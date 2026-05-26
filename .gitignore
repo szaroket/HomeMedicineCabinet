@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# 10xDevs skills
+.github/skills
+.github/.10x-cli-manifest.json
