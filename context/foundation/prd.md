@@ -55,7 +55,7 @@ Existing apps fail because they rely on free-text entry, which produces inconsis
 
 ### US-02: Receive in-app notification for expiry
 
-**Given** a user has set a notification threshold and has a medication expiring within that window  
+**Given** a user has set an expiry threshold and has a medication expiring within that window  
 **When** they open the application  
 **Then** the notification bell shows an unread count and the notification center lists the medication name and days remaining before expiry
 
@@ -79,12 +79,12 @@ Existing apps fail because they rely on free-text entry, which produces inconsis
 
 **Given** a logged-in user who has added a tablet-based medication  
 **When** they assign it to the "used" category with frequency (3 times/day), dosage (1 tablet per intake), and no end date  
-**Then** the cabinet entry displays the estimated finish date and a notification appears in the notification center when the finish date falls within the configured close-to-finish threshold
+**Then** the cabinet entry displays the estimated finish date (no close-to-finish notification fires — notifications for run-out require an end date to be set)
 
 #### Acceptance Criteria
 - Dosage fields (times, period, tablets per dose) are shown only for tablet-based medications; non-tablet medications show start/end date fields only (FR-015)
 - Estimated finish date = (package count × tablets per package) ÷ daily consumption rate, where daily consumption rate = (times × dosage per intake) ÷ period in days (FR-016)
-- Notification appears in the notification center when estimated finish date is within the user-configured close-to-finish threshold (FR-019)
+- No close-to-finish notification is generated when no end date is set (FR-019)
 - Both "used" and "important" categories can be active simultaneously on the same entry (FR-013)
 
 ### US-05: Important medication below minimum
@@ -145,13 +145,13 @@ Existing apps fail because they rely on free-text entry, which produces inconsis
   > Socrates: Counter-argument considered: "without an end date the finish date is only useful if the user acts on it — otherwise it's just a number." Resolution: kept — the estimated finish date is the input for the close-to-finish notification (FR-019); it is also useful at the pharmacy when deciding whether to restock.
 
 ### Notifications (In-App)
-- FR-007: User can configure notification settings: expiry alert threshold (7–90 days before expiry) and close-to-finish threshold (days before estimated run-out for "used" medications). Priority: must-have
-  > Socrates: Counter-argument considered: "two separate thresholds in settings adds cognitive load." Resolution: kept — expiry and finish-date concerns are distinct and the user may want different sensitivity for each (e.g. 14 days for expiry, 7 days for run-out).
+- FR-007: User can configure two notification settings: (1) expiry threshold (7–90 days before expiry date) — governs "expiring soon" classification and expiry notifications; (2) close-to-finish threshold (days before estimated run-out) — governs run-out reminders for "used" medications with an end date. Priority: must-have
+  > Socrates: Counter-argument considered: "two separate thresholds in settings adds cognitive load." Resolution: kept — expiry and finish-date concerns are distinct and the user may want different sensitivity for each (e.g. 14 days for expiry, 7 days for run-out). Both are single global values in MVP.
 
-- FR-008: The system delivers in-app notifications via a notification center (bell icon with unread count) triggered by: (a) a medication entering the expiry threshold window; (b) an "important" medication's package count falling below the configured minimum; (c) a "used" medication's estimated finish date falling within the close-to-finish threshold. Priority: must-have
+- FR-008: The system delivers in-app notifications via a notification center (bell icon with unread count) triggered by: (a) a medication entering the expiry threshold window; (b) an "important" medication's package count falling below the configured minimum; (c) a "used" medication with an end date whose estimated finish date falls before the end date and within the close-to-finish threshold. Priority: must-have
   > Socrates: Counter-argument considered: "in-app notifications are only seen when the user opens the app — they may miss time-sensitive alerts." Resolution: accepted for MVP — the product is web-only and the persona checks the app regularly; push/email notifications deferred to v2.
 
-- FR-019: The system shows an in-app notification when a "used" medication's estimated finish date is within the user-configured close-to-finish threshold. Priority: must-have
+- FR-019: The system shows an in-app notification when a "used" medication has an end date, the estimated finish date falls before that end date (stock will run out before the course ends), and the estimated finish date is within the user-configured close-to-finish threshold. Medications with no end date do not trigger this notification. Priority: must-have
   > Socrates: Counter-argument considered: "notification fires repeatedly until restocked, which could become noise." Resolution: notification persists in the notification center until the condition is resolved (restocked or category removed); no repeated re-firing once shown.
 
 ### Out of Stock Status
@@ -188,9 +188,9 @@ The system classifies each cabinet entry and proactively alerts the user before 
 
 **Dosage-based finish estimation**: for medications in the "used" category with tablet-based dosage, the system computes daily consumption rate = (times × dosage amount per intake) ÷ period in days (1 for per-day, 7 for per-week). Estimated days of supply = (package count × tablets per package) ÷ daily consumption rate. If an end date is set, the system compares days of supply against days until end date and displays sufficiency. If no end date is set, the system displays the estimated finish date. Non-tablet medications (no tablet count in registry) can be assigned to "used" for start/end date tracking only; dosage fields and finish-date estimation are not available for them.
 
-**Notification triggers**: in-app notifications fire when (a) a medication enters the expiry threshold window, (b) an important medication's package count drops below the configured minimum, or (c) a used medication's estimated finish date falls within the close-to-finish threshold. Notifications are surfaced through a persistent notification center accessible from any screen.
+**Notification triggers**: in-app notifications fire when (a) a medication enters the expiry threshold window, (b) an important medication's package count drops below the configured minimum, or (c) a used medication has an end date, its estimated finish date falls before that end date, and the finish date is within the close-to-finish threshold. Notifications are surfaced through a persistent notification center accessible from any screen.
 
-**Inputs**: expiry date, package count, tablet count per package, user's expiry threshold (7–90 days), global minimum package count for important medications, dosage data (times, period [per day / per week], dosage amount per intake, start date, optional end date), close-to-finish threshold (days).  
+**Inputs**: expiry date, package count, tablet count per package, user's expiry threshold (7–90 days), user's close-to-finish threshold (days before estimated run-out), global minimum package count for important medications, dosage data (times, period [per day / per week], dosage amount per intake, start date, optional end date).  
 **Output**: status classification per entry (valid / expiring soon / expired); out-of-stock badge (important entries only); estimated finish date or sufficiency indicator (used tablet-based entries); in-app notifications per the above triggers.
 
 ## Access Control
