@@ -1,7 +1,7 @@
 ---
 project: Home Medicine Cabinet
 context_type: greenfield
-updated: 2026-05-27
+updated: 2026-05-28
 checkpoint:
   current_phase: 8
   phases_completed: [1, 2, 3, 4, 5, 6, 7]
@@ -38,7 +38,7 @@ Existing apps fail because they rely on free-text entry, which produces inconsis
 
 ### Primary
 - User can find any medication in the Polish-approved registry and add it to their cabinet (with tablet count, package count, and expiry date) in a single flow
-- User receives an in-app notification when a medication is close to expiry, when an important medication falls below the configured minimum, or when a used medication with an end date will run out before that end date and the finish date is within the configured close-to-finish threshold
+- User receives an in-app notification when a medication is close to expiry, when an important medication falls below the configured minimum, or when a used medication with an end date is at risk of running out before the course ends and the estimated run-out falls within the configured close-to-finish threshold
 
 ### Secondary
 - User returns to check their cabinet at least once a week without an external prompt (signals genuine habit formation)
@@ -58,7 +58,7 @@ Existing apps fail because they rely on free-text entry, which produces inconsis
   > Socrates: Counter-argument considered: "logout is rarely used in personal apps." Resolution: kept — logout is a basic security requirement inseparable from any auth system.
 
 ### Adding Medications
-- FR-003: User can add a medication by typing a name, selecting from an autocomplete dropdown sourced from the Polish-approved medications list, selecting tablet count (from official dataset), entering number of packages (minimum 1; 0 packages is not a valid starting value), and setting an expiry date. Priority: must-have
+- FR-003: User can add a medication by typing a name, selecting from an autocomplete dropdown sourced from the Polish-approved medications list, selecting tablet count (from official dataset), entering number of packages (minimum 1; 0 packages is not a valid starting value), setting an expiry date, and optionally entering an actual tablet count for a partially-opened package. If the actual tablet count is left blank, the system assumes the package is full. Priority: must-have
   > Socrates: Counter-argument considered: "official dataset may be stale or missing newly approved drugs." Resolution: kept — constraining to the approved list is the core differentiator; data quality is the product. Manual fallback deferred to v2.
 
 - FR-010: When adding a medication, if an entry with the same drug + tablet count + expiry date already exists, the system increments its package count instead of creating a duplicate. Priority: must-have
@@ -68,7 +68,7 @@ Existing apps fail because they rely on free-text entry, which produces inconsis
 - FR-004: User can view their cabinet as a list with filtering by status (valid / expiring / expired / out-of-stock badge), sorting by medication name, and pagination. Priority: must-have
   > Socrates: Counter-argument considered: "flat unordered list is sufficient; search covers discovery." Resolution: updated — filtering by status and pagination added for usability at scale; sort by name added per user requirement.
 
-- FR-005: User can increase or decrease the package count on a cabinet entry, or delete it. Deleting requires explicit confirmation; if the entry carries an "out of stock" badge, the confirmation states it will also be cleared. Priority: must-have
+- FR-005: User can increase or decrease the package count on a cabinet entry, update the actual tablet count of the partially-opened package (or clear it to mark the package as full), or delete the entry. Deleting requires explicit confirmation; if the entry carries an "out of stock" badge, the confirmation states it will also be cleared. Priority: must-have
   > Socrates: Counter-argument considered: "no expiry date editing means batch changes are unrecordable." Resolution: kept — different expiry batches are separate entries added via FR-003; this keeps the edit scope intentionally narrow.
 
 - FR-006: User can search their cabinet by free text matched against medication name or active ingredient. Priority: must-have
@@ -84,8 +84,8 @@ Existing apps fail because they rely on free-text entry, which produces inconsis
 - FR-015: User can assign a medication entry to the "used" category with start date (default: date of assignment) and an optional end date. For tablet-based medications (those with a tablet count from the registry), three additional dosage fields are shown: (1) how many times (integer), (2) period — per day or per week, (3) dosage amount per intake (integer, in tablets). Example: "3 × 2 tablets per day". For non-tablet medications (e.g. syrups, without a tablet count), the dosage fields are hidden and no finish-date calculation is available. Priority: must-have
   > Socrates: Counter-argument considered: "variable dosing (e.g. 1 tablet some days, 2 on others) cannot be captured as fixed frequency + period." Resolution: accepted — fixed schedule is the MVP approximation; the system displays the assumption explicitly so the user can judge accuracy. Separate UI fields (times / period / dosage) make the structure clear.
 
-- FR-016: For tablet-based medications in the "used" category (dosage fields present), the system calculates the estimated finish date. Daily consumption rate = (times × dosage amount) ÷ period in days (1 for per-day, 7 for per-week). Days of supply = (package count × tablets per package) ÷ daily consumption rate. For non-tablet medications assigned to "used", no finish-date calculation is shown. Priority: must-have
-  > Socrates: Counter-argument considered: "calculation assumes full packages and consistent dosing; a half-used package or a skipped day will make the estimate wrong." Resolution: kept — the estimate is displayed with its assumptions; accuracy depends on the user keeping package count current, which they already do via FR-005.
+- FR-016: For tablet-based medications in the "used" category (dosage fields present), the system calculates the estimated finish date. Daily consumption rate = (times × dosage amount) ÷ period in days (1 for per-day, 7 for per-week). Total tablets available = actual tablet count of the partially-opened package (if set) + remaining full packages × tablets per package. Days of supply = total tablets available ÷ daily consumption rate. For non-tablet medications assigned to "used", no finish-date calculation is shown. Priority: must-have
+  > Socrates: Counter-argument considered: "calculation assumes full packages and consistent dosing; a half-used package or a skipped day will make the estimate wrong." Resolution: kept — the estimate is displayed with its assumptions; partial-package tracking (FR-003, FR-005) improves accuracy for opened packs; accuracy otherwise depends on the user keeping counts current.
 
 - FR-017: For "used" medications with an end date, the system displays whether the current stock is sufficient to last until that date. Priority: must-have
   > Socrates: Counter-argument considered: "'sufficient' is ambiguous — does it mean exactly enough, or with buffer?" Resolution: the system shows exact days remaining vs. days of supply, letting the user judge sufficiency; no buffer is computed by the system.
@@ -97,19 +97,19 @@ Existing apps fail because they rely on free-text entry, which produces inconsis
 - FR-007: User can configure two notification settings: (1) expiry threshold (7–90 days before expiry date) — governs "expiring soon" classification and expiry notifications; (2) close-to-finish threshold (days before estimated run-out) — governs run-out reminders for "used" medications with an end date. Priority: must-have
   > Socrates: Counter-argument considered: "two separate thresholds in settings adds cognitive load." Resolution: kept — expiry and finish-date concerns are distinct and the user may want different sensitivity for each (e.g. 14 days for expiry, 7 days for run-out). Both are single global values in MVP.
 
-- FR-008: The system delivers in-app notifications via a notification center (bell icon with unread count) triggered by: (a) a medication entering the expiry threshold window; (b) an "important" medication's package count falling below the configured minimum; (c) a "used" medication with an end date whose estimated finish date falls before the end date and within the close-to-finish threshold. Priority: must-have
+- FR-008: The system delivers in-app notifications via a notification center (bell icon with unread count) triggered by: (a) a medication entering the expiry threshold window; (b) an "important" medication's package count falling below the configured minimum; (c) a "used" medication with an end date whose estimated finish date falls before the end date and within the close-to-finish threshold. The user can dismiss any individual notification; a dismissed notification does not re-fire until the condition clears and is triggered again from scratch. Priority: must-have
   > Socrates: Counter-argument considered: "in-app notifications are only seen when the user opens the app — they may miss time-sensitive alerts." Resolution: accepted for MVP — the product is web-only and the persona checks the app regularly; push/email notifications deferred to v2.
 
-- FR-019: The system shows an in-app notification when a "used" medication has an end date, the estimated finish date falls before that end date (stock will run out before the course ends), and the estimated finish date is within the user-configured close-to-finish threshold. Medications with no end date do not trigger this notification. Priority: must-have
-  > Socrates: Counter-argument considered: "notification fires repeatedly until restocked, which could become noise." Resolution: notification persists in the notification center until the condition is resolved (restocked or category removed); no repeated re-firing once shown.
+- FR-019: The system shows an in-app notification when a "used" medication has an end date, the estimated finish date falls before that end date (stock will run out before the course ends), and the estimated finish date is within the user-configured close-to-finish threshold. Medications with no end date do not trigger this notification. The user can dismiss the notification; if dismissed while the condition is still active, it does not re-fire until the condition clears and is triggered again from scratch. Priority: must-have
+  > Socrates: Counter-argument considered: "notification fires repeatedly until restocked, which could become noise." Resolution: user can dismiss any notification manually; dismissed notifications do not re-fire until the triggering condition fully resolves and re-triggers.
 
 ### Out of Stock Status
 - FR-020: The system automatically displays an "out of stock" badge on an "important" medication entry when any of these conditions hold: (a) the medication is close to expiry (within expiry threshold) or expired; (b) package count is below the user-configured minimum. The badge is computed — it clears automatically when conditions no longer hold. Priority: must-have
   > Socrates: Counter-argument considered: "a drug expiring soon but with many packages isn't really out of stock — the label is misleading." Resolution: "out of stock" is a working name; the badge surfaced to the user communicates the specific condition (expiring / expired / below minimum), not a single opaque label. Display copy is a UI concern.
 
 ### Dashboard
-- FR-009: Dashboard shows summary counts: total medications / valid / expiring soon / expired / out-of-stock badges active. Priority: must-have
-  > Socrates: Counter-argument considered: "dashboard duplicates the filtered list (FR-004)." Resolution: kept — dashboard is the landing screen; at-a-glance counts are the primary value moment on open.
+- FR-009: Dashboard shows summary counts: total medications / valid / expiring soon / expired / out-of-stock / out-of-stock badges active. Each count is a clickable link that navigates to the cabinet list pre-filtered to the corresponding status. Priority: must-have
+  > Socrates: Counter-argument considered: "dashboard duplicates the filtered list (FR-004)." Resolution: kept — dashboard is the landing screen; at-a-glance counts are the primary value moment on open. Clickable counts make the dashboard an active navigation hub, not just a summary.
 
 ### Medication Details
 - FR-011: Each cabinet entry displays the producer and route of administration (method of use) sourced from the official dataset. Priority: must-have
@@ -168,6 +168,7 @@ The system classifies each cabinet entry and proactively alerts the user before 
 - Search and autocomplete must return results with no perceptible lag (user-perceived response < 500ms p95)
 - One user's cabinet data must never be visible to another user (strict per-account data isolation)
 - The application interface must be in Polish language
+- All cabinet data, user account data (email, password), and user preferences (expiry threshold, close-to-finish threshold, minimum package threshold) must persist server-side and be accessible across sessions and devices
 
 ## Non-Goals
 
@@ -178,6 +179,7 @@ The system classifies each cabinet entry and proactively alerts the user before 
 - No email or push notifications in MVP — in-app notification center only
 - No per-entry minimum package thresholds for important medications — one global minimum applies to all in MVP
 - No variable dosing schedules for "used" medications — fixed frequency with per-day or per-week period only in MVP; as-needed (PRN) dosing not supported
+- No grouped cabinet view — medications are displayed as a flat list of entries (drug + tablet count + expiry date); grouping by medication name with per-variant breakdown deferred to v2
 
 ## Open Questions
 
