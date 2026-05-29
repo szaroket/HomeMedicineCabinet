@@ -1,7 +1,7 @@
 [project]
-name = "backend"
+name = "home-medicine-cabinet"
 version = "0.1.0"
-description = "Add your description here"
+description = "Backend to manage home medicine cabinet"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
