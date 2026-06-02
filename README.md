@@ -1,4 +1,4 @@
-# Home Medical Cabinet
+# Home Medicine Cabinet
 
 A web app for managing your home medicine cabinet. Track medications from the Polish approved drug registry — what you have, how many packages remain, when they expire, and whether your supply will last through an active course. In-app notifications alert you to upcoming expiry, low stock on important medications, and run-out risk.
 
