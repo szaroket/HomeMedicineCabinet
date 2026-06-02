@@ -151,6 +151,7 @@ Deploys are triggered manually from the Render dashboard. Re-introduce this phas
 - [ ] DevTools → Network: `/healthz` fetch goes to Render backend URL (not localhost)
 - [ ] DevTools → Console: no CORS errors
 - [ ] `https://<backend>.onrender.com/healthz` → `{"status":"healthy"}`
+- [ ] Swagger UI (`/docs`) works in browser — disable ad/content blockers (e.g. uBlock Origin) if fetch requests fail
 
 ---
 
