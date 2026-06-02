@@ -9,7 +9,7 @@ function App() {
   const [backendStatus, setBackendStatus] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL ?? "http://localhost:8000"}/health`)
+    fetch(`${import.meta.env.VITE_API_URL ?? "http://localhost:8000"}/healthz`)
       .then((res) => res.json())
       .then((data: { status: string }) => setBackendStatus(data.status))
       .catch(() => setBackendStatus("unreachable"));

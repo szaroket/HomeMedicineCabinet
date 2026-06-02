@@ -25,7 +25,7 @@ async def root():
     return {"message": "Hello World"}
 
 
-@app.get("/health")
+@app.get("/healthz")
 async def health_check():
     return {"status": "healthy"}
 
