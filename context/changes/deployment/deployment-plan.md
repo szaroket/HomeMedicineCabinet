@@ -26,7 +26,7 @@ The project has a completed infrastructure decision (Render, per `context/founda
 Env-driven CORS: `FRONTEND_URL` env var drives allowed origins; absent → localhost only.
 
 ### 1.4 `frontend/src/App.tsx` ✅
-`fetch(\`${import.meta.env.VITE_API_URL ?? "http://localhost:8000"}/health\`)` — baked at build time.
+`fetch(\`${import.meta.env.VITE_API_URL ?? "http://localhost:8000"}/healthz\`)` — baked at build time.
 
 ### 1.5 `frontend/.env.local` ✅ (present locally, NOT committed)
 
@@ -38,8 +38,8 @@ services:
     runtime: python
     rootDir: backend
     buildCommand: pip install uv && uv sync --frozen
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
-    healthCheckPath: /health
+    startCommand: uv run --active uvicorn main:app --host 0.0.0.0 --port $PORT --proxy-headers
+    healthCheckPath: /healthz
     envVars:
       - key: FRONTEND_URL
         sync: false
@@ -68,79 +68,94 @@ services:
 
 ## Phase 2: Local Verification (before committing)
 - [ ] `cd backend && uv sync` — no lock file conflicts after pyproject.toml change
-- [ ] `cd backend && uv run uvicorn main:app --host 0.0.0.0 --port 8000` — `/health` returns `{"status":"healthy"}`
+- [ ] `cd backend && uv run uvicorn main:app --host 0.0.0.0 --port 8000` — `/healthz` returns `{"status":"healthy"}`
 - [ ] `cd frontend && npm run build` — build succeeds (with `.env.local` present)
 - [ ] Frontend dev server + backend running — UI shows "healthy", no CORS errors in console
 - [ ] `git status` — `frontend/.env.local` does NOT appear
 
 ---
 
-## Phase 3: Render Services Setup
+## Phase 3: Supabase Database Setup
 
-### 3.1 [HUMAN GATE] Create Render account
+### 3.1 [HUMAN GATE] Create Supabase account
+Sign up at supabase.com with GitHub (free tier available, no credit card for dev).
+
+### 3.2 [HUMAN GATE] Create a new project
+Dashboard → New Project → choose an organisation → set a **strong database password** (save it — it cannot be retrieved later) → select a region close to your Render backend region → Create Project.
+
+### 3.3 [HUMAN GATE] Collect credentials
+Once the project finishes provisioning, collect the three values from **Project Settings**:
+
+| Credential | Where to find it | Render env var |
+|---|---|---|
+| Project URL | **Data API** → "API URL" | `SUPABASE_URL` |
+| `service_role` key | **API Keys** → "service_role" (secret, reveal to copy) | `SUPABASE_SERVICE_ROLE_KEY` |
+| DB connection string | **Connect to your project** (button at top of dashboard) → Transaction pooler → URI | `DATABASE_URL` |
+
+⚠️ The `service_role` key bypasses Row Level Security — treat it like a root password. Never expose it in frontend code or commit it to the repo.
+
+---
+
+## Phase 4: Render Services Setup
+
+### 4.1 [HUMAN GATE] Create Render account
 Sign up at render.com with GitHub (free, no credit card). Connect the monorepo.
 
-### 3.2 [HUMAN GATE] Create backend Web Service
-New → Web Service → select repo → Root Dir: `backend` → Runtime: Python 3 → Build: `pip install uv && uv sync --frozen` → Start: `uvicorn main:app --host 0.0.0.0 --port $PORT` → Instance: Free.
-**Do not deploy yet** — set env vars first.
+### 4.2 [HUMAN GATE] Create backend Web Service
+New → Web Service → select repo → Root Dir: `backend` → Runtime: Python 3 → Build: `pip install uv && uv sync --frozen` → Start: `uv run --active uvicorn main:app --host 0.0.0.0 --port $PORT --proxy-headers` → Instance: Free.
 
-### 3.3 [HUMAN GATE] Create frontend Static Site
-New → Static Site → same repo → Root Dir: `frontend` → Build: `npm run build` → Publish Dir: `dist`.
-**Do not deploy yet** — set env vars first.
-
-### 3.4 [HUMAN GATE] Set backend env vars
-In backend Web Service → Environment tab:
+Before saving, set env vars in the **Environment** section (use Supabase credentials from Phase 3.3):
 | Key | Value |
 |---|---|
-| `FRONTEND_URL` | *(leave blank until frontend URL known — see 3.6)* |
-| `SUPABASE_URL` | `https://placeholder.supabase.co` *(update when DB created)* |
-| `SUPABASE_SERVICE_ROLE_KEY` | `placeholder` *(update when DB created)* |
-| `DATABASE_URL` | `postgresql://placeholder` *(update when DB created)* |
+| `FRONTEND_URL` | *(leave blank for now — fill in after frontend is created, see 4.3)* |
+| `SUPABASE_URL` | from Phase 3.3 |
+| `SUPABASE_SERVICE_ROLE_KEY` | from Phase 3.3 |
+| `DATABASE_URL` | from Phase 3.3 |
 
-### 3.5 [HUMAN GATE] Set frontend env var
-In Static Site → Environment tab. Backend URL format: `https://home-medicine-cabinet-backend.onrender.com`.
+Note: `$PORT` does **not** need to be added to the env vars — Render sets it automatically at runtime.
+
+**Do not deploy yet.**
+
+### 4.3 [HUMAN GATE] Create frontend Static Site
+New → Static Site → same repo → Root Dir: `frontend` → Build: `npm run build` → Publish Dir: `dist`.
+
+Before saving, set env vars in the **Environment** section:
 | Key | Value |
 |---|---|
 | `VITE_API_URL` | `https://<backend-service-name>.onrender.com` |
 
-⚠️ This MUST be set before the first frontend build runs — Vite bakes it at compile time.
+⚠️ `VITE_API_URL` is baked at build time — must be set before the first build runs.
 
-### 3.6 [HUMAN GATE] Set FRONTEND_URL in backend
-After Static Site is created, Render shows its URL. Go back to backend env vars and fill in:
+Once the Static Site is saved, Render shows its URL. Go back to the backend service → Environment tab and fill in:
 | Key | Value |
 |---|---|
 | `FRONTEND_URL` | `https://<frontend-site-name>.onrender.com` |
-Then trigger a manual backend redeploy.
 
-### 3.7 [HUMAN GATE] Trigger first deploys
+### 4.5 [HUMAN GATE] Trigger first deploys
 1. Backend: Manual Deploy → Deploy Latest Commit — watch build log for `uv sync` success
-2. Verify: `https://<backend>.onrender.com/health` → `{"status":"healthy"}`
+2. Verify: `https://<backend>.onrender.com/healthz` → `{"status":"healthy"}`
 3. Frontend: Manual Deploy → Deploy Latest Commit
 4. Verify: open the Static Site URL → app loads, "Backend status: healthy" shown
 
 ---
 
-## Phase 4: GitHub Actions CI/CD — **SKIPPED (deferred)**
+## Phase 5: GitHub Actions CI/CD — **SKIPPED (deferred)**
 
 Deploys are triggered manually from the Render dashboard. Re-introduce this phase when CI/CD automation is needed.
 
 ---
 
-## Phase 5: Post-Deploy Smoke Tests
+## Phase 6: Post-Deploy Smoke Tests
 - [ ] `https://<frontend>.onrender.com` loads in browser
 - [ ] "Backend status: healthy" shown (not "unreachable")
-- [ ] DevTools → Network: `/health` fetch goes to Render backend URL (not localhost)
+- [ ] DevTools → Network: `/healthz` fetch goes to Render backend URL (not localhost)
 - [ ] DevTools → Console: no CORS errors
-- [ ] `https://<backend>.onrender.com/health` → `{"status":"healthy"}`
+- [ ] `https://<backend>.onrender.com/healthz` → `{"status":"healthy"}`
 
 ---
 
-## Phase 6: Future Supabase Wiring (deferred)
-When the database layer is implemented:
-1. Create a Supabase project
-2. Rotate the three backend env vars in the Render dashboard (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`)
-3. Trigger a manual backend redeploy
-4. **Never** commit Supabase credentials to any file
+## Phase 7: Future DB credential rotation
+When Supabase credentials need to be rotated: update the three env vars in the Render dashboard → Manual Deploy on the backend service. **Never** commit Supabase credentials to any file.
 
 ---
 
