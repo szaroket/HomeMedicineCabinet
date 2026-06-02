@@ -5,7 +5,7 @@ project_name: home-medicine-cabinet
 hints:
   language_family: multi
   team_size: solo
-  deployment_target: fly+cloudflare-pages
+  deployment_target: render
   ci_provider: github-actions
   ci_default_flow: auto-deploy-on-merge
   bootstrapper_confidence: first-class
@@ -23,7 +23,7 @@ hints:
   has_ai: false
   has_background_jobs: false
   frontend_starter_id: vite-react
-  frontend_deployment_target: cloudflare-pages
+  frontend_deployment_target: render-static-site
   frontend_css: tailwind
   database: postgresql
   database_provider: supabase
@@ -52,6 +52,6 @@ hints:
 
 Solo developer building a Polish-language medication cabinet web app in 2 weeks after-hours. Custom path taken because the developer has an explicit Python/FastAPI constraint from shaping. FastAPI clears all four agent-friendly gates within the Python family (typed via Pydantic, convention-based, popular in Python training data, well-documented). The database is PostgreSQL hosted on Supabase (free tier, 500 MB). Supabase was chosen over Neon for two reasons: it eliminates auth boilerplate (FR-001/FR-002 registration and login come out of the box via Supabase Auth), and its Row Level Security provides a defence-in-depth isolation guarantee aligned with the PRD guardrail that one user's cabinet data must never be visible to another. The ORM layer is SQLModel (SQLAlchemy + Pydantic combined — type-safe, fits FastAPI naturally) connecting to Supabase's PostgreSQL via a standard connection string. The architectural constraint is firm: FastAPI is the sole Supabase/DB client — the frontend never holds a Supabase service key and never calls Supabase directly. All auth and data access flows through FastAPI, which validates sessions and enforces business logic before any query runs. RLS acts as a safety net, not the primary enforcement layer.
 
-The architecture is a single-repository monorepo: backend/ (FastAPI/uv) and frontend/ (Vite React TypeScript SPA/npm + Tailwind CSS). No monorepo orchestrator — a flat two-directory layout with path-filtered GitHub Actions jobs is the practical approach for this polyglot stack. Backend deploys to Fly.io (Dockerfile-based, hobby tier); frontend deploys to Cloudflare Pages as a static build; CI auto-deploys on merge to main. Notifications are computed on page load so no background queue is needed.
+The architecture is a single-repository monorepo: backend/ (FastAPI/uv) and frontend/ (Vite React TypeScript SPA/npm + Tailwind CSS). No monorepo orchestrator — a flat two-directory layout with path-filtered GitHub Actions jobs is the practical approach for this polyglot stack. Backend deploys to Render as a Web Service (free tier with cold starts after 15 min inactivity; upgradeable to always-on at $7/month); frontend deploys to Render as a Static Site (always free, CDN-served, no cold starts). Both services live in the same Render project. CI auto-deploys on merge to main via Render deploy hooks wired into GitHub Actions. Notifications are computed on page load so no background queue is needed.
 
 Code quality is gated by a `pre-commit` hook running fast lint and format checks on staged files (ruff for Python lint + format; ESLint + Prettier for React/TypeScript). Backend tests run on pytest with pytest-asyncio, httpx, and pytest-cov; frontend tests use Vitest with React Testing Library; Playwright covers one golden-path E2E flow (login → add medication → see it in cabinet). Tests are gated in CI, not in pre-commit, so commits stay fast. Self-check returned 4/5 — React is new territory for the developer, flagged for extra care when reviewing agent-generated frontend code.
