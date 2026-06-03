@@ -14,6 +14,20 @@ The project has a completed infrastructure decision (Render, per `context/founda
 
 ---
 
+## Phase 0.5: CLI Tools Installation
+
+### Render CLI
+- [ ] Install — Windows: download `cli_*_windows_amd64.zip` from https://github.com/render-oss/cli/releases, extract, **rename the exe to `render.exe`**, place it in a folder on your PATH (e.g. `C:\Program Files\render\`); Mac: `brew install render`; Linux: download matching archive from the same releases page
+- [ ] Authenticate: `render login` (opens browser — requires Render account from Phase 4.1)
+- [ ] Verify: `render whoami`
+
+### GitHub CLI
+- [ ] Install — Windows: `winget install --id GitHub.cli`; Mac: `brew install gh`; Ubuntu/Debian: `sudo apt install gh`
+- [ ] Authenticate: `gh auth login` (select: GitHub.com → HTTPS → Login with a web browser)
+- [ ] Verify: `gh auth status`
+
+---
+
 ## Phase 1: Code Changes ✅ (all applied)
 
 ### 1.1 `backend/.python-version` ✅
@@ -201,3 +215,5 @@ When Supabase credentials need to be rotated: update the three env vars in the R
 | `frontend/.env.local` | ✅ Present locally (not committed) |
 | `render.yaml` | ✅ Done |
 | `.github/workflows/deploy.yml` | ⏭ Skipped (CI/CD deferred) |
+| Render CLI | Install & authenticate before Phase 4 |
+| GitHub CLI | Install & authenticate before Phase 4 |
