@@ -8,6 +8,7 @@ The project was created as part of the [10xDevs 3.0](https://www.10xdevs.pl/) tr
 - [`context/foundation/prd.md`](context/foundation/prd.md) — product requirements
 - [`context/foundation/tech-stack.md`](context/foundation/tech-stack.md) — tech stack
 - [`context/foundation/infrastructure.md`](context/foundation/infrastructure.md) — deployment platform
+- [`context\foundation\roadmap.md`](context\foundation\roadmap.md) — implementation roadmap
 
 ## Requitements
 
