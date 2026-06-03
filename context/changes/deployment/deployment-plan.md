@@ -17,14 +17,14 @@ The project has a completed infrastructure decision (Render, per `context/founda
 ## Phase 0.5: CLI Tools Installation
 
 ### Render CLI
-- [ ] Install — Windows: download `cli_*_windows_amd64.zip` from https://github.com/render-oss/cli/releases, extract, **rename the exe to `render.exe`**, place it in a folder on your PATH (e.g. `C:\Program Files\render\`); Mac: `brew install render`; Linux: download matching archive from the same releases page
-- [ ] Authenticate: `render login` (opens browser — requires Render account from Phase 4.1)
-- [ ] Verify: `render whoami`
+- [x] Install — Windows: download `cli_*_windows_amd64.zip` from https://github.com/render-oss/cli/releases, extract, **rename the exe to `render.exe`**, place it in a folder on your PATH (e.g. `C:\Program Files\render\`); Mac: `brew install render`; Linux: download matching archive from the same releases page
+- [x] Authenticate: `render login` (opens browser — requires Render account from Phase 4.1)
+- [x] Verify: `render whoami`
 
 ### GitHub CLI
-- [ ] Install — Windows: `winget install --id GitHub.cli`; Mac: `brew install gh`; Ubuntu/Debian: `sudo apt install gh`
-- [ ] Authenticate: `gh auth login` (select: GitHub.com → HTTPS → Login with a web browser)
-- [ ] Verify: `gh auth status`
+- [x] Install — Windows: `winget install --id GitHub.cli`; Mac: `brew install gh`; Ubuntu/Debian: `sudo apt install gh`
+- [x] Authenticate: `gh auth login` (select: GitHub.com → HTTPS → Login with a web browser)
+- [x] Verify: `gh auth status`
 
 ---
 
@@ -81,11 +81,11 @@ services:
 ---
 
 ## Phase 2: Local Verification (before committing)
-- [ ] `cd backend && uv sync` — no lock file conflicts after pyproject.toml change
-- [ ] `cd backend && uv run uvicorn main:app --host 0.0.0.0 --port 8000` — `/healthz` returns `{"status":"healthy"}`
-- [ ] `cd frontend && npm run build` — build succeeds (with `.env.local` present)
-- [ ] Frontend dev server + backend running — UI shows "healthy", no CORS errors in console
-- [ ] `git status` — `frontend/.env.local` does NOT appear
+- [x] `cd backend && uv sync` — no lock file conflicts after pyproject.toml change
+- [x] `cd backend && uv run uvicorn main:app --host 0.0.0.0 --port 8000` — `/healthz` returns `{"status":"healthy"}`
+- [x] `cd frontend && npm run build` — build succeeds (with `.env.local` present)
+- [x] `cd frontend && npm run dev` Frontend dev server + backend running — UI shows "healthy", no CORS errors in console
+- [x] `git status` — `frontend/.env.local` does NOT appear
 
 ---
 
@@ -160,12 +160,12 @@ Deploys are triggered manually from the Render dashboard. Re-introduce this phas
 ---
 
 ## Phase 6: Post-Deploy Smoke Tests
-- [ ] `https://<frontend>.onrender.com` loads in browser
-- [ ] "Backend status: healthy" shown (not "unreachable")
-- [ ] DevTools → Network: `/healthz` fetch goes to Render backend URL (not localhost)
-- [ ] DevTools → Console: no CORS errors
-- [ ] `https://<backend>.onrender.com/healthz` → `{"status":"healthy"}`
-- [ ] Swagger UI (`/docs`) works in browser — disable ad/content blockers (e.g. uBlock Origin) if fetch requests fail
+- [x] `https://home-medicine-cabinet.onrender.com/` loads in browser
+- [x] "Backend status: healthy" shown (not "unreachable")
+- [x] DevTools → Network: `/healthz` fetch goes to Render backend URL (not localhost)
+- [x] DevTools → Console: no CORS errors
+- [x] `https://home-medicine-cabinet-backend.onrender.com/healthz` → `{"status":"healthy"}`
+- [x] Swagger UI (`/docs`) works in browser — disable ad/content blockers (e.g. uBlock Origin) if fetch requests fail
 
 ---
 
