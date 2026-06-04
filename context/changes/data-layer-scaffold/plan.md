@@ -1,5 +1,12 @@
 # Data Layer Scaffold Implementation Plan
 
+> **Addendum (2026-06-04):** Folder paths in this plan are stale. The repo
+> structure changed after this plan was written; the authoritative layout in
+> `AGENTS.md` was followed instead. Wherever this plan says `app/v1/<domain>/`
+> read `app/api/v1/<domain>/`, and wherever it says `app/config.py` /
+> `app.config` read `app/core/config.py` / `app.core.config`. The implemented
+> code is correct — trust the code over the paths in this plan.
+
 ## Overview
 
 Install SQLModel + asyncpg + Alembic, create a shared DB connector module, define four SQLModel table models covering the full MVP schema, and generate + verify the initial Alembic migration. A smoke test confirms the connection and migration are healthy before any feature slice builds on top.

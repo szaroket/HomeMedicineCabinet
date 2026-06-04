@@ -4,6 +4,14 @@ Revision ID: 2c7067ce3f56
 Revises: 0e56afa1e4b6
 Create Date: 2026-06-04
 
+NOTE: The initial migration (0e56afa1e4b6) was first applied to the shared
+Supabase DB with varchar columns; this migration corrected those columns to
+text and was stamped into that DB's chain. The committed copy of the initial
+migration was later cleaned to create the columns as ``sa.Text()`` directly,
+so on a *fresh* database this migration is a near no-op (it only rebuilds the
+search_vector generated column + GIN index). Do NOT delete or squash it:
+``alembic_version`` on the live DB references this revision and removing it
+would break ``alembic upgrade``/``downgrade`` there.
 """
 
 from collections.abc import Sequence
