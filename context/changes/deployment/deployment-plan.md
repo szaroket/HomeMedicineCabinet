@@ -14,6 +14,20 @@ The project has a completed infrastructure decision (Render, per `context/founda
 
 ---
 
+## Phase 0.5: CLI Tools Installation
+
+### Render CLI
+- [x] Install — Windows: download `cli_*_windows_amd64.zip` from https://github.com/render-oss/cli/releases, extract, **rename the exe to `render.exe`**, place it in a folder on your PATH (e.g. `C:\Program Files\render\`); Mac: `brew install render`; Linux: download matching archive from the same releases page
+- [x] Authenticate: `render login` (opens browser — requires Render account from Phase 4.1)
+- [x] Verify: `render whoami`
+
+### GitHub CLI
+- [x] Install — Windows: `winget install --id GitHub.cli`; Mac: `brew install gh`; Ubuntu/Debian: `sudo apt install gh`
+- [x] Authenticate: `gh auth login` (select: GitHub.com → HTTPS → Login with a web browser)
+- [x] Verify: `gh auth status`
+
+---
+
 ## Phase 1: Code Changes ✅ (all applied)
 
 ### 1.1 `backend/.python-version` ✅
@@ -38,7 +52,7 @@ services:
     runtime: python
     rootDir: backend
     buildCommand: pip install uv && uv sync --frozen
-    startCommand: uv run --active uvicorn main:app --host 0.0.0.0 --port $PORT --proxy-headers
+    startCommand: uv run --active uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers
     healthCheckPath: /healthz
     envVars:
       - key: FRONTEND_URL
@@ -67,11 +81,11 @@ services:
 ---
 
 ## Phase 2: Local Verification (before committing)
-- [ ] `cd backend && uv sync` — no lock file conflicts after pyproject.toml change
-- [ ] `cd backend && uv run uvicorn main:app --host 0.0.0.0 --port 8000` — `/healthz` returns `{"status":"healthy"}`
-- [ ] `cd frontend && npm run build` — build succeeds (with `.env.local` present)
-- [ ] Frontend dev server + backend running — UI shows "healthy", no CORS errors in console
-- [ ] `git status` — `frontend/.env.local` does NOT appear
+- [x] `cd backend && uv sync` — no lock file conflicts after pyproject.toml change
+- [x] `cd backend && uv run uvicorn app.main:app --host 0.0.0.0 --port 8000` — `/v1/health/` returns `{"status":"healthy"}`
+- [x] `cd frontend && npm run build` — build succeeds (with `.env.local` present)
+- [x] `cd frontend && npm run dev` Frontend dev server + backend running — UI shows "healthy", no CORS errors in console
+- [x] `git status` — `frontend/.env.local` does NOT appear
 
 ---
 
@@ -102,7 +116,7 @@ Once the project finishes provisioning, collect the three values from **Project 
 Sign up at render.com with GitHub (free, no credit card). Connect the monorepo.
 
 ### 4.2 [HUMAN GATE] Create backend Web Service
-New → Web Service → select repo → Root Dir: `backend` → Runtime: Python 3 → Build: `pip install uv && uv sync --frozen` → Start: `uv run --active uvicorn main:app --host 0.0.0.0 --port $PORT --proxy-headers` → Instance: Free.
+New → Web Service → select repo → Root Dir: `backend` → Runtime: Python 3 → Build: `pip install uv && uv sync --frozen` → Start: `uv run --active uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers` → Instance: Free.
 
 Before saving, set env vars in the **Environment** section (use Supabase credentials from Phase 3.3):
 | Key | Value |
@@ -146,12 +160,12 @@ Deploys are triggered manually from the Render dashboard. Re-introduce this phas
 ---
 
 ## Phase 6: Post-Deploy Smoke Tests
-- [ ] `https://<frontend>.onrender.com` loads in browser
-- [ ] "Backend status: healthy" shown (not "unreachable")
-- [ ] DevTools → Network: `/healthz` fetch goes to Render backend URL (not localhost)
-- [ ] DevTools → Console: no CORS errors
-- [ ] `https://<backend>.onrender.com/healthz` → `{"status":"healthy"}`
-- [ ] Swagger UI (`/docs`) works in browser — disable ad/content blockers (e.g. uBlock Origin) if fetch requests fail
+- [x] `https://home-medicine-cabinet.onrender.com/` loads in browser
+- [x] "Backend status: healthy" shown (not "unreachable")
+- [x] DevTools → Network: `/v1/health/` fetch goes to Render backend URL (not localhost)
+- [x] DevTools → Console: no CORS errors
+- [x] `https://home-medicine-cabinet-backend.onrender.com/v1/health/` → `{"status":"healthy"}`
+- [x] Swagger UI (`/docs`) works in browser — disable ad/content blockers (e.g. uBlock Origin) if fetch requests fail
 
 ---
 
@@ -201,3 +215,5 @@ When Supabase credentials need to be rotated: update the three env vars in the R
 | `frontend/.env.local` | ✅ Present locally (not committed) |
 | `render.yaml` | ✅ Done |
 | `.github/workflows/deploy.yml` | ⏭ Skipped (CI/CD deferred) |
+| Render CLI | Install & authenticate before Phase 4 |
+| GitHub CLI | Install & authenticate before Phase 4 |
