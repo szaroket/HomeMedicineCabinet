@@ -526,28 +526,28 @@ in Supabase before marking F-03 done.
 
 #### Automated
 
-- [x] 1.1 `uv run alembic upgrade head` completes cleanly against Supabase
-- [x] 1.2 `uv run alembic downgrade -1` rolls back cleanly
-- [x] 1.3 `uv run alembic upgrade head` succeeds again (idempotency)
-- [x] 1.4 `MedicationRegistry` imports without error
-- [x] 1.5 `uv run ruff check . && uv run ruff format --check .` passes
+- [x] 1.1 `uv run alembic upgrade head` completes cleanly against Supabase — 2c2736c
+- [x] 1.2 `uv run alembic downgrade -1` rolls back cleanly — 2c2736c
+- [x] 1.3 `uv run alembic upgrade head` succeeds again (idempotency) — 2c2736c
+- [x] 1.4 `MedicationRegistry` imports without error — 2c2736c
+- [x] 1.5 `uv run ruff check . && uv run ruff format --check .` passes — 2c2736c
 
 #### Manual
 
-- [x] 1.6 New columns present, `tablet_count`/`producer` gone in Supabase
-- [x] 1.7 `search_vector` tsvector column + GIN index still present
-- [x] 1.8 `cabinet_entries` FK to `medication_registry` intact
+- [x] 1.6 New columns present, `tablet_count`/`producer` gone in Supabase — 2c2736c
+- [x] 1.7 `search_vector` tsvector column + GIN index still present — 2c2736c
+- [x] 1.8 `cabinet_entries` FK to `medication_registry` intact — 2c2736c
 
 ### Phase 2: XML Parser (pure, fixture-tested)
 
 #### Automated
 
-- [ ] 2.1 `uv run pytest tests/test_registry_parser.py -v` passes
-- [ ] 2.2 `uv run ruff check . && uv run ruff format --check .` passes
+- [x] 2.1 `uv run pytest tests/test_registry_parser.py -v` passes
+- [x] 2.2 `uv run ruff check . && uv run ruff format --check .` passes
 
 #### Manual
 
-- [ ] 2.3 Spot-read yielded dicts confirm field mapping matches the XML
+- [x] 2.3 Spot-read yielded dicts confirm field mapping matches the XML
 
 ### Phase 3: Loader + CLI
 
