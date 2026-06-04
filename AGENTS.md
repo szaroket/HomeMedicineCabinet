@@ -16,18 +16,23 @@ Home Medicine Cabinet — a Polish-language web app for tracking medication inve
 backend/
   app/
     main.py          sole entry point: create_app() factory, middleware, uvicorn __main__
-    v1/
-      router.py      aggregates all domain routers under prefix /v1
-      health/
-        router.py    GET /v1/health/ — router layer only
-      auth/
-        router.py    route definitions only
-        service.py   business logic
-        crud.py      database operations
-      medicines/
-        router.py
-        service.py
-        crud.py
+    core/
+      config.py      pydantic-settings — single source of truth for env config
+    db/
+      connector.py   async engine, session factory, get_session dependency, init_db
+    api/
+      v1/
+        router.py    aggregates all domain routers under prefix /api/v1
+        health/
+          router.py  GET /api/v1/health/ — router layer only
+        auth/
+          router.py  route definitions only
+          service.py business logic
+          crud.py    database operations
+        medicines/
+          router.py
+          service.py
+          crud.py
   pyproject.toml     dependencies and uv config
 frontend/
   src/
@@ -47,13 +52,15 @@ See `docs/reference/backend-structure.md` for backend directory rules, layer res
 ### Backend layer rules
 
 - `app/main.py` — app factory and middleware only. No domain routes.
-- `app/v1/router.py` — imports and includes every domain router. No route logic here.
-- Domain directories live under `app/v1/<domain>/`. URL paths mirror the directory path: `app/v1/<domain>/<endpoint>` → `/v1/<domain>/<endpoint>`.
+- `app/core/config.py` — pydantic-settings `Settings` singleton; import `settings` from here everywhere.
+- `app/db/connector.py` — async engine, session factory, `get_session` dependency, `init_db`.
+- `app/api/v1/router.py` — imports and includes every domain router. No route logic here.
+- Domain directories live under `app/api/v1/<domain>/`. URL paths mirror the directory path: `app/api/v1/<domain>/<endpoint>` → `/api/v1/<domain>/<endpoint>`.
 - `router.py` — route decorators only; calls service functions.
 - `service.py` — business logic and orchestration; calls crud functions.
 - `crud.py` — raw database operations; no business logic.
 - Domains with no DB access (e.g. `health/`) may omit `service.py` and `crud.py`.
-- To add a new domain: create `app/v1/<domain>/` with `__init__.py`, `router.py`, `service.py`, `crud.py`; import and include the router in `app/v1/router.py`.
+- To add a new domain: create `app/api/v1/<domain>/` with `__init__.py`, `router.py`, `service.py`, `crud.py`; import and include the router in `app/api/v1/router.py`.
 
 ## Build, Test, and Dev Commands
 
@@ -73,7 +80,7 @@ See `docs/reference/backend-structure.md` for backend directory rules, layer res
 
 ## Coding Style & Naming Conventions
 
-Backend: Python 3.13, enforced by ruff v0.11.12 (lint + format). See `.pre-commit-config.yaml` for active rule set. Place SQLModel table models in `backend/app/v1/<domain>/models.py` (one file per domain). Place FastAPI routers in `backend/app/v1/<domain>/router.py`; router files use `snake_case`.
+Backend: Python 3.13, enforced by ruff v0.11.12 (lint + format). See `.pre-commit-config.yaml` for active rule set. Place SQLModel table models in `backend/app/api/v1/<domain>/models.py` (one file per domain). Place FastAPI routers in `backend/app/api/v1/<domain>/router.py`; router files use `snake_case`.
 
 Frontend: TypeScript strict mode (`frontend/tsconfig.app.json`). Components `PascalCase.tsx`, utilities `camelCase.ts`. ESLint enforces `react-hooks` and `react-refresh` rules; Prettier formats `src/**/*.{ts,tsx,css}`.
 

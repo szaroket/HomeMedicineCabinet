@@ -412,9 +412,9 @@ Create `backend/tests/` with a `conftest.py` that provides a test DB session, an
 
 #### Automated
 
-- [ ] 1.1 `uv sync` completes without dependency conflicts
-- [ ] 1.2 `uv run uvicorn app.main:app` starts without import errors
-- [ ] 1.3 `uv run ruff check . && uv run ruff format --check .` passes
+- [x] 1.1 `uv sync` completes without dependency conflicts
+- [x] 1.2 `uv run uvicorn app.main:app` starts without import errors
+- [x] 1.3 `uv run ruff check . && uv run ruff format --check .` passes
 
 #### Manual
 
@@ -425,8 +425,8 @@ Create `backend/tests/` with a `conftest.py` that provides a test DB session, an
 
 #### Automated
 
-- [ ] 2.1 `uv run ruff check . && uv run ruff format --check .` passes
-- [ ] 2.2 All four model classes importable via python -c
+- [x] 2.1 `uv run ruff check . && uv run ruff format --check .` passes
+- [x] 2.2 All four model classes importable via python -c
 
 #### Manual
 
