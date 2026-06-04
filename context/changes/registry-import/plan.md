@@ -542,25 +542,25 @@ in Supabase before marking F-03 done.
 
 #### Automated
 
-- [x] 2.1 `uv run pytest tests/test_registry_parser.py -v` passes
-- [x] 2.2 `uv run ruff check . && uv run ruff format --check .` passes
+- [x] 2.1 `uv run pytest tests/test_registry_parser.py -v` passes — 996c968
+- [x] 2.2 `uv run ruff check . && uv run ruff format --check .` passes — 996c968
 
 #### Manual
 
-- [x] 2.3 Spot-read yielded dicts confirm field mapping matches the XML
+- [x] 2.3 Spot-read yielded dicts confirm field mapping matches the XML — 996c968
 
 ### Phase 3: Loader + CLI
 
 #### Automated
 
-- [ ] 3.1 `--dry-run` over the fixture prints expected counts and exits 0
-- [ ] 3.2 `uv run ruff check . && uv run ruff format --check .` passes
-- [ ] 3.3 loader + parser modules import without error
+- [x] 3.1 `--dry-run` over the fixture prints expected counts and exits 0
+- [x] 3.2 `uv run ruff check . && uv run ruff format --check .` passes
+- [x] 3.3 loader + parser modules import without error
 
 #### Manual
 
-- [ ] 3.4 `--dry-run` sample output looks correct
-- [ ] 3.5 Run without `--force` against non-empty cabinet aborts clearly
+- [x] 3.4 `--dry-run` sample output looks correct
+- [x] 3.5 Run without `--force` against non-empty cabinet aborts clearly
 
 ### Phase 4: Production Import Run + Verification
 
