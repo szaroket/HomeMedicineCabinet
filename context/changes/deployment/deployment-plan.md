@@ -52,7 +52,7 @@ services:
     runtime: python
     rootDir: backend
     buildCommand: pip install uv && uv sync --frozen
-    startCommand: uv run --active uvicorn main:app --host 0.0.0.0 --port $PORT --proxy-headers
+    startCommand: uv run --active uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers
     healthCheckPath: /healthz
     envVars:
       - key: FRONTEND_URL
@@ -82,7 +82,7 @@ services:
 
 ## Phase 2: Local Verification (before committing)
 - [x] `cd backend && uv sync` — no lock file conflicts after pyproject.toml change
-- [x] `cd backend && uv run uvicorn main:app --host 0.0.0.0 --port 8000` — `/healthz` returns `{"status":"healthy"}`
+- [x] `cd backend && uv run uvicorn app.main:app --host 0.0.0.0 --port 8000` — `/v1/health/` returns `{"status":"healthy"}`
 - [x] `cd frontend && npm run build` — build succeeds (with `.env.local` present)
 - [x] `cd frontend && npm run dev` Frontend dev server + backend running — UI shows "healthy", no CORS errors in console
 - [x] `git status` — `frontend/.env.local` does NOT appear
@@ -116,7 +116,7 @@ Once the project finishes provisioning, collect the three values from **Project 
 Sign up at render.com with GitHub (free, no credit card). Connect the monorepo.
 
 ### 4.2 [HUMAN GATE] Create backend Web Service
-New → Web Service → select repo → Root Dir: `backend` → Runtime: Python 3 → Build: `pip install uv && uv sync --frozen` → Start: `uv run --active uvicorn main:app --host 0.0.0.0 --port $PORT --proxy-headers` → Instance: Free.
+New → Web Service → select repo → Root Dir: `backend` → Runtime: Python 3 → Build: `pip install uv && uv sync --frozen` → Start: `uv run --active uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers` → Instance: Free.
 
 Before saving, set env vars in the **Environment** section (use Supabase credentials from Phase 3.3):
 | Key | Value |
@@ -162,9 +162,9 @@ Deploys are triggered manually from the Render dashboard. Re-introduce this phas
 ## Phase 6: Post-Deploy Smoke Tests
 - [x] `https://home-medicine-cabinet.onrender.com/` loads in browser
 - [x] "Backend status: healthy" shown (not "unreachable")
-- [x] DevTools → Network: `/healthz` fetch goes to Render backend URL (not localhost)
+- [x] DevTools → Network: `/v1/health/` fetch goes to Render backend URL (not localhost)
 - [x] DevTools → Console: no CORS errors
-- [x] `https://home-medicine-cabinet-backend.onrender.com/healthz` → `{"status":"healthy"}`
+- [x] `https://home-medicine-cabinet-backend.onrender.com/v1/health/` → `{"status":"healthy"}`
 - [x] Swagger UI (`/docs`) works in browser — disable ad/content blockers (e.g. uBlock Origin) if fetch requests fail
 
 ---
