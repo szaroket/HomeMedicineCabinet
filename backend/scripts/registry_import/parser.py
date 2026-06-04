@@ -8,10 +8,13 @@ single row — GTIN is informational for the MVP. Nothing here touches the DB or
 the network; every function is unit-testable against a committed XML fixture.
 """
 
+import logging
 import xml.etree.ElementTree as ET
 from collections.abc import Iterator
 from decimal import Decimal, InvalidOperation
 from xml.etree.ElementTree import Element
+
+logger = logging.getLogger(__name__)
 
 # The export's default namespace; ElementTree reports tags fully qualified.
 NS = "{http://rejestry.ezdrowie.gov.pl/rpl/eksport-danych-v6.0.0}"
@@ -108,6 +111,12 @@ def _rows_for_product(product: Element) -> Iterator[dict]:
         "leaflet_url": _clean(product.get("ulotka")),
         "specification_url": _clean(product.get("charakterystyka")),
     }
+    if base["name"] is None:
+        logger.warning(
+            "Skipping product %s: missing nazwaProduktu (name)",
+            base["source_product_id"],
+        )
+        return
     seen: set[tuple[Decimal | None, str | None]] = set()
     for opakowanie in product.findall(f"{NS}opakowania/{NS}opakowanie"):
         if opakowanie.get("skasowane") == "TAK":
@@ -141,6 +150,13 @@ def parse_registry(source) -> Iterator[dict]:
     the hundreds-of-MB production file. Products whose ``rodzajPreparatu`` is
     not ``ludzki`` (human) are skipped; withdrawn packages (``skasowane="TAK"``)
     are skipped inside ``_rows_for_product``.
+
+    Security note: stdlib ElementTree never resolves external entities, so there
+    is no XXE file-read/SSRF here. The only residual XML risk is an internal
+    entity-expansion (billion-laughs) DoS, which we accept: the source is a
+    trusted government HTTPS endpoint and this script is hand-run by an operator
+    on a one-off basis. Swap to ``defusedxml.ElementTree.iterparse`` if this ever
+    parses untrusted input.
     """
     context = ET.iterparse(source, events=("start", "end"))
     _event, root = next(context)  # capture the <produktyLecznicze> root

@@ -41,8 +41,9 @@ async def load_registry(
             if cabinet_rows:
                 raise RuntimeError(
                     f"Refusing to reload: cabinet_entries has {cabinet_rows} row(s) "
-                    "referencing medication_registry. Clearing the registry would "
-                    "orphan those FKs. Re-run with force=True to override."
+                    "referencing medication_registry. The restrict-default FK would "
+                    "reject the registry DELETE, so force=True would fail loudly at "
+                    "the DB. Clear cabinet_entries first if a reload is intended."
                 )
 
         await session.execute(sa.delete(MedicationRegistry))

@@ -13,8 +13,9 @@ a native PowerShell terminal (see context/foundation/lessons.md, L-001).
 import argparse
 import asyncio
 import logging
-import os
 import tempfile
+import time
+from pathlib import Path
 
 import httpx
 
@@ -31,6 +32,13 @@ logger = logging.getLogger("registry_import")
 # Keys surfaced in --dry-run sample output (the most telling fields).
 _SAMPLE_KEYS = ("name", "capacity", "capacity_unit", "is_tablet_based", "gtin")
 
+# Download is the long network-bound step. A finite timeout prevents an
+# indefinite hang on a stalled server; a few retries ride out transient stalls
+# so the operator need not re-run the whole command.
+_DOWNLOAD_TIMEOUT = httpx.Timeout(connect=30, read=300, write=30, pool=30)
+_DOWNLOAD_MAX_ATTEMPTS = 3
+_DOWNLOAD_RETRY_DELAY = 5  # seconds
+
 
 def _is_url(source: str) -> bool:
     return source.startswith(("http://", "https://"))
@@ -45,10 +53,29 @@ def _download(url: str) -> str:
     """
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".xml")
     try:
-        with httpx.stream("GET", url, timeout=None, follow_redirects=True) as resp:
-            resp.raise_for_status()
-            for chunk in resp.iter_bytes():
-                tmp.write(chunk)
+        for attempt in range(1, _DOWNLOAD_MAX_ATTEMPTS + 1):
+            try:
+                # Discard any partial bytes from a failed earlier attempt.
+                tmp.seek(0)
+                tmp.truncate()
+                with httpx.stream(
+                    "GET", url, timeout=_DOWNLOAD_TIMEOUT, follow_redirects=True
+                ) as resp:
+                    resp.raise_for_status()
+                    for chunk in resp.iter_bytes():
+                        tmp.write(chunk)
+                break
+            except (httpx.TimeoutException, httpx.TransportError) as exc:
+                if attempt == _DOWNLOAD_MAX_ATTEMPTS:
+                    raise
+                logger.warning(
+                    "Download attempt %d/%d failed: %s — retrying in %ds",
+                    attempt,
+                    _DOWNLOAD_MAX_ATTEMPTS,
+                    exc,
+                    _DOWNLOAD_RETRY_DELAY,
+                )
+                time.sleep(_DOWNLOAD_RETRY_DELAY)
     finally:
         tmp.close()
     return tmp.name
@@ -116,7 +143,12 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     finally:
         if tmp_path is not None:
-            os.unlink(tmp_path)
+            # Best-effort cleanup: never let a cleanup error mask an in-flight
+            # exception from the import body above.
+            try:
+                Path(tmp_path).unlink(missing_ok=True)
+            except OSError as exc:
+                logger.warning("Could not remove temp file %s: %s", tmp_path, exc)
 
 
 if __name__ == "__main__":
