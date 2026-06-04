@@ -1,6 +1,6 @@
 # Repository Guidelines
 
-Home Medicine Cabinet — a Polish-language web app for tracking medication inventory. Monorepo: `backend/` (FastAPI + Python 3.14, uv) and `frontend/` (Vite + React 19 + TypeScript, npm).
+Home Medicine Cabinet — a Polish-language web app for tracking medication inventory. Monorepo: `backend/` (FastAPI + Python 3.13, uv) and `frontend/` (Vite + React 19 + TypeScript, npm).
 
 ## Hard Rules
 
@@ -14,25 +14,51 @@ Home Medicine Cabinet — a Polish-language web app for tracking medication inve
 
 ```
 backend/
-  main.py          entry point
-  models/          SQLModel table models, one file per domain entity
-  routers/         FastAPI routers, one file per feature area
-  pyproject.toml   dependencies and uv config
+  app/
+    main.py          sole entry point: create_app() factory, middleware, uvicorn __main__
+    v1/
+      router.py      aggregates all domain routers under prefix /v1
+      health/
+        router.py    GET /v1/health/ — router layer only
+      auth/
+        router.py    route definitions only
+        service.py   business logic
+        crud.py      database operations
+      medicines/
+        router.py
+        service.py
+        crud.py
+  pyproject.toml     dependencies and uv config
 frontend/
   src/
-    components/    React components (PascalCase.tsx)
-    pages/         page-level components
-    hooks/         custom React hooks
+    components/      React components (PascalCase.tsx)
+    pages/           page-level components
+    hooks/           custom React hooks
   vite.config.ts
-context/           project documentation — PRD, shape-notes, tech-stack hand-off
+context/             project documentation — PRD, shape-notes, tech-stack hand-off
+docs/
+  reference/
+    backend-structure.md   backend layer rules and conventions for adding new domains
 ```
 
-See `@context/foundation/prd.md` for full functional requirements and business logic.
+See `context/foundation/prd.md` for full functional requirements and business logic.
+See `docs/reference/backend-structure.md` for backend directory rules, layer responsibilities, and instructions for adding new domains or API versions.
+
+### Backend layer rules
+
+- `app/main.py` — app factory and middleware only. No domain routes.
+- `app/v1/router.py` — imports and includes every domain router. No route logic here.
+- Domain directories live under `app/v1/<domain>/`. URL paths mirror the directory path: `app/v1/<domain>/<endpoint>` → `/v1/<domain>/<endpoint>`.
+- `router.py` — route decorators only; calls service functions.
+- `service.py` — business logic and orchestration; calls crud functions.
+- `crud.py` — raw database operations; no business logic.
+- Domains with no DB access (e.g. `health/`) may omit `service.py` and `crud.py`.
+- To add a new domain: create `app/v1/<domain>/` with `__init__.py`, `router.py`, `service.py`, `crud.py`; import and include the router in `app/v1/router.py`.
 
 ## Build, Test, and Dev Commands
 
 **Backend** (run from `backend/`):
-- `uv run uvicorn main:app --reload` — start dev server
+- `uv run uvicorn app.main:app --reload` — start dev server
 - `uv run pytest` — run all backend tests (pytest + pytest-asyncio + httpx)
 - `uv run ruff check . && uv run ruff format --check .` — lint and format check
 
@@ -47,9 +73,9 @@ See `@context/foundation/prd.md` for full functional requirements and business l
 
 ## Coding Style & Naming Conventions
 
-Backend: Python 3.14, enforced by ruff v0.11.12 (lint + format). See `@.pre-commit-config.yaml` for active rule set. Place SQLModel table models in `backend/models/`, one file per domain entity (`medication.py`, `user.py`, etc.). Place FastAPI routers in `backend/routers/`, one file per feature area; router files use `snake_case`.
+Backend: Python 3.13, enforced by ruff v0.11.12 (lint + format). See `.pre-commit-config.yaml` for active rule set. Place SQLModel table models in `backend/app/v1/<domain>/models.py` (one file per domain). Place FastAPI routers in `backend/app/v1/<domain>/router.py`; router files use `snake_case`.
 
-Frontend: TypeScript strict mode (`@frontend/tsconfig.app.json`). Components `PascalCase.tsx`, utilities `camelCase.ts`. ESLint enforces `react-hooks` and `react-refresh` rules; Prettier formats `src/**/*.{ts,tsx,css}`.
+Frontend: TypeScript strict mode (`frontend/tsconfig.app.json`). Components `PascalCase.tsx`, utilities `camelCase.ts`. ESLint enforces `react-hooks` and `react-refresh` rules; Prettier formats `src/**/*.{ts,tsx,css}`.
 
 ## Testing Guidelines
 
