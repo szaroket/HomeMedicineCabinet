@@ -437,23 +437,23 @@ Create `backend/tests/` with a `conftest.py` that provides a test DB session, an
 
 #### Automated
 
-- [x] 3.1 `uv run alembic upgrade head` completes without error
-- [x] 3.2 `uv run alembic downgrade -1` rolls back cleanly
-- [x] 3.3 `uv run alembic upgrade head` succeeds again (idempotency)
+- [x] 3.1 `uv run alembic upgrade head` completes without error — 33a9adc
+- [x] 3.2 `uv run alembic downgrade -1` rolls back cleanly — 33a9adc
+- [x] 3.3 `uv run alembic upgrade head` succeeds again (idempotency) — 33a9adc
 
 #### Manual
 
-- [x] 3.4 Four tables visible in Supabase dashboard
-- [x] 3.5 `search_vector` tsvector column and GIN index visible
-- [x] 3.6 Both CHECK constraints visible on `cabinet_entries`
+- [x] 3.4 Four tables visible in Supabase dashboard — 33a9adc
+- [x] 3.5 `search_vector` tsvector column and GIN index visible — 33a9adc
+- [x] 3.6 Both CHECK constraints visible on `cabinet_entries` — 33a9adc
 
 ### Phase 4: Smoke Test
 
 #### Automated
 
-- [ ] 4.1 `uv run pytest backend/tests/test_db.py -v` passes
-- [ ] 4.2 `uv run ruff check . && uv run ruff format --check .` passes
+- [x] 4.1 `uv run pytest backend/tests/test_db.py -v` passes
+- [x] 4.2 `uv run ruff check . && uv run ruff format --check .` passes
 
 #### Manual
 
-- [ ] 4.3 Test output shows connection to correct Supabase DB host
+- [x] 4.3 Test output shows connection to correct Supabase DB host
