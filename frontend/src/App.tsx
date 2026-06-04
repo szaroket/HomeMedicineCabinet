@@ -10,7 +10,7 @@ function App() {
 
   useEffect(() => {
     fetch(
-      `${import.meta.env.VITE_API_URL ?? "http://localhost:8000"}/v1/health/`,
+      `${import.meta.env.VITE_API_URL ?? "http://localhost:8000"}/api/v1/health/`,
     )
       .then((res) => res.json())
       .then((data: { status: string }) => setBackendStatus(data.status))
