@@ -566,12 +566,12 @@ in Supabase before marking F-03 done.
 
 #### Automated
 
-- [x] 4.1 Script exits 0 and logs a non-zero inserted-row count
+- [x] 4.1 Script exits 0 and logs a non-zero inserted-row count — 34189ba
 
 #### Manual
 
-- [x] 4.2 `count(*)` returns a plausible large number
-- [x] 4.3 Apap spot-check: one row per non-withdrawn tablet package, correct capacity
-- [x] 4.4 Tablet vs syrup/cream `is_tablet_based` correct
-- [x] 4.5 Leaflet/specification URLs resolve
-- [x] 4.6 tsvector/GIN search returns matches for new rows
+- [x] 4.2 `count(*)` returns a plausible large number — 34189ba
+- [x] 4.3 Apap spot-check: one row per non-withdrawn tablet package, correct capacity — 34189ba
+- [x] 4.4 Tablet vs syrup/cream `is_tablet_based` correct — 34189ba
+- [x] 4.5 Leaflet/specification URLs resolve — 34189ba
+- [x] 4.6 tsvector/GIN search returns matches for new rows — 34189ba
