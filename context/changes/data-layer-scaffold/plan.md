@@ -451,9 +451,9 @@ Create `backend/tests/` with a `conftest.py` that provides a test DB session, an
 
 #### Automated
 
-- [x] 4.1 `uv run pytest backend/tests/test_db.py -v` passes
-- [x] 4.2 `uv run ruff check . && uv run ruff format --check .` passes
+- [x] 4.1 `uv run pytest backend/tests/test_db.py -v` passes — 589d27c
+- [x] 4.2 `uv run ruff check . && uv run ruff format --check .` passes — 589d27c
 
 #### Manual
 
-- [x] 4.3 Test output shows connection to correct Supabase DB host
+- [x] 4.3 Test output shows connection to correct Supabase DB host — 589d27c
