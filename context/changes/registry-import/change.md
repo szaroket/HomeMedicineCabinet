@@ -2,7 +2,7 @@
 change_id: registry-import
 roadmap_id: F-03
 title: "Registry import: Polish medicines XML → PostgreSQL"
-status: implemented
+status: impl_reviewed
 created: 2026-06-04
 updated: 2026-06-04
 ---
