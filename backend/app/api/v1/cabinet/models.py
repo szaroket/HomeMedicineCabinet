@@ -1,6 +1,7 @@
 import uuid
 from datetime import date, datetime, timezone
 
+import sqlalchemy as sa
 from sqlmodel import Field, SQLModel
 
 
@@ -16,7 +17,7 @@ class CabinetEntry(SQLModel, table=True):
     is_important: bool = Field(default=False)
     is_used: bool = Field(default=False)
     dosage_times: int | None = None
-    dosage_period: str | None = None
+    dosage_period: str | None = Field(default=None, sa_type=sa.Text())
     dosage_amount: int | None = None
     dosage_start_date: date | None = None
     dosage_end_date: date | None = None

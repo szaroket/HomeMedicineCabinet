@@ -425,8 +425,8 @@ Create `backend/tests/` with a `conftest.py` that provides a test DB session, an
 
 #### Automated
 
-- [x] 2.1 `uv run ruff check . && uv run ruff format --check .` passes
-- [x] 2.2 All four model classes importable via python -c
+- [x] 2.1 `uv run ruff check . && uv run ruff format --check .` passes — c748dc2
+- [x] 2.2 All four model classes importable via python -c — c748dc2
 
 #### Manual
 
@@ -437,15 +437,15 @@ Create `backend/tests/` with a `conftest.py` that provides a test DB session, an
 
 #### Automated
 
-- [ ] 3.1 `uv run alembic upgrade head` completes without error
-- [ ] 3.2 `uv run alembic downgrade -1` rolls back cleanly
-- [ ] 3.3 `uv run alembic upgrade head` succeeds again (idempotency)
+- [x] 3.1 `uv run alembic upgrade head` completes without error
+- [x] 3.2 `uv run alembic downgrade -1` rolls back cleanly
+- [x] 3.3 `uv run alembic upgrade head` succeeds again (idempotency)
 
 #### Manual
 
-- [ ] 3.4 Four tables visible in Supabase dashboard
-- [ ] 3.5 `search_vector` tsvector column and GIN index visible
-- [ ] 3.6 Both CHECK constraints visible on `cabinet_entries`
+- [x] 3.4 Four tables visible in Supabase dashboard
+- [x] 3.5 `search_vector` tsvector column and GIN index visible
+- [x] 3.6 Both CHECK constraints visible on `cabinet_entries`
 
 ### Phase 4: Smoke Test
 
