@@ -22,6 +22,16 @@ built until the registry table holds real, queryable data. The F-02 schema's
 single lossy `tablet_count` column can't represent a product's many package sizes;
 reshaping to a package-grain table that mirrors the XML fixes this at the root.
 
+## Scope constraints
+
+- **Human-use medicines only** — only products whose `rodzajPreparatu` is `ludzki`
+  (human) are imported; veterinary products are skipped (`parser.py`, covered by
+  the `weterynaryjny` fixture row). Animal/veterinary medicines are out of MVP
+  scope (PRD §Non-Goals).
+- **Import once, no updates** — registry records are created once at MVP via this
+  one-off script and are not updated thereafter. Incremental/periodic refresh is
+  deferred to v2 (PRD §Non-Goals; roadmap Parking Lot "Daily dataset update").
+
 ## Links
 
 - Roadmap entry: `context/foundation/roadmap.md` § F-03

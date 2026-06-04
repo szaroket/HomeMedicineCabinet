@@ -185,6 +185,8 @@ The system classifies each cabinet entry and proactively alerts the user before 
 - No per-entry minimum package thresholds for important medications — one global minimum applies to all in MVP
 - No variable dosing schedules for "used" medications — fixed frequency with per-day or per-week period only in MVP; as-needed (PRN) dosing not supported
 - No grouped cabinet view — medications are displayed as a flat list of entries (drug + tablet count + expiry date); grouping by medication name with per-variant breakdown deferred to v2
+- No registry data updates — the Polish-approved medications registry is stored in the database and imported once at MVP; each record is created once and not updated thereafter. Periodic/incremental refresh of registry records deferred to v2
+- No veterinary medications — only medicines approved for human use are inserted into the registry database; animal/veterinary medicines are out of scope
 
 ## Open Questions
 
