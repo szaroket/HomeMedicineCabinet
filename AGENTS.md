@@ -82,6 +82,8 @@ See `docs/reference/backend-structure.md` for backend directory rules, layer res
 
 Backend: Python 3.13, enforced by ruff v0.11.12 (lint + format). See `.pre-commit-config.yaml` for active rule set. Place SQLModel table models in `backend/app/api/v1/<domain>/models.py` (one file per domain). Place FastAPI routers in `backend/app/api/v1/<domain>/router.py`; router files use `snake_case`.
 
+Docstrings follow the **Google style** convention (`Args:`/`Returns:`/`Raises:` sections), enforced by ruff's pydocstyle rules (`convention = "google"` in `backend/pyproject.toml`). Docstrings are not required everywhere (`D1` rules are ignored), but any docstring you write must follow Google formatting. Alembic migrations under `backend/migrations/` are exempt.
+
 Frontend: TypeScript strict mode (`frontend/tsconfig.app.json`). Components `PascalCase.tsx`, utilities `camelCase.ts`. ESLint enforces `react-hooks` and `react-refresh` rules; Prettier formats `src/**/*.{ts,tsx,css}`.
 
 ## Testing Guidelines
