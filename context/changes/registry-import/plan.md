@@ -553,25 +553,25 @@ in Supabase before marking F-03 done.
 
 #### Automated
 
-- [x] 3.1 `--dry-run` over the fixture prints expected counts and exits 0
-- [x] 3.2 `uv run ruff check . && uv run ruff format --check .` passes
-- [x] 3.3 loader + parser modules import without error
+- [x] 3.1 `--dry-run` over the fixture prints expected counts and exits 0 — 219f410
+- [x] 3.2 `uv run ruff check . && uv run ruff format --check .` passes — 219f410
+- [x] 3.3 loader + parser modules import without error — 219f410
 
 #### Manual
 
-- [x] 3.4 `--dry-run` sample output looks correct
-- [x] 3.5 Run without `--force` against non-empty cabinet aborts clearly
+- [x] 3.4 `--dry-run` sample output looks correct — 219f410
+- [x] 3.5 Run without `--force` against non-empty cabinet aborts clearly — 219f410
 
 ### Phase 4: Production Import Run + Verification
 
 #### Automated
 
-- [ ] 4.1 Script exits 0 and logs a non-zero inserted-row count
+- [x] 4.1 Script exits 0 and logs a non-zero inserted-row count
 
 #### Manual
 
-- [ ] 4.2 `count(*)` returns a plausible large number
-- [ ] 4.3 Apap spot-check: one row per non-withdrawn tablet package, correct capacity
-- [ ] 4.4 Tablet vs syrup/cream `is_tablet_based` correct
-- [ ] 4.5 Leaflet/specification URLs resolve
-- [ ] 4.6 tsvector/GIN search returns matches for new rows
+- [x] 4.2 `count(*)` returns a plausible large number
+- [x] 4.3 Apap spot-check: one row per non-withdrawn tablet package, correct capacity
+- [x] 4.4 Tablet vs syrup/cream `is_tablet_based` correct
+- [x] 4.5 Leaflet/specification URLs resolve
+- [x] 4.6 tsvector/GIN search returns matches for new rows
