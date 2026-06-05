@@ -4,7 +4,7 @@
 - **Plan**: context/changes/auth-scaffold/plan.md
 - **Mode**: Deep
 - **Date**: 2026-06-05
-- **Verdict**: REVISE
+- **Verdict**: REVISE → SOUND (all 3 findings fixed in plan, 2026-06-05)
 - **Findings**: 0 critical · 2 warnings · 1 observation
 
 ## Verdicts
@@ -40,7 +40,7 @@
   - Tradeoff: agent can't self-verify Phase 2 (must hand commands to the user per L-001); tests are stateful and need cleanup.
   - Confidence: MED — works, but contradicts the "mock the Supabase client" framing and slows the implement loop.
   - Blind spot: concurrent test runs against shared rows are flaky.
-- **Decision**: PENDING
+- **Decision**: FIXED via Fix A — plan Phase 2 §5 now overrides `get_session` (AsyncMock), keeps the suite hermetic, and extends (not clobbers) the existing `conftest.py`; provisioning SQL moved to the Phase 2 manual gate.
 
 ### F2 — Phase 1 guard verification targets a route that doesn't exist yet
 
@@ -50,7 +50,7 @@
 - **Location**: Phase 1 §6 + Manual Verification 1.4 / 1.5
 - **Detail**: Phase 1 applies `dependencies=[Depends(get_current_user)]` to the medicines / cabinet / users routers — but all three are empty (`APIRouter(prefix=…)` with zero path operations; confirmed in code). FastAPI runs router-level dependencies only after a path matches, so a request to `/api/v1/medicines/` returns 404, not 401. The first route the guard actually protects is `GET /auth/me`, which lands in Phase 2. Result: the Phase 1 manual gates "invalid token → 401" (1.4) and "valid token passes" (1.5) are not testable at the Phase 1 boundary — the implementer hits 404 and either gets confused or marks a gate green that proved nothing.
 - **Fix**: Reword the Phase 1 manual gate to state that no protected route exists yet, and move the real-route 401/200 check to Phase 2 (after `/auth/me`), relying on the monkeypatched guard unit test for Phase 1 confidence. (Alternatively, pull `/auth/me` into Phase 1 so there's a live guarded route to curl — heavier reorder.)
-- **Decision**: PENDING
+- **Decision**: FIXED via Fix — Phase 1 Manual Verification + Progress 1.4/1.5 reworded (no live guarded route yet; confidence from guard unit test); real-route 401/200 check added to Phase 2 Manual Verification + Progress 2.6.
 
 ### F3 — Access token in localStorage: XSS exposure not acknowledged
 
@@ -60,4 +60,4 @@
 - **Location**: Phase 3 §4 (Auth store) + brief "Key Decisions"
 - **Detail**: Storing the access JWT in localStorage is a deliberate, documented choice — but the plan pairs it with the security-careful httpOnly refresh-cookie design without noting that localStorage is readable by any injected script (XSS), which is exactly what httpOnly avoids for the refresh token. Worth one line so it's a known, accepted risk rather than an oversight.
 - **Fix**: Add a one-line note: access token in localStorage is XSS-exposed; mitigated by short token lifetime + strict input handling; revisit (in-memory + silent refresh) if the threat model tightens.
-- **Decision**: PENDING
+- **Decision**: FIXED via Fix — added a "Security note (accepted risk)" line to the Phase 3 §4 Auth store contract.

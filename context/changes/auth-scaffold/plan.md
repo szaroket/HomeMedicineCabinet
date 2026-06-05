@@ -138,8 +138,8 @@ claims = jwt.decode(
 
 #### Manual Verification
 
-- A hand-crafted invalid/expired token to a protected route returns 401.
-- A valid token (from a manual Supabase login) passes the guard.
+- **Note**: no guarded *route* exists yet at this boundary — the domain routers (medicines/cabinet/users) are empty (zero path operations), so FastAPI never reaches the router-level guard and a request returns 404, not 401. The real 401/200 route check moves to Phase 2 (after `GET /auth/me` exists). Phase 1 guard confidence comes from the monkeypatched guard unit test, not a live curl.
+- The guard unit test (missing/expired/wrong-audience → 401, valid → passes) is present and the guard is wired onto the three domain routers (code review of the `dependencies=[...]` constructor arg).
 - `/health` and `/auth/*` remain reachable without a token.
 
 **Implementation Note**: After automated verification passes, pause for manual confirmation before Phase 2.
@@ -198,11 +198,11 @@ Implement `register` / `login` / `logout` / `refresh` / `me` through router→se
 
 #### 5. Tests
 
-**File**: `backend/tests/test_auth.py` (new), `backend/tests/conftest.py` (new)
+**File**: `backend/tests/test_auth.py` (new), `backend/tests/conftest.py` (**extend — already exists** with a live-DB `db_session` fixture; do not overwrite it)
 
-**Intent**: Cover the security-critical guard and the endpoint contracts without hitting real Supabase.
+**Intent**: Cover the security-critical guard and the endpoint contracts **hermetically** — no live Supabase Auth and no live Postgres, so the suite runs from the agent's Bash tool (per lessons.md **L-001**, any TLS DB connection hard-aborts under Bash; the existing live-DB `db_session` fixture must NOT be in the auth-test path).
 
-**Contract**: `httpx.AsyncClient` against the app. Guard tests: missing token → 401, expired token → 401, wrong-audience → 401, valid token → passes (monkeypatch the JWKS/decode path). Endpoint tests: register/login return access token + set refresh cookie and call `provision_user`; refresh with/without cookie; logout clears cookie — all with the `supabase` client mocked. `conftest.py` provides the async client fixture and a mocked Supabase client.
+**Contract**: `httpx.AsyncClient` against the app. **DB isolation**: override the app's session dependency with `app.dependency_overrides[get_session] = lambda: <AsyncMock session>` so `provision_user` writes are asserted against the mock, never live Postgres (prefer mocking the session/crud over aiosqlite — aiosqlite won't honor the PG `ON CONFLICT` syntax). Guard tests: missing token → 401, expired token → 401, wrong-audience → 401, valid token → passes (monkeypatch the JWKS/decode path). Endpoint tests: register/login return access token + set refresh cookie and assert `provision_user` was called; refresh with/without cookie; logout clears cookie — all with the `supabase` client mocked. Add fixtures to the **existing** `conftest.py`: the async client fixture, the mocked Supabase client, and the `get_session` override teardown. The real provisioning SQL (`ON CONFLICT` against Postgres) is exercised by the Phase 2 **manual** gate (2.3, rows verified in the Supabase table editor), not the automated suite.
 
 ### Success Criteria
 
@@ -216,6 +216,7 @@ Implement `register` / `login` / `logout` / `refresh` / `me` through router→se
 - Against a live Supabase project: `register` creates a Supabase user, returns an access token, sets the refresh cookie, and inserts `users` + `user_preferences` rows (verify in Supabase table editor).
 - `login` then `GET /auth/refresh` (cookie present) returns a fresh access token.
 - `logout` clears the cookie; a subsequent refresh returns 401.
+- Now that `GET /auth/me` exists, the guard is verifiable on a live route: `curl` `/auth/me` with no/invalid token → 401; with a valid Bearer → 200. (This is the real-route check deferred from Phase 1.)
 
 **Implementation Note**: After automated verification passes, pause for manual confirmation before Phase 3.
 
@@ -269,6 +270,8 @@ function refreshOnce() {
 **Intent**: Hold session state (access token + user) with localStorage persistence for the token.
 
 **Contract**: A small store (React context or `useSyncExternalStore`/zustand-free context) exposing `token`, `user`, `setSession`, `clearSession`. Token read from / written to `localStorage` under a single key. `clearSession` removes the key.
+
+**Security note (accepted risk)**: the access JWT in `localStorage` is readable by any injected script (XSS) — the very exposure the httpOnly refresh cookie avoids. Accepted for this slice; mitigated by short access-token lifetime + strict input handling. Revisit (in-memory token + silent refresh) if the threat model tightens.
 
 #### 5. App composition root
 
@@ -424,8 +427,8 @@ Build the auth feature (RHF+zod login/register forms, logout control, typed api 
 
 #### Manual
 
-- [ ] 1.4 Invalid/expired token to a protected route returns 401
-- [ ] 1.5 Valid token passes the guard
+- [ ] 1.4 No guarded route exists yet — real 401/200 check deferred to Phase 2 (Phase 1 confidence via monkeypatched guard unit test)
+- [ ] 1.5 Guard unit test present + guard wired onto the three domain routers (code review of `dependencies=[...]`)
 - [ ] 1.6 `/health` and `/auth/*` reachable without a token
 
 ### Phase 2: Backend — Auth Endpoints & Provisioning
@@ -440,6 +443,7 @@ Build the auth feature (RHF+zod login/register forms, logout control, typed api 
 - [ ] 2.3 Register creates Supabase user + returns access token + sets refresh cookie + inserts `users`/`user_preferences`
 - [ ] 2.4 Login then `GET /auth/refresh` (cookie) returns a fresh access token
 - [ ] 2.5 Logout clears cookie; subsequent refresh returns 401
+- [ ] 2.6 `GET /auth/me`: no/invalid token → 401, valid Bearer → 200 (real-route guard check deferred from Phase 1)
 
 ### Phase 3: Frontend — Foundation
 
