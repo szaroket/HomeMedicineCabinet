@@ -28,8 +28,8 @@ A single adult can't reliably track their home medication inventory — what the
 | ID   | Change ID                    | Outcome (user can …)                                                                                                                                 | Prerequisites    | PRD refs                          | Status   |
 |------|------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|------------------|-----------------------------------|----------|
 | F-01 | auth-scaffold                | (foundation) auth entry screen in place; register/login/logout UI wired to Supabase Auth, plus FastAPI route protection                              | Supabase project created | FR-001, FR-002, Access Control | ready    |
-| F-02 | data-layer-scaffold          | (foundation) SQLModel models, Supabase PostgreSQL connection, and Alembic migration tooling ready                                                    | Supabase project created | FR-003, FR-010, NFR data-isolation | ready  |
-| F-03 | registry-import              | (foundation) Polish medicines XML dataset loaded into PostgreSQL and queryable for autocomplete                                                       | F-02             | FR-003, FR-011, FR-012            | proposed |
+| F-02 | data-layer-scaffold          | (foundation) SQLModel models, Supabase PostgreSQL connection, and Alembic migration tooling ready                                                    | Supabase project created | FR-003, FR-010, NFR data-isolation | implemented |
+| F-03 | registry-import              | (foundation) Polish medicines XML dataset loaded into PostgreSQL and queryable for autocomplete                                                       | F-02             | FR-003, FR-011, FR-012            | implemented |
 | F-04 | ci-cd-wiring                 | (foundation) GitHub Actions auto-deploys backend and frontend to Render on merge to main                                                             | —                | NFR persist-across-sessions       | ready    |
 | S-01 | add-medication-from-registry | add a medication by searching the Polish registry autocomplete, choosing tablet count, entering package count and expiry date; entry appears in cabinet with correct status; duplicate entries merge per dedup rule | F-01, F-02, F-03 | US-01, FR-003, FR-010, FR-022 | proposed |
 | S-02 | cabinet-view-and-search      | view cabinet as a filterable, sortable, paginated list; search by name or active ingredient; see producer, route of administration, and leaflet/specification links on each entry | S-01 | US-03, FR-004, FR-006, FR-011, FR-012 | proposed |
@@ -89,7 +89,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Schema design decisions here ripple through all slices — modelling the deduplication key (drug + tablet count + expiry date, FR-010) correctly up front avoids a disruptive migration mid-build. A full-text index on medication name and active ingredient should be included here to satisfy the < 500ms p95 autocomplete NFR before S-01 is built.
-- **Status:** ready
+- **Status:** implemented
 
 ### F-03: Registry import
 
@@ -104,7 +104,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
   - Does the XML dataset include all fields the PRD requires (tablet count per package, producer, route of administration, leaflet URL, specification URL)? — Owner: user. Block: no (developer has seen the dataset; field mapping is an implementation task, not an open question).
   - Dataset URL (public, no licence or registration required): `https://rejestry.ezdrowie.gov.pl/api/rpl/medicinal-products/public-pl-report/6.0.0/overall.xml` — large file, download only during the import script run.
 - **Risk:** XML field normalisation may be non-trivial (e.g. tablet count stored as a string, multiple route-of-administration values per entry). Resolving this during F-03 keeps S-01 clean and avoids patching the import after the add flow is built.
-- **Status:** proposed
+- **Status:** implemented
 
 ### F-04: CI/CD wiring
 
