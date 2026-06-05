@@ -35,11 +35,20 @@ backend/
           crud.py
   pyproject.toml     dependencies and uv config
 frontend/
+  e2e/               Playwright specs (*.spec.ts) + auth.setup.ts
   src/
-    components/      React components (PascalCase.tsx)
-    pages/           page-level components
-    hooks/           custom React hooks
-  vite.config.ts
+    app/             composition root: App, providers, router.tsx, layouts/
+    components/
+      ui/            shared, domain-agnostic primitives (button, input, modal)
+      layout/        shared composite layout pieces
+    features/        one folder per domain feature; each owns its slice
+      <feature>/     components/ hooks/ api/ schemas/ types.ts (+ store.ts if needed)
+    lib/             configured third-party wrappers: api-client, query-client, utils (cn)
+    hooks/           generic shared hooks only
+    types/           genuinely cross-feature types only
+    utils/           shared pure helpers
+    test/setup.ts    Vitest setup (jest-dom, cleanup)
+  vite.config.ts     Vite + @tailwindcss/vite + Vitest (test block) + @/ alias
 context/             project documentation — PRD, shape-notes, tech-stack hand-off
 docs/
   reference/
@@ -48,6 +57,7 @@ docs/
 
 See `context/foundation/prd.md` for full functional requirements and business logic.
 See `docs/reference/backend-structure.md` for backend directory rules, layer responsibilities, and instructions for adding new domains or API versions.
+See `docs/reference/frontend-structure.md` for frontend directory rules, the feature-based layout, and instructions for adding new features.
 
 ### Backend layer rules
 
@@ -61,6 +71,16 @@ See `docs/reference/backend-structure.md` for backend directory rules, layer res
 - `crud.py` — raw database operations; no business logic.
 - Domains with no DB access (e.g. `health/`) may omit `service.py` and `crud.py`.
 - To add a new domain: create `app/api/v1/<domain>/` with `__init__.py`, `router.py`, `service.py`, `crud.py`; import and include the router in `app/api/v1/router.py`.
+
+### Frontend structure rules
+
+- **Feature-based layout**: most code lives in `src/features/<feature>/`. A feature owns its `components/`, `hooks/`, `api/` (typed fetchers + TanStack Query hooks + query-key factory), `schemas/` (zod), and `types.ts`. Create feature folders **just-in-time** per roadmap slice — do not scaffold all features up front, and do not create empty `api/`/`schemas/` until needed.
+- **Shared layer is thin**: only genuinely cross-feature code goes in top-level `components/`, `hooks/`, `types/`, `utils/`, `lib/`. Promote feature code to shared only when a second feature needs it ("colocate first, extract later"). Domain-agnostic UI primitives live in `components/ui/`; anything that knows the domain stays in its feature.
+- **Composition at `app/`**: routing, providers, and layouts live in `src/app/`. Compose features there; avoid cross-feature imports.
+- **No barrel files**: import directly via the `@/*` path alias (configured in `tsconfig.app.json` + `vite.config.ts`). Avoid `index.ts` re-exports — they hurt Vite tree-shaking and hide circular dependencies.
+- **Data access**: FastAPI is the sole backend client — the frontend never calls Supabase/DB directly. One `lib/api-client.ts` wraps `${VITE_API_URL}/api/v1/...` and attaches `Authorization: Bearer <jwt>`; per-feature `api/` functions are the typed REST contract, Query hooks are the cache layer.
+- **Tailwind v4**: the CSS entry is `src/index.css` (`@import "tailwindcss"` + an `@theme` token block — config lives in CSS). The `cn()` helper (clsx + tailwind-merge) lives in `lib/utils.ts`.
+- Full rules and recommended tree: `docs/reference/frontend-structure.md`. Rationale, paradigm comparison, and migration path: `context/changes/frontend-structure/research.md`.
 
 ## Build, Test, and Dev Commands
 
@@ -82,7 +102,9 @@ See `docs/reference/backend-structure.md` for backend directory rules, layer res
 
 Backend: Python 3.13, enforced by ruff v0.11.12 (lint + format). See `.pre-commit-config.yaml` for active rule set. Place SQLModel table models in `backend/app/api/v1/<domain>/models.py` (one file per domain). Place FastAPI routers in `backend/app/api/v1/<domain>/router.py`; router files use `snake_case`.
 
-Frontend: TypeScript strict mode (`frontend/tsconfig.app.json`). Components `PascalCase.tsx`, utilities `camelCase.ts`. ESLint enforces `react-hooks` and `react-refresh` rules; Prettier formats `src/**/*.{ts,tsx,css}`.
+Docstrings follow the **Google style** convention (`Args:`/`Returns:`/`Raises:` sections), enforced by ruff's pydocstyle rules (`convention = "google"` in `backend/pyproject.toml`). Docstrings are not required everywhere (`D1` rules are ignored), but any docstring you write must follow Google formatting. Alembic migrations under `backend/migrations/` are exempt.
+
+Frontend: TypeScript strict mode (`frontend/tsconfig.app.json`). **Files and folders use `kebab-case`** (`medication-form.tsx`, `use-debounce.ts`, `api-client.ts`) — chosen for cross-OS safety (Windows dev, Linux deploy). Component *identifiers* are still `PascalCase` (`export function MedicationForm`); only the filename is kebab-case. Folders: lowercase, plural for type buckets (`components/`, `hooks/`), singular for feature names (`auth/`, `cabinet/`). ESLint enforces `react-hooks` and `react-refresh` rules; Prettier formats `src/**/*.{ts,tsx,css}`.
 
 ## Testing Guidelines
 
