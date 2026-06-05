@@ -3,7 +3,7 @@ project: "Home Medicine Cabinet"
 version: 1
 status: draft
 created: 2026-06-03
-updated: 2026-06-03
+updated: 2026-06-05
 prd_version: 1
 main_goal: low-complexity
 top_blocker: skills
@@ -27,7 +27,7 @@ A single adult can't reliably track their home medication inventory — what the
 
 | ID   | Change ID                    | Outcome (user can …)                                                                                                                                 | Prerequisites    | PRD refs                          | Status   |
 |------|------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|------------------|-----------------------------------|----------|
-| F-01 | auth-scaffold                | (foundation) auth flow in place; registration, login, logout, and FastAPI route protection wired via Supabase Auth                                   | Supabase project created | FR-001, FR-002, Access Control | ready    |
+| F-01 | auth-scaffold                | (foundation) auth entry screen in place; register/login/logout UI wired to Supabase Auth, plus FastAPI route protection                              | Supabase project created | FR-001, FR-002, Access Control | ready    |
 | F-02 | data-layer-scaffold          | (foundation) SQLModel models, Supabase PostgreSQL connection, and Alembic migration tooling ready                                                    | Supabase project created | FR-003, FR-010, NFR data-isolation | ready  |
 | F-03 | registry-import              | (foundation) Polish medicines XML dataset loaded into PostgreSQL and queryable for autocomplete                                                       | F-02             | FR-003, FR-011, FR-012            | proposed |
 | F-04 | ci-cd-wiring                 | (foundation) GitHub Actions auto-deploys backend and frontend to Render on merge to main                                                             | —                | NFR persist-across-sessions       | ready    |
@@ -67,7 +67,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ### F-01: Auth scaffold
 
-- **Outcome:** (foundation) Supabase Auth integrated via FastAPI; users can register, log in, and log out; a FastAPI dependency guard rejects unauthenticated requests on all protected routes.
+- **Outcome:** (foundation) Supabase Auth integrated end-to-end. The unauthenticated entry screen presents register and login forms plus a logout control, all wired to Supabase Auth; users can register, log in, and log out; a FastAPI dependency guard rejects unauthenticated requests on all protected routes. Scope is the minimal auth UI needed to exercise the flow — not account settings or profile management.
 - **Change ID:** auth-scaffold
 - **PRD refs:** FR-001, FR-002, Access Control section
 - **Unlocks:** S-01 (all user-facing slices require a verified user identity before any cabinet data can be read or written)
@@ -75,7 +75,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Parallel with:** F-02, F-04
 - **Blockers:** —
 - **Unknowns:** —
-- **Risk:** Sequenced first because every downstream slice requires a verified user; auth bugs discovered late are expensive to retrofit across all routes.
+- **Risk:** Sequenced first because every downstream slice requires a verified user; auth bugs discovered late are expensive to retrofit across all routes. The thin auth UI (the app's entry screen) is included here so the flow is verifiable end-to-end — keeping it minimal avoids this foundation drifting into a full account-management slice.
 - **Status:** ready
 
 ### F-02: Data layer scaffold
