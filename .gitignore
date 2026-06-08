@@ -217,6 +217,22 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
+# Node / Frontend (merged from frontend/.gitignore)
+node_modules/
+dist-ssr/
+*.local
+
+# Editor directories and files
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
 # 10xDevs skills
 .claude/
 
