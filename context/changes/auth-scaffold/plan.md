@@ -463,14 +463,14 @@ Build the auth feature (RHF+zod login/register forms, logout control, typed api 
 
 #### Automated
 
-- [x] 4.1 Type + build pass: `npm run build`
-- [x] 4.2 Lint pass: `npm run lint`
-- [x] 4.3 Format pass: `npx prettier --check src/`
+- [x] 4.1 Type + build pass: `npm run build` — 84fa5ac
+- [x] 4.2 Lint pass: `npm run lint` — 84fa5ac
+- [x] 4.3 Format pass: `npx prettier --check src/` — 84fa5ac
 
 #### Manual
 
-- [x] 4.4 Register → immediately logged in → protected placeholder
-- [x] 4.5 Page refresh keeps the session (rehydrate-then-validate)
-- [x] 4.6 Logout returns to `/login`; protected route blocked
-- [x] 4.7 Invalid credentials + invalid form input show Polish errors
-- [x] 4.8 Expired token triggers single-flight refresh-and-retry; failed refresh redirects to `/login`
+- [x] 4.4 Register → immediately logged in → protected placeholder — 84fa5ac
+- [x] 4.5 Page refresh keeps the session (rehydrate-then-validate) — 84fa5ac
+- [x] 4.6 Logout returns to `/login`; protected route blocked — 84fa5ac
+- [x] 4.7 Invalid credentials + invalid form input show Polish errors — 84fa5ac
+- [x] 4.8 Expired token triggers single-flight refresh-and-retry; failed refresh redirects to `/login` — 84fa5ac
