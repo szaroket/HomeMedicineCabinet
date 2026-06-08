@@ -60,7 +60,7 @@ class UserOut(BaseModel):
 
 
 class AuthResponse(BaseModel):
-    """Response body for register and login endpoints.
+    """Response body for login, refresh, and auto-confirmed register.
 
     Attributes:
         access_token: Short-lived Supabase access JWT.

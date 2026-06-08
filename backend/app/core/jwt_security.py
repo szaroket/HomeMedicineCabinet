@@ -34,7 +34,7 @@ def _get_signing_key(token: str) -> object:
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Unable to reach the JWKS endpoint.",
         ) from e
-    except jwt.PyJWKClientError as e:
+    except (jwt.PyJWKClientError, jwt.DecodeError) as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Failed to resolve signing key.",

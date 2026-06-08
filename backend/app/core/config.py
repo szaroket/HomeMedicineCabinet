@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     jwt_audience: str = "authenticated"
     jwt_algorithms: list[str] = ["ES256", "RS256"]
 
+    auth_cookie_name: str = "refresh_token"
+    auth_cookie_path: str = "/api/v1/auth"
+
     @property
     def jwt_issuer(self) -> str:
         """Return the JWT issuer URL derived from the Supabase project URL."""

@@ -1,13 +1,22 @@
+import logging
 import os
-from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.core.logging_config import (
+    configure_logging,
+    correlation_id_var,
+    generate_correlation_id,
+)
 from app.db.connector import engine, init_db
 from app.api.v1.router import router as v1_router
+
+configure_logging()
+logger = logging.getLogger("app.main")
 
 
 @asynccontextmanager
@@ -30,9 +39,23 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=_allowed_origins,
+        allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "DELETE"],
         allow_headers=["*"],
     )
+
+    @app.middleware("http")
+    async def correlation_id_middleware(request: Request, call_next):
+        cid = request.headers.get("X-Correlation-ID") or generate_correlation_id()
+        token = correlation_id_var.set(cid)
+        logger.debug("→ %s %s", request.method, request.url.path)
+        response = await call_next(request)
+        response.headers["X-Correlation-ID"] = cid
+        logger.debug(
+            "← %s %s %d", request.method, request.url.path, response.status_code
+        )
+        correlation_id_var.reset(token)
+        return response
 
     app.include_router(v1_router)
 

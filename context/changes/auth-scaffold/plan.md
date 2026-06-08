@@ -134,7 +134,7 @@ claims = jwt.decode(
 
 - Dependencies install: `cd backend && uv sync`
 - Lint + format pass: `uv run ruff check . && uv run ruff format --check .`
-- Imports resolve / app builds: `uv run python -c "from app.main import app"`
+- Imports resolve / app builds: `uv run python -c "from main import app"`
 
 #### Manual Verification
 
@@ -421,22 +421,22 @@ Build the auth feature (RHF+zod login/register forms, logout control, typed api 
 
 #### Automated
 
-- [x] 1.1 Dependencies install: `uv sync`
-- [x] 1.2 Lint + format pass: `uv run ruff check . && uv run ruff format --check .`
-- [x] 1.3 App imports / builds: `uv run python -c "from app.main import app"`
+- [x] 1.1 Dependencies install: `uv sync` — b321837
+- [x] 1.2 Lint + format pass: `uv run ruff check . && uv run ruff format --check .` — b321837
+- [x] 1.3 App imports / builds: `uv run python -c "from main import app"` — b321837
 
 #### Manual
 
-- [x] 1.4 No guarded route exists yet — real 401/200 check deferred to Phase 2 (Phase 1 confidence via monkeypatched guard unit test)
-- [x] 1.5 Guard unit test present + guard wired onto the three domain routers (code review of `dependencies=[...]`)
-- [x] 1.6 `/health` and `/auth/*` reachable without a token
+- [x] 1.4 No guarded route exists yet — real 401/200 check deferred to Phase 2 (Phase 1 confidence via monkeypatched guard unit test) — b321837
+- [x] 1.5 Guard unit test present + guard wired onto the three domain routers (code review of `dependencies=[...]`) — b321837
+- [x] 1.6 `/health` and `/auth/*` reachable without a token — b321837
 
 ### Phase 2: Backend — Auth Endpoints & Provisioning
 
 #### Automated
 
-- [ ] 2.1 Tests pass: `uv run pytest`
-- [ ] 2.2 Lint + format pass: `uv run ruff check . && uv run ruff format --check .`
+- [x] 2.1 Tests pass: `uv run pytest`
+- [x] 2.2 Lint + format pass: `uv run ruff check . && uv run ruff format --check .`
 
 #### Manual
 
