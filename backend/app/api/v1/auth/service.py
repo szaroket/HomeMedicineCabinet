@@ -164,16 +164,3 @@ def refresh(refresh_token: str) -> tuple[AuthResponse, str]:
         ),
         result.session.refresh_token,
     )
-
-
-def logout(access_token: str) -> None:
-    """Sign out the user from Supabase Auth.
-
-    Args:
-        access_token: The user's current access JWT.
-    """
-    try:
-        get_supabase().auth.sign_out()
-        logger.info("User signed out")
-    except Exception as e:
-        logger.warning("Supabase sign_out failed (ignored): %s", e)

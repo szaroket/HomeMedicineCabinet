@@ -101,6 +101,18 @@ class InvalidEmailError(AuthError):
         super().__init__(message)
 
 
+class ProvisioningError(AuthError):
+    """Raised when local user provisioning fails after Supabase auth succeeds."""
+
+    def __init__(self, message: str = "Failed to provision the user account.") -> None:
+        """Initialise with a default message.
+
+        Args:
+            message: Description of what went wrong.
+        """
+        super().__init__(message)
+
+
 class RateLimitError(AuthError):
     """Raised when Supabase Auth rejects a request due to rate limiting."""
 

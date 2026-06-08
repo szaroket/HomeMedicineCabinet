@@ -1,22 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { useAuth } from "@/features/auth/store";
+import { useAuth, setStoredToken } from "@/features/auth/store";
 import { useMe } from "@/features/auth/api/auth-queries";
-
-const BASE = `${import.meta.env.VITE_API_URL ?? "http://localhost:8000"}/api/v1`;
-
-async function trySilentRefresh(): Promise<string | null> {
-  try {
-    const res = await fetch(`${BASE}/auth/refresh`, {
-      method: "GET",
-      credentials: "include",
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { access_token: string };
-    return data.access_token;
-  } catch {
-    return null;
-  }
-}
+import { refreshOnce } from "@/lib/api-client";
 
 export function useSessionInit() {
   const { token, user, setSession, clearSession } = useAuth();
@@ -29,9 +14,9 @@ export function useSessionInit() {
   useEffect(() => {
     if (hasToken || attempted.current) return;
     attempted.current = true;
-    trySilentRefresh().then((newToken) => {
+    refreshOnce().then((newToken) => {
       if (newToken) {
-        localStorage.setItem("auth_token", newToken);
+        setStoredToken(newToken);
         setSession(newToken, { id: "", email: "" });
       }
       setRefreshDone(true);

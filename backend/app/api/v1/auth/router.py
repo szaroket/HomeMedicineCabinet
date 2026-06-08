@@ -1,6 +1,14 @@
 """Auth endpoints: register, login, logout, refresh, me."""
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Request,
+    Response,
+    Security,
+    status,
+)
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.v1.auth import service as auth_service
@@ -13,6 +21,7 @@ from app.utilities.errors import (
     DuplicateEmailError,
     InvalidCredentialsError,
     InvalidEmailError,
+    ProvisioningError,
     RateLimitError,
     RegistrationError,
     SessionExpiredError,
@@ -27,6 +36,7 @@ def _set_refresh_cookie(response: Response, token: str) -> None:
         key=settings.auth_cookie_name,
         value=token,
         httponly=True,
+        secure=settings.auth_cookie_secure,
         samesite="lax",
         path=settings.auth_cookie_path,
     )
@@ -34,7 +44,11 @@ def _set_refresh_cookie(response: Response, token: str) -> None:
 
 def _clear_refresh_cookie(response: Response) -> None:
     response.delete_cookie(
-        key=settings.auth_cookie_name, path=settings.auth_cookie_path
+        key=settings.auth_cookie_name,
+        path=settings.auth_cookie_path,
+        httponly=True,
+        secure=settings.auth_cookie_secure,
+        samesite="lax",
     )
 
 
@@ -63,6 +77,10 @@ async def register(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
         ) from e
+    except ProvisioningError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        ) from e
     _set_refresh_cookie(response, refresh_token)
     return auth_response
 
@@ -83,6 +101,10 @@ async def login(
     except InvalidCredentialsError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e)
+        ) from e
+    except ProvisioningError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         ) from e
     _set_refresh_cookie(response, refresh_token)
     return auth_response
@@ -114,15 +136,22 @@ def refresh(request: Request, response: Response) -> AuthResponse:
 @router.post(
     "/logout",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(get_current_user)],
+    dependencies=[Security(get_current_user)],
 )
 def logout(response: Response) -> None:
-    """Sign out the current user and clear the refresh cookie."""
+    """Clear the refresh cookie for the current user.
+
+    Note:
+        This is a cookie-clear-only logout. It deletes the httpOnly refresh
+        cookie so this browser can no longer refresh, but it does NOT revoke
+        the refresh token at Supabase — a copied token stays valid until its
+        own expiry. True server-side revocation is planned for v2 (see the
+        plan's "v2 / follow-up" section).
+    """
     _clear_refresh_cookie(response)
-    auth_service.logout(access_token="")
 
 
 @router.get("/me", response_model=UserOut)
-def me(current_user: CurrentUser = Depends(get_current_user)) -> UserOut:
+def me(current_user: CurrentUser = Security(get_current_user)) -> UserOut:
     """Return the authenticated user's identity."""
     return UserOut(id=current_user.id, email=current_user.email)

@@ -3,6 +3,7 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
+import jwt
 import pytest
 import pytest_asyncio
 from fastapi import status
@@ -113,6 +114,29 @@ async def test_guard_valid_token(client: AsyncClient):
     data = response.json()
     assert data["email"] == _FAKE_EMAIL
     assert data["id"] == str(_FAKE_USER_ID)
+
+
+@pytest.mark.asyncio
+async def test_guard_wrong_audience(client: AsyncClient):
+    """A token whose `aud` claim fails validation → 401 from the guard."""
+    jwks_patch = patch("app.core.jwt_security._jwks")
+    decode_patch = patch(
+        "app.core.jwt_security.jwt.decode",
+        side_effect=jwt.InvalidAudienceError("Invalid audience"),
+    )
+
+    with jwks_patch as mock_jwks, decode_patch:
+        mock_signing_key = MagicMock()
+        mock_signing_key.key = "fake-key"
+        mock_jwks.get_signing_key_from_jwt.return_value = mock_signing_key
+
+        response = await client.get(
+            "/api/v1/auth/me",
+            headers={"Authorization": "Bearer wrong.audience.token"},
+        )
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert "audience" in response.json()["detail"].lower()
 
 
 # ---------------------------------------------------------------------------
@@ -308,4 +332,7 @@ async def test_logout_clears_cookie(client: AsyncClient):
 
     assert response.status_code == status.HTTP_204_NO_CONTENT
     set_cookie = response.headers.get("set-cookie", "")
+    # Assert the cookie is actually being deleted, not merely present:
+    # delete_cookie emits the cookie name with Max-Age=0.
     assert "refresh_token" in set_cookie
+    assert "Max-Age=0" in set_cookie

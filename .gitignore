@@ -219,3 +219,7 @@ __marimo__/
 
 # 10xDevs skills
 .claude/
+
+# Frontend source — the Python `lib/` rule above otherwise swallows the
+# frontend's real source directory (api-client, query-client, errors, …).
+!frontend/src/lib/

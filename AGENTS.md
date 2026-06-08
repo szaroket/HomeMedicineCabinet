@@ -73,7 +73,7 @@ See `docs/reference/frontend-structure.md` for frontend directory rules, the fea
 - `crud.py` — raw database operations; no business logic.
 - Domains with no DB access (e.g. `health/`) may omit `service.py` and `crud.py`.
 - To add a new domain: create `app/api/v1/<domain>/` with `__init__.py`, `router.py`, `service.py`, `crud.py`; import and include the router in `app/api/v1/router.py`.
-- New protected domain routers must add `dependencies=[Depends(get_current_user)]`; only `health/` and public `auth/` endpoints are unguarded.
+- New protected domain routers must add `dependencies=[Security(get_current_user)]` (use `Security`, not `Depends`, so the OpenAPI lock icon renders); only `health/` and public `auth/` endpoints are unguarded.
 
 ### Frontend structure rules
 

@@ -413,6 +413,15 @@ Build the auth feature (RHF+zod login/register forms, logout control, typed api 
 - Existing models: `backend/app/api/v1/users/models.py`, `backend/app/api/v1/cabinet/models.py`
 - Backend layer rules / frontend structure rules: `AGENTS.md`
 
+## v2 / Follow-up
+
+- **True server-side logout (refresh-token revocation).** The v1 `POST /auth/logout` is cookie-clear-only: it deletes the httpOnly refresh cookie so the browser can't refresh, but the refresh token stays valid at Supabase until it expires (a copied token still works). v2 should truly revoke. Mechanics (verified against vendored `supabase_auth/_sync/gotrue_client.py`):
+  - Use a **request-scoped** Supabase client — never `set_session` on the shared module-level client (it mutates state across concurrent requests).
+  - `set_session(access_token, refresh_token)` then `sign_out(scope="global")` (routes to `admin.sign_out`) to revoke all of the user's refresh tokens server-side.
+  - Router wiring: capture the raw access token (currently discarded) and read the refresh cookie, passing both to the service.
+  - The access-token JWT itself can never be revoked pre-expiry; pair this with a short JWT expiry in the Supabase dashboard.
+  - Source: impl-review F3 (`context/changes/auth-scaffold/reviews/impl-review.md`).
+
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.

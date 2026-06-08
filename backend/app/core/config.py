@@ -12,6 +12,10 @@ class Settings(BaseSettings):
         supabase_anon_key: Supabase anon/public API key.
         jwt_audience: Expected `aud` claim in Supabase JWTs.
         jwt_algorithms: Allowed signing algorithms for JWT verification.
+        auth_cookie_name: Name of the refresh-token cookie.
+        auth_cookie_path: Path scope for the refresh-token cookie.
+        auth_cookie_secure: Whether the refresh cookie carries the `Secure`
+            flag. Defaults to True (HTTPS-only); set False for localhost HTTP dev.
     """
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
@@ -25,6 +29,7 @@ class Settings(BaseSettings):
 
     auth_cookie_name: str = "refresh_token"
     auth_cookie_path: str = "/api/v1/auth"
+    auth_cookie_secure: bool = True
 
     @property
     def jwt_issuer(self) -> str:
