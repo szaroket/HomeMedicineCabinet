@@ -435,29 +435,29 @@ Build the auth feature (RHF+zod login/register forms, logout control, typed api 
 
 #### Automated
 
-- [x] 2.1 Tests pass: `uv run pytest`
-- [x] 2.2 Lint + format pass: `uv run ruff check . && uv run ruff format --check .`
+- [x] 2.1 Tests pass: `uv run pytest` — 7a27494
+- [x] 2.2 Lint + format pass: `uv run ruff check . && uv run ruff format --check .` — 7a27494
 
 #### Manual
 
-- [ ] 2.3 Register creates Supabase user + returns access token + sets refresh cookie + inserts `users`/`user_preferences`
-- [ ] 2.4 Login then `GET /auth/refresh` (cookie) returns a fresh access token
-- [ ] 2.5 Logout clears cookie; subsequent refresh returns 401
-- [ ] 2.6 `GET /auth/me`: no/invalid token → 401, valid Bearer → 200 (real-route guard check deferred from Phase 1)
+- [x] 2.3 Register creates Supabase user + returns access token + sets refresh cookie + inserts `users`/`user_preferences` — 7a27494
+- [x] 2.4 Login then `GET /auth/refresh` (cookie) returns a fresh access token — 7a27494
+- [x] 2.5 Logout clears cookie; subsequent refresh returns 401 — 7a27494
+- [x] 2.6 `GET /auth/me`: no/invalid token → 401, valid Bearer → 200 (real-route guard check deferred from Phase 1) — 7a27494
 
 ### Phase 3: Frontend — Foundation
 
 #### Automated
 
-- [ ] 3.1 Install: `npm install`
-- [ ] 3.2 Type + build pass: `npm run build`
-- [ ] 3.3 Lint pass: `npm run lint`
-- [ ] 3.4 Format pass: `npx prettier --check src/`
+- [x] 3.1 Install: `npm install`
+- [x] 3.2 Type + build pass: `npm run build`
+- [x] 3.3 Lint pass: `npm run lint`
+- [x] 3.4 Format pass: `npx prettier --check src/`
 
 #### Manual
 
-- [ ] 3.5 Protected route with no token redirects to `/login`
-- [ ] 3.6 `@/` imports resolve at build and in editor
+- [x] 3.5 Protected route with no token redirects to `/login`
+- [x] 3.6 `@/` imports resolve at build and in editor
 
 ### Phase 4: Frontend — Auth Feature & Entry Screen
 
