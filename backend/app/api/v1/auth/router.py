@@ -55,11 +55,7 @@ async def register(
         ) from e
     except DuplicateEmailError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
-    except WeakPasswordError as e:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(e)
-        ) from e
-    except InvalidEmailError as e:
+    except (WeakPasswordError, InvalidEmailError) as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(e)
         ) from e
@@ -115,11 +111,12 @@ def refresh(request: Request, response: Response) -> AuthResponse:
     return auth_response
 
 
-@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-def logout(
-    response: Response,
-    current_user: CurrentUser = Depends(get_current_user),
-) -> None:
+@router.post(
+    "/logout",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(get_current_user)],
+)
+def logout(response: Response) -> None:
     """Sign out the current user and clear the refresh cookie."""
     _clear_refresh_cookie(response)
     auth_service.logout(access_token="")
