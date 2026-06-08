@@ -1,20 +1,20 @@
 import { createBrowserRouter } from "react-router-dom";
 import { PublicLayout } from "@/app/layouts/public-layout";
 import { ProtectedLayout } from "@/app/layouts/protected-layout";
-import { LoginPlaceholder } from "@/features/auth/components/login-placeholder";
-import { RegisterPlaceholder } from "@/features/auth/components/register-placeholder";
-import { DashboardPlaceholder } from "@/features/dashboard/components/dashboard-placeholder";
+import { LoginPage } from "@/features/auth/components/login-page";
+import { RegisterPage } from "@/features/auth/components/register-page";
+import { DashboardPage } from "@/features/dashboard/components/dashboard-page";
 
 export const router = createBrowserRouter([
   {
     element: <PublicLayout />,
     children: [
-      { path: "/login", element: <LoginPlaceholder /> },
-      { path: "/register", element: <RegisterPlaceholder /> },
+      { path: "/login", element: <LoginPage /> },
+      { path: "/register", element: <RegisterPage /> },
     ],
   },
   {
     element: <ProtectedLayout />,
-    children: [{ path: "/", element: <DashboardPlaceholder /> }],
+    children: [{ path: "/", element: <DashboardPage /> }],
   },
 ]);

@@ -449,28 +449,28 @@ Build the auth feature (RHF+zod login/register forms, logout control, typed api 
 
 #### Automated
 
-- [x] 3.1 Install: `npm install`
-- [x] 3.2 Type + build pass: `npm run build`
-- [x] 3.3 Lint pass: `npm run lint`
-- [x] 3.4 Format pass: `npx prettier --check src/`
+- [x] 3.1 Install: `npm install` — 34a2c57
+- [x] 3.2 Type + build pass: `npm run build` — 34a2c57
+- [x] 3.3 Lint pass: `npm run lint` — 34a2c57
+- [x] 3.4 Format pass: `npx prettier --check src/` — 34a2c57
 
 #### Manual
 
-- [x] 3.5 Protected route with no token redirects to `/login`
-- [x] 3.6 `@/` imports resolve at build and in editor
+- [x] 3.5 Protected route with no token redirects to `/login` — 34a2c57
+- [x] 3.6 `@/` imports resolve at build and in editor — 34a2c57
 
 ### Phase 4: Frontend — Auth Feature & Entry Screen
 
 #### Automated
 
-- [ ] 4.1 Type + build pass: `npm run build`
-- [ ] 4.2 Lint pass: `npm run lint`
-- [ ] 4.3 Format pass: `npx prettier --check src/`
+- [x] 4.1 Type + build pass: `npm run build`
+- [x] 4.2 Lint pass: `npm run lint`
+- [x] 4.3 Format pass: `npx prettier --check src/`
 
 #### Manual
 
-- [ ] 4.4 Register → immediately logged in → protected placeholder
-- [ ] 4.5 Page refresh keeps the session (rehydrate-then-validate)
-- [ ] 4.6 Logout returns to `/login`; protected route blocked
-- [ ] 4.7 Invalid credentials + invalid form input show Polish errors
-- [ ] 4.8 Expired token triggers single-flight refresh-and-retry; failed refresh redirects to `/login`
+- [x] 4.4 Register → immediately logged in → protected placeholder
+- [x] 4.5 Page refresh keeps the session (rehydrate-then-validate)
+- [x] 4.6 Logout returns to `/login`; protected route blocked
+- [x] 4.7 Invalid credentials + invalid form input show Polish errors
+- [x] 4.8 Expired token triggers single-flight refresh-and-retry; failed refresh redirects to `/login`
