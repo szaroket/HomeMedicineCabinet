@@ -421,15 +421,15 @@ Build the auth feature (RHF+zod login/register forms, logout control, typed api 
 
 #### Automated
 
-- [ ] 1.1 Dependencies install: `uv sync`
-- [ ] 1.2 Lint + format pass: `uv run ruff check . && uv run ruff format --check .`
-- [ ] 1.3 App imports / builds: `uv run python -c "from app.main import app"`
+- [x] 1.1 Dependencies install: `uv sync`
+- [x] 1.2 Lint + format pass: `uv run ruff check . && uv run ruff format --check .`
+- [x] 1.3 App imports / builds: `uv run python -c "from app.main import app"`
 
 #### Manual
 
-- [ ] 1.4 No guarded route exists yet — real 401/200 check deferred to Phase 2 (Phase 1 confidence via monkeypatched guard unit test)
-- [ ] 1.5 Guard unit test present + guard wired onto the three domain routers (code review of `dependencies=[...]`)
-- [ ] 1.6 `/health` and `/auth/*` reachable without a token
+- [x] 1.4 No guarded route exists yet — real 401/200 check deferred to Phase 2 (Phase 1 confidence via monkeypatched guard unit test)
+- [x] 1.5 Guard unit test present + guard wired onto the three domain routers (code review of `dependencies=[...]`)
+- [x] 1.6 `/health` and `/auth/*` reachable without a token
 
 ### Phase 2: Backend — Auth Endpoints & Provisioning
 

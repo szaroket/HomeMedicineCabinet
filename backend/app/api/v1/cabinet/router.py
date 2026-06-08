@@ -1,3 +1,7 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Security
 
-router = APIRouter(prefix="/cabinet", tags=["cabinet"])
+from app.core.jwt_security import get_current_user
+
+router = APIRouter(
+    prefix="/cabinet", tags=["cabinet"], dependencies=[Security(get_current_user)]
+)
