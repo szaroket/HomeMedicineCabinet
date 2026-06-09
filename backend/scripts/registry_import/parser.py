@@ -23,7 +23,23 @@ NS = "{http://rejestry.ezdrowie.gov.pl/rpl/eksport-danych-v6.0.0}"
 # (ml, g, …) and unknown units stay False. Centralized so downstream query code
 # (S-01/S-05) never re-derives pill-ness; extend conservatively.
 TABLET_UNITS: frozenset[str] = frozenset(
-    {"tabl.", "kaps.", "draż.", "past.", "czopki", "globulki"}
+    {
+        "amp.",
+        "czopków",
+        "dawek",
+        "dawka",
+        "fiolka",
+        "granulki",
+        "kaps.",
+        "pastylek",
+        "pastylki",
+        "plaster",
+        "plastrów",
+        "plastry",
+        "szt.",
+        "tabl.",
+        "tabletek",
+    }
 )
 
 
