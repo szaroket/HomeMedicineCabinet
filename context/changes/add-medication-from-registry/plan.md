@@ -147,7 +147,7 @@ Step-1 of the picker: full-text prefix search returning distinct products (name 
 
 **Intent**: Expose the endpoint on the already-guarded router.
 
-**Contract**: `GET /products?q=<str>&limit=<int>` → `list[ProductOut]`. `q` is a required query param.
+**Contract**: `GET /products?query=<str>&limit=<int>` → `list[ProductOut]`. `query` is a required query param.
 
 ### Success Criteria:
 
@@ -158,7 +158,7 @@ Step-1 of the picker: full-text prefix search returning distinct products (name 
 
 #### Manual Verification:
 
-- [ ] From PowerShell (per L-001): start the server and `GET /api/v1/medicines/products?q=apa` with a valid bearer token returns distinct products within ~500ms; a 1-char query returns `[]`; an unauthenticated request is rejected.
+- [ ] From PowerShell (per L-001): start the server and `GET /api/v1/medicines/products?query=apa` with a valid bearer token returns distinct products within ~500ms; a 1-char query returns `[]`; an unauthenticated request is rejected.
 
 **Implementation Note**: Pause for human confirmation before Phase 3.
 
@@ -224,6 +224,8 @@ The write path. Validates input, looks up the registry variant, applies the FR-0
 **File**: `backend/app/utilities/errors.py`
 
 **Intent**: Domain exceptions the router maps to HTTP status codes (English messages, per conventions).
+
+> **Addendum (Phase 2 review):** A sibling `MedicinesError(Exception)` base + `MedicineSearchError` and a crud `SQLAlchemyError → MedicineSearchError → 503` guard already landed in Phase 2 (`errors.py`, `medicines/{crud,router}.py`), mirroring `AuthError`'s shape (separate base, English messages, `HTTPException` at the router only). `CabinetError` below follows the same independent-per-domain pattern — do not fold the medicines errors into it.
 
 **Contract**: Add a new per-domain base class `CabinetError(Exception)` mirroring `AuthError`'s shape exactly (a `message: str` attribute set in `__init__`, English-only). Do **not** extend `AuthError` — that base is auth-specific and reusing it for cabinet/medicine errors would muddy the taxonomy. The new errors extend `CabinetError`, each with a default message: `MedicationNotFoundError` (→ 404, default e.g. "Medication not found."), `InvalidPackageCountError` / `InvalidPartialTabletCountError` (→ 422, with descriptive defaults). The router catches `CabinetError` subclasses and maps them to HTTP, exactly as `auth/router.py` catches `AuthError` subclasses.
 
@@ -453,12 +455,12 @@ None — the schema from F-02 already supports this slice; no new migrations.
 
 #### Automated
 
-- [x] 2.1 Lint/format clean
-- [x] 2.2 Existing tests still pass (pytest)
+- [x] 2.1 Lint/format clean — a8a25a3
+- [x] 2.2 Existing tests still pass (pytest) — a8a25a3
 
 #### Manual
 
-- [x] 2.3 PowerShell: product search returns distinct products < ~500ms; 1-char ⇒ []; unauthenticated rejected
+- [x] 2.3 PowerShell: product search returns distinct products < ~500ms; 1-char ⇒ []; unauthenticated rejected — a8a25a3
 
 ### Phase 3: Backend — `GET /api/v1/medicines/variants`
 
