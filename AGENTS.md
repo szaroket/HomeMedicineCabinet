@@ -111,7 +111,10 @@ Frontend: TypeScript strict mode (`frontend/tsconfig.app.json`). **Files and fol
 
 ## Testing Guidelines
 
-Backend: pytest with pytest-asyncio; test files in `backend/tests/` (directory not yet created — place tests there). Use `httpx.AsyncClient` as the FastAPI test client.
+Backend: pytest with pytest-asyncio; test files in `backend/tests/`, mirroring the `app/api/v1/<domain>/` layout (one subpackage per domain). Use `httpx.AsyncClient` as the FastAPI test client.
+
+- **Reuse shared fixtures; never duplicate mocks.** Common mocks live in `backend/tests/conftest.py` (`mock_session`, `fake_user`, `client`, `authed_client`) — request them by name instead of constructing your own. If a mock setup is repeated across tests, promote it to a fixture (domain-local `conftest.py` or a helper) and reuse it rather than copy-pasting.
+- **Always pass `spec=` when building a `MagicMock`/`AsyncMock`** (e.g. `AsyncMock(spec=AsyncSession)`); use `autospec=True` for `mocker.patch` of functions/methods so signatures are validated.
 
 Frontend: Vitest + React Testing Library (not yet configured — add `vitest.config.ts` when writing first test). Playwright covers one golden-path E2E: login → add medication → verify cabinet entry.
 
