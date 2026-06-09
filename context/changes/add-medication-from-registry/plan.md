@@ -62,6 +62,7 @@ Backend-first, one endpoint per phase for small reviewable PRs. The riskiest, co
 - **Timezone policy (F4).** The backend and database operate entirely in UTC: `today` is the UTC date, status is computed UTC-relative, and `expiry_date` is stored/returned as a plain calendar date. The frontend owns timezone presentation — it converts/interprets dates against the user's **browser** timezone for display. Consequence accepted for MVP: because status is computed UTC-side, the `valid↔expiring↔expired` boundary follows the UTC day, which can differ by one day from the Warsaw local day right around midnight. This is a deliberate trade (no per-user timezone passed to the backend this slice), not an oversight. **S-02 (filterable list) should pass the browser's IANA timezone (e.g. `?tz=Europe/Warsaw`) so status-based filtering computes `today` in the user's local zone; `classify_status` already accepts `today` as a parameter, so no refactor is needed.**
 - **Safe tsquery construction.** User input must never be interpolated raw into `to_tsquery`. Split the query on whitespace, keep alphanumeric tokens, append `:*` to each, and join with ` & ` — bind as a parameter. An empty/all-stripped query returns no rows (or is rejected before hitting the DB).
 - **Null variant attributes.** `strength` and `pharmaceutical_form` can be `NULL`; the variants lookup must match `NULL` to `NULL` (use `IS NOT DISTINCT FROM`), not `=`.
+- **Case-folded product key (cross-phase, Phases 2 & 3).** The source registry stores the same product under inconsistent casing (e.g. "Apap" vs "APAP"). Phase 2's `/products` endpoint groups case-insensitively (`DISTINCT ON (lower(name), lower(coalesce(strength,'')), lower(coalesce(form,'')))`) and returns one representative row per case-folded group. Phase 3's `/variants` lookup **must** therefore match the product key case-insensitively (`lower(...)` on both sides, NULL-safe), or selecting a product would miss pack-size variants stored under a different casing.
 
 ## Phase 1: FR-010 merge/normalization + status logic (with unit tests)
 
@@ -185,7 +186,7 @@ Step-2 of the picker: return all pack-size variants of a selected product, so th
 
 **Intent**: Fetch all registry rows for an exact `(name, strength, form)` product, NULL-safe.
 
-**Contract**: `async def list_variants(session, name, strength, pharmaceutical_form) -> list[MedicationRegistry]` — equality on `name`, `IS NOT DISTINCT FROM` on `strength` and `pharmaceutical_form`, ordered by `capacity`.
+**Contract**: `async def list_variants(session, name, strength, pharmaceutical_form) -> list[MedicationRegistry]` — **case-insensitive** match on the product key, ordered by `capacity`. Phase 2's products endpoint returns a case-folded representative of `(name, strength, form)` (the source registry holds the same product under inconsistent casing, e.g. "Apap" vs "APAP"), so this lookup must match the same case-folded key or it will miss variants stored under a different casing. Use `lower(name) = lower(:name)` for the name, and a NULL-safe case-insensitive comparison for `strength`/`pharmaceutical_form` — `lower(strength) IS NOT DISTINCT FROM lower(:strength)` (so `NULL` still matches `NULL`), not a plain `=`.
 
 #### 3. Variants service + route
 
@@ -452,12 +453,12 @@ None — the schema from F-02 already supports this slice; no new migrations.
 
 #### Automated
 
-- [ ] 2.1 Lint/format clean
-- [ ] 2.2 Existing tests still pass (pytest)
+- [x] 2.1 Lint/format clean
+- [x] 2.2 Existing tests still pass (pytest)
 
 #### Manual
 
-- [ ] 2.3 PowerShell: product search returns distinct products < ~500ms; 1-char ⇒ []; unauthenticated rejected
+- [x] 2.3 PowerShell: product search returns distinct products < ~500ms; 1-char ⇒ []; unauthenticated rejected
 
 ### Phase 3: Backend — `GET /api/v1/medicines/variants`
 

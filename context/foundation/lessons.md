@@ -6,6 +6,91 @@ note. Newest first.
 
 ---
 
+## L-003 — Keep FastAPI `Query()`/`Path()` inside `Annotated`, never as a default value, when the type carries Pydantic constraints
+
+**Context**: Surfaced in `medicines/router.py` (S-01 Phase 2, 2026-06-09) while
+adding a `StringConstraints(strip_whitespace=True, min_length=1)` to reject
+blank/whitespace-only search queries.
+
+**Symptom**: The validation silently did nothing — a whitespace-only `query`
+returned `200 []` instead of `422`. The constraint was declared on a type alias
+but applied via a `Query()` *default value*:
+
+```python
+SearchQuery = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+# BROKEN: StringConstraints is silently dropped
+async def search_products(query: SearchQuery = Query(description="...")): ...
+```
+
+**Root cause**: When `Query()` (or `Path()`, `Header()`, ...) is supplied as the
+parameter's **default value** while the Pydantic metadata lives on the
+`Annotated` type, FastAPI builds the field from the `Query()` FieldInfo and does
+**not** merge in the `Annotated` `StringConstraints`. The constraint is silently
+ignored — no error, no warning. Putting `Query()` *inside* the `Annotated`
+metadata makes FastAPI combine both.
+
+**The rule**:
+
+- Declare query/path/header params in the **all-in-`Annotated`** style; put
+  `Query()`/`Path()`/etc. as Annotated metadata, not as the default value:
+
+  ```python
+  SearchQuery = Annotated[
+      str,
+      StringConstraints(strip_whitespace=True, min_length=1),
+      Query(description="..."),
+  ]
+
+  async def search_products(query: SearchQuery): ...          # required
+  async def search_products(query: SearchQuery = "default"): ...  # optional, real default
+  ```
+
+- A plain `param: int = Query(20, ge=1, le=50)` is fine **when all constraints
+  live on the `Query()` itself** (no separate `Annotated`/`StringConstraints`).
+  The trap is specifically: Pydantic constraints on the type **+** `Query()` as a
+  default value — then the type's constraints vanish.
+- When validation "does nothing", suspect this before suspecting the constraint
+  values; it fails silently, so cover it with an explicit test/manual check.
+
+---
+
+## L-002 — Type `crud.py` sessions as `sqlalchemy.ext.asyncio.AsyncSession`, not the SQLModel one
+
+**Context**: Surfaced in `auth/crud.py` and again in `medicines/crud.py` (S-01
+Phase 2, 2026-06-09) when running raw `text()` / Core `insert()` statements.
+
+**Symptom**: When the session parameter is annotated with
+`sqlmodel.ext.asyncio.session.AsyncSession`, the type checker / IDE flags
+`session.execute(...)` as deprecated and nudges toward `session.exec()`:
+
+```
+The method "execute" in class "AsyncSession" is deprecated.
+You probably want to use `session.exec()` instead of `session.execute()`.
+```
+
+**Root cause**: SQLModel subclasses SQLAlchemy's `AsyncSession` and marks
+`execute()` deprecated to push its own `exec()` — but `exec()` only accepts
+`select()`-style statements. For a raw `text()` query (e.g. the full-text
+`to_tsquery` search) or a Core `insert(...)`, `exec()` does not fit and
+`execute()` is the correct call. Crucially, `get_session` in
+`app/db/connector.py` yields a **plain** `sqlalchemy.ext.asyncio.AsyncSession`,
+so the deprecation is a false positive caused only by the annotation.
+
+**The rule**:
+
+- In `crud.py` modules, annotate the session as
+  `from sqlalchemy.ext.asyncio import AsyncSession` (matches the real runtime
+  object from `get_session`); `session.execute(...)` is then correct and
+  un-deprecated. This is the pattern in `auth/crud.py`.
+- Do **not** "fix" the warning by forcing `session.exec()` on a `text()` or
+  Core statement — that is the wrong API for non-`select` work.
+- `router.py` / `service.py` may keep the SQLModel `AsyncSession` annotation
+  (as `auth/` does) since they don't call `.execute()` directly; the rule is
+  specifically about the crud layer that issues raw/Core statements.
+
+---
+
 ## L-001 — Run TLS database commands from native PowerShell, not the Git Bash tool
 
 **Context**: Discovered during `registry-import` Phase 1 (2026-06-04) while trying

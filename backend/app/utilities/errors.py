@@ -125,3 +125,41 @@ class RateLimitError(AuthError):
             message: Description of what went wrong.
         """
         super().__init__(message)
+
+
+class MedicinesError(Exception):
+    """Base class for medicines domain errors.
+
+    Kept separate from AuthError so the auth and medicines taxonomies do not
+    bleed into each other.
+
+    Attributes:
+        message: Human-readable description of the error (English).
+    """
+
+    def __init__(self, message: str) -> None:
+        """Initialise the error with a message.
+
+        Args:
+            message: Description of what went wrong.
+        """
+        super().__init__(message)
+        self.message = message
+
+
+class MedicineSearchError(MedicinesError):
+    """Raised when the registry search fails at the database layer.
+
+    Typically wraps a SQLAlchemy/connection error so the router can map it to a
+    503 Service Unavailable rather than leaking a raw 500.
+    """
+
+    def __init__(
+        self, message: str = "Failed to search the medicines registry."
+    ) -> None:
+        """Initialise with a default message.
+
+        Args:
+            message: Description of what went wrong.
+        """
+        super().__init__(message)
