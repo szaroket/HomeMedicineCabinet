@@ -441,12 +441,12 @@ None — the schema from F-02 already supports this slice; no new migrations.
 
 #### Automated
 
-- [ ] 1.1 Lint/format clean (ruff check + format --check)
-- [ ] 1.2 Unit tests pass (pytest tests/cabinet/test_logic.py)
+- [x] 1.1 Lint/format clean (ruff check + format --check)
+- [x] 1.2 Unit tests pass (pytest tests/cabinet/test_logic.py)
 
 #### Manual
 
-- [ ] 1.3 Worked FR-010 example matches a test case
+- [x] 1.3 Worked FR-010 example matches a test case
 
 ### Phase 2: Backend — `GET /api/v1/medicines/products`
 
