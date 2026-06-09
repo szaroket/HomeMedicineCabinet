@@ -5,7 +5,9 @@
             "name": "Python: Debug App",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/backend/app/main.py",
+            "module": "uvicorn",
+            "args": ["app.main:app", "--reload"],
+            "cwd": "${workspaceFolder}/backend",
             "console": "integratedTerminal",
             "justMyCode": true
         }

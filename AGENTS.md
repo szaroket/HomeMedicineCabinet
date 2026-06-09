@@ -63,7 +63,9 @@ See `docs/reference/frontend-structure.md` for frontend directory rules, the fea
 
 - `app/main.py` — app factory and middleware only. No domain routes.
 - `app/core/config.py` — pydantic-settings `Settings` singleton; import `settings` from here everywhere.
+- `app/core/jwt_security.py` — JWT guard (`get_current_user`, `get_token_claims`); import guard from here in all protected routers.
 - `app/db/connector.py` — async engine, session factory, `get_session` dependency, `init_db`.
+- `app/db/supabase_auth.py` — configured `supabase-py` client plus thin, domain-agnostic Supabase Auth operations (`sign_up`, `sign_in_with_password`, `refresh_session`); consumed by `auth/crud.py`, never imported directly by `service.py`.
 - `app/api/v1/router.py` — imports and includes every domain router. No route logic here.
 - Domain directories live under `app/api/v1/<domain>/`. URL paths mirror the directory path: `app/api/v1/<domain>/<endpoint>` → `/api/v1/<domain>/<endpoint>`.
 - `router.py` — route decorators only; calls service functions.
@@ -71,6 +73,7 @@ See `docs/reference/frontend-structure.md` for frontend directory rules, the fea
 - `crud.py` — raw database operations; no business logic.
 - Domains with no DB access (e.g. `health/`) may omit `service.py` and `crud.py`.
 - To add a new domain: create `app/api/v1/<domain>/` with `__init__.py`, `router.py`, `service.py`, `crud.py`; import and include the router in `app/api/v1/router.py`.
+- New protected domain routers must add `dependencies=[Security(get_current_user)]` (use `Security`, not `Depends`, so the OpenAPI lock icon renders); only `health/` and public `auth/` endpoints are unguarded.
 
 ### Frontend structure rules
 
