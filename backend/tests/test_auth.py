@@ -150,9 +150,9 @@ async def test_register_success(client: AsyncClient):
     supabase_result = _mock_supabase_result()
 
     with (
-        patch("app.api.v1.auth.service.get_supabase") as mock_get_sb,
+        patch("app.db.supabase_auth.get_supabase") as mock_get_sb,
         patch(
-            "app.api.v1.auth.service.provision_user", new_callable=AsyncMock
+            "app.api.v1.auth.crud.provision_user", new_callable=AsyncMock
         ) as mock_provision,
     ):
         mock_get_sb.return_value.auth.sign_up.return_value = supabase_result
@@ -177,7 +177,7 @@ async def test_register_duplicate_email(client: AsyncClient):
     err = AuthApiError("User already registered", 400, None)
     err.code = "user_already_exists"
 
-    with patch("app.api.v1.auth.service.get_supabase") as mock_get_sb:
+    with patch("app.db.supabase_auth.get_supabase") as mock_get_sb:
         mock_get_sb.return_value.auth.sign_up.side_effect = err
 
         response = await client.post(
@@ -195,7 +195,7 @@ async def test_register_weak_password(client: AsyncClient):
     err = AuthApiError("Password is too weak", 422, None)
     err.code = "weak_password"
 
-    with patch("app.api.v1.auth.service.get_supabase") as mock_get_sb:
+    with patch("app.db.supabase_auth.get_supabase") as mock_get_sb:
         mock_get_sb.return_value.auth.sign_up.side_effect = err
 
         response = await client.post(
@@ -213,7 +213,7 @@ async def test_register_invalid_email(client: AsyncClient):
     err = AuthApiError("Invalid email", 422, None)
     err.code = "email_address_invalid"
 
-    with patch("app.api.v1.auth.service.get_supabase") as mock_get_sb:
+    with patch("app.db.supabase_auth.get_supabase") as mock_get_sb:
         mock_get_sb.return_value.auth.sign_up.side_effect = err
 
         response = await client.post(
@@ -236,8 +236,8 @@ async def test_login_success(client: AsyncClient):
     supabase_result = _mock_supabase_result()
 
     with (
-        patch("app.api.v1.auth.service.get_supabase") as mock_get_sb,
-        patch("app.api.v1.auth.service.provision_user", new_callable=AsyncMock),
+        patch("app.db.supabase_auth.get_supabase") as mock_get_sb,
+        patch("app.api.v1.auth.crud.provision_user", new_callable=AsyncMock),
     ):
         mock_get_sb.return_value.auth.sign_in_with_password.return_value = (
             supabase_result
@@ -257,7 +257,7 @@ async def test_login_success(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_login_invalid_credentials(client: AsyncClient):
     """POST /auth/login with wrong password returns 401."""
-    with patch("app.api.v1.auth.service.get_supabase") as mock_get_sb:
+    with patch("app.db.supabase_auth.get_supabase") as mock_get_sb:
         mock_get_sb.return_value.auth.sign_in_with_password.side_effect = AuthApiError(
             "Invalid login credentials", 400, None
         )
@@ -280,7 +280,7 @@ async def test_refresh_with_cookie(client: AsyncClient):
     """GET /auth/refresh with a valid refresh cookie returns new access token."""
     supabase_result = _mock_supabase_result()
 
-    with patch("app.api.v1.auth.service.get_supabase") as mock_get_sb:
+    with patch("app.db.supabase_auth.get_supabase") as mock_get_sb:
         mock_get_sb.return_value.auth.refresh_session.return_value = supabase_result
 
         client.cookies.set("refresh_token", _FAKE_REFRESH_TOKEN)
@@ -319,7 +319,7 @@ async def test_logout_clears_cookie(client: AsyncClient):
     with (
         jwks_patch as mock_jwks,
         decode_patch,
-        patch("app.api.v1.auth.service.get_supabase"),
+        patch("app.db.supabase_auth.get_supabase"),
     ):
         mock_signing_key = MagicMock()
         mock_signing_key.key = "fake-key"

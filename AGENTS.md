@@ -65,7 +65,7 @@ See `docs/reference/frontend-structure.md` for frontend directory rules, the fea
 - `app/core/config.py` — pydantic-settings `Settings` singleton; import `settings` from here everywhere.
 - `app/core/jwt_security.py` — JWT guard (`get_current_user`, `get_token_claims`); import guard from here in all protected routers.
 - `app/db/connector.py` — async engine, session factory, `get_session` dependency, `init_db`.
-- `app/db/supabase_client.py` — configured `supabase-py` client instance; import `supabase` from here in auth service.
+- `app/db/supabase_auth.py` — configured `supabase-py` client plus thin, domain-agnostic Supabase Auth operations (`sign_up`, `sign_in_with_password`, `refresh_session`); consumed by `auth/crud.py`, never imported directly by `service.py`.
 - `app/api/v1/router.py` — imports and includes every domain router. No route logic here.
 - Domain directories live under `app/api/v1/<domain>/`. URL paths mirror the directory path: `app/api/v1/<domain>/<endpoint>` → `/api/v1/<domain>/<endpoint>`.
 - `router.py` — route decorators only; calls service functions.

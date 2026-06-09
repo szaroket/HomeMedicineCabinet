@@ -4,19 +4,15 @@ import logging
 from uuid import UUID
 
 from sqlmodel.ext.asyncio.session import AsyncSession
-from supabase import AuthApiError
 
-from app.api.v1.auth.crud import provision_user
+from app.api.v1.auth import crud
 from app.api.v1.auth.schemas import AuthResponse, LoginRequest, RegisterRequest, UserOut
-from app.db.supabase_client import get_supabase
+from app.db import supabase_auth
 from app.utilities.errors import (
     DuplicateEmailError,
     InvalidCredentialsError,
-    InvalidEmailError,
-    RateLimitError,
     RegistrationError,
     SessionExpiredError,
-    WeakPasswordError,
 )
 
 logger = logging.getLogger("app.auth.service")
@@ -38,24 +34,7 @@ async def register(
         DuplicateEmailError: If the email is already registered.
         RegistrationError: If Supabase rejects the sign-up for any other reason.
     """
-    try:
-        result = get_supabase().auth.sign_up(
-            {"email": data.email, "password": data.password}
-        )
-    except AuthApiError as e:
-        logger.error("Supabase sign_up failed (code=%s): %s", e.code, e)
-        if e.status == 429:
-            raise RateLimitError() from e
-        if e.code == "user_already_exists":
-            raise DuplicateEmailError() from e
-        if e.code == "weak_password":
-            raise WeakPasswordError() from e
-        if e.code in ("email_address_invalid", "email_address_not_authorized"):
-            raise InvalidEmailError() from e
-        raise RegistrationError() from e
-    except Exception as e:
-        logger.error("Unexpected error during sign_up: %s", e, exc_info=True)
-        raise RegistrationError() from e
+    result = supabase_auth.sign_up(data.email, data.password)
 
     if result.user is None:
         logger.warning("sign_up returned no user for %s — duplicate email", data.email)
@@ -70,7 +49,7 @@ async def register(
 
     user_id = UUID(str(result.user.id))
     email = result.user.email or data.email
-    await provision_user(session, user_id, email)
+    await crud.provision_user(session, user_id, email)
     logger.info("Registered and provisioned user %s", user_id)
 
     return (
@@ -95,18 +74,7 @@ async def login(session: AsyncSession, data: LoginRequest) -> tuple[AuthResponse
     Raises:
         InvalidCredentialsError: If the email/password combination is incorrect.
     """
-    try:
-        result = get_supabase().auth.sign_in_with_password(
-            {"email": data.email, "password": data.password}
-        )
-    except AuthApiError as e:
-        logger.warning("Supabase sign_in failed for %s: %s", data.email, e)
-        if e.status == 429:
-            raise RateLimitError() from e
-        raise InvalidCredentialsError() from e
-    except Exception as e:
-        logger.error("Unexpected error during sign_in: %s", e, exc_info=True)
-        raise InvalidCredentialsError() from e
+    result = supabase_auth.sign_in_with_password(data.email, data.password)
 
     if result.user is None or result.session is None:
         logger.warning("sign_in returned no user/session for %s", data.email)
@@ -114,7 +82,7 @@ async def login(session: AsyncSession, data: LoginRequest) -> tuple[AuthResponse
 
     user_id = UUID(str(result.user.id))
     email = result.user.email or data.email
-    await provision_user(session, user_id, email)
+    await crud.provision_user(session, user_id, email)
     logger.info("Logged in user %s", user_id)
 
     return (
@@ -138,16 +106,7 @@ def refresh(refresh_token: str) -> tuple[AuthResponse, str]:
     Raises:
         SessionExpiredError: If the refresh token is invalid or expired.
     """
-    try:
-        result = get_supabase().auth.refresh_session(refresh_token)
-    except AuthApiError as e:
-        logger.warning("Supabase refresh_session failed: %s", e)
-        if e.status == 429:
-            raise RateLimitError() from e
-        raise SessionExpiredError() from e
-    except Exception as e:
-        logger.error("Unexpected error during refresh_session: %s", e, exc_info=True)
-        raise SessionExpiredError() from e
+    result = supabase_auth.refresh_session(refresh_token)
 
     if result.user is None or result.session is None:
         logger.warning("refresh_session returned no user/session")
