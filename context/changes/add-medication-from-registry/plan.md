@@ -73,7 +73,7 @@ Implement the pure, DB-free domain logic for the tablet-pool merge/normalization
 
 #### 1. Cabinet domain logic module
 
-**File**: `backend/app/api/v1/cabinet/logic.py` (new)
+**File**: `backend/app/api/v1/cabinet/service.py` (new)
 
 **Intent**: House the pure functions for FR-010 so they are unit-testable without a DB and reusable by the service layer. Keep them free of SQLModel/session types.
 
@@ -87,7 +87,7 @@ A `Status` `StrEnum` (or module-level constants) defines the three values. Googl
 
 #### 2. Unit tests
 
-**File**: `backend/tests/cabinet/__init__.py`, `backend/tests/cabinet/test_logic.py` (new)
+**File**: `backend/tests/cabinet/__init__.py`, `backend/tests/cabinet/test_service.py` (new)
 
 **Intent**: Exhaustively cover the merge/normalization and status logic, including the edge cases the roadmap flagged.
 
@@ -98,7 +98,7 @@ A `Status` `StrEnum` (or module-level constants) defines the three values. Googl
 #### Automated Verification:
 
 - [ ] Lint/format clean: `cd backend && uv run ruff check . && uv run ruff format --check .`
-- [ ] Unit tests pass: `cd backend && uv run pytest tests/cabinet/test_logic.py`
+- [ ] Unit tests pass: `cd backend && uv run pytest tests/cabinet/test_service.py`
 
 #### Manual Verification:
 
@@ -441,12 +441,12 @@ None — the schema from F-02 already supports this slice; no new migrations.
 
 #### Automated
 
-- [x] 1.1 Lint/format clean (ruff check + format --check)
-- [x] 1.2 Unit tests pass (pytest tests/cabinet/test_logic.py)
+- [x] 1.1 Lint/format clean (ruff check + format --check) — fe03838
+- [x] 1.2 Unit tests pass (pytest tests/cabinet/test_service.py) — fe03838
 
 #### Manual
 
-- [x] 1.3 Worked FR-010 example matches a test case
+- [x] 1.3 Worked FR-010 example matches a test case — fe03838
 
 ### Phase 2: Backend — `GET /api/v1/medicines/products`
 
