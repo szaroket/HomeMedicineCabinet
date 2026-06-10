@@ -209,6 +209,10 @@ Step-2 of the picker: return all pack-size variants of a selected product, so th
 
 **Implementation Note**: Pause for human confirmation before Phase 4.
 
+> **Addendum (Phase 3 impl):** A registry-import parser fix also landed in this phase's commit (`scripts/registry_import/parser.py` `_clean()` now maps the `"-"` sentinel to `None`, plus a `TestClean` suite). It is forward-only (affects future imports, not the rows `/variants` serves today) and is unrelated to the variants endpoint, so it falls outside this slice's "no registry data changes" guardrail — recorded here so it isn't re-flagged as drift.
+>
+> **Addendum (Phase 3 impl):** Raw SQL was extracted into a new `backend/app/api/v1/medicines/queries.py` module (`SEARCH_PRODUCTS`, `LIST_VARIANTS` as `text(...)` constants) rather than kept inline in `crud.py` as the plan implied; `crud.py` imports `queries` and owns execution. This is now a repo convention — see AGENTS.md "Backend layer rules" (`queries.py`).
+
 ---
 
 ## Phase 4: Backend — `POST /api/v1/cabinet/entries` (add with FR-010 merge)
@@ -466,12 +470,12 @@ None — the schema from F-02 already supports this slice; no new migrations.
 
 #### Automated
 
-- [x] 3.1 Lint/format clean
-- [x] 3.2 Existing tests still pass (pytest)
+- [x] 3.1 Lint/format clean — c29d1ec
+- [x] 3.2 Existing tests still pass (pytest) — c29d1ec
 
 #### Manual
 
-- [x] 3.3 PowerShell: variants ordered by capacity; is_tablet_based correct; NULL strength matches
+- [x] 3.3 PowerShell: variants ordered by capacity; is_tablet_based correct; NULL strength matches — c29d1ec
 
 ### Phase 4: Backend — `POST /api/v1/cabinet/entries` (add with FR-010 merge)
 

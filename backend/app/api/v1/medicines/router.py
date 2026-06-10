@@ -51,7 +51,7 @@ async def search_products(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
         ) from exc
     except Exception as exc:
-        logger.exception("Unexpected error in list_variants: %s", exc)
+        logger.exception("Unexpected error in search_products: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred.",

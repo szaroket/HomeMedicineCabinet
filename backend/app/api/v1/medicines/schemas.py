@@ -7,8 +7,6 @@ from pydantic import BaseModel, ConfigDict
 
 
 class ProductOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True, extra="ignore")
-
     """A distinct product result from the registry search.
 
     A product groups all pack-size variants that share the same name,
@@ -21,6 +19,8 @@ class ProductOut(BaseModel):
         pharmaceutical_form: Form (tablet, syrup, ...), or None when not recorded.
         active_ingredient: Active ingredient, or None when not recorded.
     """
+
+    model_config = ConfigDict(from_attributes=True, extra="ignore")
 
     name: str
     strength: str | None

@@ -71,6 +71,7 @@ See `docs/reference/frontend-structure.md` for frontend directory rules, the fea
 - `router.py` — route decorators only; calls service functions.
 - `service.py` — business logic and orchestration; calls crud functions.
 - `crud.py` — raw database operations; no business logic.
+- `queries.py` — raw SQL statements as module-level `text(...)` constants; no execution. When a domain uses hand-written SQL, keep the SQL here and have `crud.py` import `queries` and execute the constants. Inline SQL inside `crud.py` only for trivial one-liners; anything multi-line or reused belongs in `queries.py`.
 - Domains with no DB access (e.g. `health/`) may omit `service.py` and `crud.py`.
 - To add a new domain: create `app/api/v1/<domain>/` with `__init__.py`, `router.py`, `service.py`, `crud.py`; import and include the router in `app/api/v1/router.py`.
 - New protected domain routers must add `dependencies=[Security(get_current_user)]` (use `Security`, not `Depends`, so the OpenAPI lock icon renders); only `health/` and public `auth/` endpoints are unguarded.

@@ -3,7 +3,7 @@ change_id: add-medication-from-registry
 title: Add medication from Polish registry with autocomplete and dedup
 status: impl_reviewed
 created: 2026-06-09
-updated: 2026-06-09
+updated: 2026-06-10
 archived_at: null
 ---
 
