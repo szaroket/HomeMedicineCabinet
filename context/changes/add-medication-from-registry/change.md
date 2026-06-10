@@ -4,6 +4,7 @@ title: Add medication from Polish registry with autocomplete and dedup
 status: impl_reviewed
 created: 2026-06-09
 updated: 2026-06-10
+last_review: reviews/impl-review-phase-4.md
 archived_at: null
 ---
 

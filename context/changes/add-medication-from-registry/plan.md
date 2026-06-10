@@ -481,12 +481,12 @@ None — the schema from F-02 already supports this slice; no new migrations.
 
 #### Automated
 
-- [x] 4.1 Lint/format clean
-- [x] 4.2 Existing tests still pass (pytest)
+- [x] 4.1 Lint/format clean — 813312b
+- [x] 4.2 Existing tests still pass (pytest) — 813312b
 
 #### Manual
 
-- [x] 4.3 PowerShell: new add, merge with summary, different-expiry new entry, non-tablet increment, 422 validation, 404 unknown id
+- [x] 4.3 PowerShell: new add, merge with summary, different-expiry new entry, non-tablet increment, 422 validation, 404 unknown id — 813312b
 
 ### Phase 5: Backend — `GET /api/v1/cabinet/entries` (list)
 
