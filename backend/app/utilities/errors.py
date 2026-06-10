@@ -163,3 +163,104 @@ class MedicineSearchError(MedicinesError):
             message: Description of what went wrong.
         """
         super().__init__(message)
+
+
+class CabinetError(Exception):
+    """Base class for cabinet domain errors.
+
+    Kept separate from AuthError and MedicinesError so the cabinet taxonomy
+    remains independent.
+
+    Attributes:
+        message: Human-readable description of the error (English).
+    """
+
+    def __init__(self, message: str) -> None:
+        """Initialise the error with a message.
+
+        Args:
+            message: Description of what went wrong.
+        """
+        super().__init__(message)
+        self.message = message
+
+
+class MedicationNotFoundError(CabinetError):
+    """Raised when the requested medication registry entry does not exist."""
+
+    def __init__(self, message: str = "Medication not found.") -> None:
+        """Initialise with a default message.
+
+        Args:
+            message: Description of what went wrong.
+        """
+        super().__init__(message)
+
+
+class InvalidPackageCountError(CabinetError):
+    """Raised when the supplied package_count is below the minimum (1)."""
+
+    def __init__(self, message: str = "Package count must be at least 1.") -> None:
+        """Initialise with a default message.
+
+        Args:
+            message: Description of what went wrong.
+        """
+        super().__init__(message)
+
+
+class InvalidPartialTabletCountError(CabinetError):
+    """Raised when partial_tablet_count is invalid for the selected variant.
+
+    This covers two cases: a partial count supplied for a non-tablet variant,
+    and a partial count outside the valid range (1 … tablets_per_package − 1).
+    """
+
+    def __init__(
+        self,
+        message: str = "Invalid partial tablet count for the selected variant.",
+    ) -> None:
+        """Initialise with a default message.
+
+        Args:
+            message: Description of what went wrong.
+        """
+        super().__init__(message)
+
+
+class CabinetInvariantError(CabinetError):
+    """Raised when an internal data invariant is violated in the cabinet domain.
+
+    Signals a bug or corrupt data (e.g. a tablet-based registry row with NULL
+    capacity), not a user mistake. The router maps this to 500.
+    """
+
+    def __init__(
+        self,
+        message: str = "An internal invariant was violated in the cabinet domain.",
+    ) -> None:
+        """Initialise with a default message.
+
+        Args:
+            message: Description of what went wrong.
+        """
+        super().__init__(message)
+
+
+class CabinetDatabaseError(CabinetError):
+    """Raised when a cabinet database query fails (e.g. connection unavailable).
+
+    Wraps a SQLAlchemy error so the router can map it to 503 rather than leaking
+    a raw 500.
+    """
+
+    def __init__(
+        self,
+        message: str = "A database error occurred in the cabinet domain.",
+    ) -> None:
+        """Initialise with a default message.
+
+        Args:
+            message: Description of what went wrong.
+        """
+        super().__init__(message)

@@ -6,6 +6,20 @@ note. Newest first.
 
 ---
 
+## L-004 — Wrap every `session.execute` / `session.flush` in `try/except SQLAlchemyError`
+
+**Context**: Applied consistently starting with `cabinet/crud.py` (S-01 Phase 4, 2026-06-10); the pattern was already present in `medicines/crud.py`.
+
+**The rule**:
+
+- Every `await session.execute(...)`, `await session.flush()`, and `await session.refresh(...)` in a `crud.py` module must be wrapped in `try/except SQLAlchemyError`.
+- On catch: log with `logger.error(..., exc_info=True)` and raise the domain-specific database error (e.g. `CabinetDatabaseError`, `MedicineSearchError`) chained with `from exc`.
+- Each domain must define its own `<Domain>DatabaseError(BaseDomainError)` in `app/utilities/errors.py` — do not reuse another domain's error class.
+- The router maps `<Domain>DatabaseError` → HTTP 503; never let a raw `SQLAlchemyError` propagate to the client.
+- For `insert_entry` / `update_entry_counts` patterns where `session.add()` precedes the flush, the `session.add()` call itself doesn't need the try block — only the `await` calls do.
+
+---
+
 ## L-003 — Keep FastAPI `Query()`/`Path()` inside `Annotated`, never as a default value, when the type carries Pydantic constraints
 
 **Context**: Surfaced in `medicines/router.py` (S-01 Phase 2, 2026-06-09) while

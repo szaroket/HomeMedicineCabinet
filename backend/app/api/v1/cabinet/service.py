@@ -1,8 +1,29 @@
-"""Cabinet service: pure domain logic and (future) DB-backed orchestration."""
+"""Cabinet service: pure domain logic and DB-backed orchestration."""
 
+import logging
+import uuid
 from datetime import date, timedelta
 from enum import StrEnum
 from typing import NamedTuple
+
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api.v1.cabinet import crud
+from app.api.v1.cabinet.models import CabinetEntry
+from app.api.v1.cabinet.schemas import (
+    AddEntryOut,
+    AddEntryResult,
+    MergeSummary,
+)
+from app.api.v1.medicines.models import MedicationRegistry
+from app.utilities.errors import (
+    CabinetInvariantError,
+    InvalidPartialTabletCountError,
+    MedicationNotFoundError,
+)
+
+logger = logging.getLogger("app.cabinet.service")
 
 
 class Status(StrEnum):
@@ -122,3 +143,320 @@ def classify_status(
     if expiry_date <= today + timedelta(days=expiry_threshold_days):
         return Status.EXPIRING
     return Status.VALID
+
+
+async def _get_variant_or_raise(
+    session: AsyncSession,
+    medication_registry_id: uuid.UUID,
+) -> MedicationRegistry:
+    """Fetch a registry variant by ID or raise MedicationNotFoundError.
+
+    Args:
+        session: Active async database session.
+        medication_registry_id: UUID of the registry row to look up.
+
+    Returns:
+        The MedicationRegistry row.
+
+    Raises:
+        MedicationNotFoundError: When no row exists for the given ID.
+    """
+    variant = await crud.get_registry_by_id(session, medication_registry_id)
+    if variant is None:
+        raise MedicationNotFoundError()
+    return variant
+
+
+def _validate_and_get_tpp(
+    variant: MedicationRegistry,
+    partial_tablet_count: int | None,
+) -> int | None:
+    """Validate partial_tablet_count against the variant and return tablets-per-package.
+
+    Args:
+        variant: The MedicationRegistry row for the selected variant.
+        partial_tablet_count: Tablets in the last package supplied by the caller.
+
+    Returns:
+        Tablets per package (int) for tablet-based variants, None otherwise.
+
+    Raises:
+        InvalidPartialTabletCountError: When partial_tablet_count is supplied for
+            a non-tablet variant or is outside the valid range 1…tpp-1.
+    """
+    if variant.is_tablet_based:
+        if variant.capacity is None:
+            raise CabinetInvariantError(
+                f"Registry invariant violated: tablet-based row {variant.id} has NULL capacity"
+            )
+        tpp = int(variant.capacity)
+        if partial_tablet_count is not None and not (
+            1 <= partial_tablet_count <= tpp - 1
+        ):
+            raise InvalidPartialTabletCountError(
+                f"partial_tablet_count must be between 1 and {tpp - 1} for this variant."
+            )
+        return tpp
+    if partial_tablet_count is not None:
+        raise InvalidPartialTabletCountError(
+            "partial_tablet_count is not applicable for non-tablet variants."
+        )
+    return None
+
+
+def _computed_total(entry: CabinetEntry, tpp: int | None) -> int | None:
+    if tpp is not None:
+        return total_tablets(entry.package_count, entry.partial_tablet_count, tpp)
+    return None
+
+
+def _build_add_entry_out(
+    entry: CabinetEntry,
+    variant: MedicationRegistry,
+    tpp: int | None,
+) -> AddEntryOut:
+    """Assemble an AddEntryOut (no status) from a persisted entry and its variant.
+
+    Args:
+        entry: The CabinetEntry row (flushed or committed).
+        variant: The MedicationRegistry row for display fields.
+        tpp: Tablets per package, or None for non-tablet variants.
+
+    Returns:
+        Populated AddEntryOut without status.
+    """
+    return AddEntryOut(
+        id=entry.id,
+        name=variant.name,
+        strength=variant.strength,
+        pharmaceutical_form=variant.pharmaceutical_form,
+        capacity=variant.capacity,
+        capacity_unit=variant.capacity_unit,
+        is_tablet_based=variant.is_tablet_based,
+        package_count=entry.package_count,
+        partial_tablet_count=entry.partial_tablet_count,
+        expiry_date=entry.expiry_date,
+        total_tablets=_computed_total(entry, tpp),
+    )
+
+
+async def _insert_with_race_guard(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    medication_registry_id: uuid.UUID,
+    package_count: int,
+    partial_tablet_count: int | None,
+    expiry_date: date,
+) -> CabinetEntry | None:
+    """Insert a new cabinet entry, returning None on a concurrent-insert race.
+
+    On ``IntegrityError`` (duplicate unique key from a concurrent POST), rolls
+    back the failed insert and returns ``None`` so the caller can fall through
+    to the merge path.
+
+    Args:
+        session: Active async database session.
+        user_id: Authenticated user's UUID.
+        medication_registry_id: UUID of the selected registry variant.
+        package_count: Number of packages to insert.
+        partial_tablet_count: Tablets in the last package, or None.
+        expiry_date: Expiry date for the entry.
+
+    Returns:
+        The newly created CabinetEntry, or None if a race condition was detected.
+    """
+    try:
+        return await crud.insert_entry(
+            session,
+            user_id,
+            medication_registry_id,
+            package_count,
+            partial_tablet_count,
+            expiry_date,
+        )
+    except IntegrityError:
+        return None
+
+
+async def _dedup_or_insert(
+    *,
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    medication_registry_id: uuid.UUID,
+    package_count: int,
+    partial_tablet_count: int | None,
+    expiry_date: date,
+    variant: MedicationRegistry,
+    tpp: int | None,
+) -> AddEntryResult:
+    """Check for a duplicate entry and merge, or insert fresh (with race guard).
+
+    Looks up the dedup key. On a hit, delegates to ``_merge_and_commit``. On a
+    miss, inserts; if a concurrent request wins the race and triggers an
+    ``IntegrityError``, rolls back and falls through to the merge path.
+
+    Args:
+        session: Active async database session.
+        user_id: Authenticated user's UUID.
+        medication_registry_id: UUID of the selected registry variant.
+        package_count: Number of packages to add.
+        partial_tablet_count: Tablets in the last package, or None.
+        expiry_date: Expiry date for the entry.
+        variant: Already-fetched MedicationRegistry row.
+        tpp: Tablets per package, or None for non-tablet variants.
+
+    Returns:
+        AddEntryResult with merged=False for a fresh insert, merged=True on merge.
+
+    Raises:
+        CabinetInvariantError: If an IntegrityError occurs but the row is missing.
+    """
+    merge_kwargs = dict(
+        session=session,
+        new_package_count=package_count,
+        new_partial=partial_tablet_count,
+        variant=variant,
+        tpp=tpp,
+    )
+
+    existing = await crud.find_entry(
+        session, user_id, medication_registry_id, expiry_date
+    )
+    if existing is not None:
+        return await _merge_and_commit(existing=existing, **merge_kwargs)
+
+    entry = await _insert_with_race_guard(
+        session,
+        user_id,
+        medication_registry_id,
+        package_count,
+        partial_tablet_count,
+        expiry_date,
+    )
+    if entry is None:
+        existing = await crud.find_entry(
+            session, user_id, medication_registry_id, expiry_date
+        )
+        if existing is None:
+            raise CabinetInvariantError(
+                "Race-condition insert failed but row not found"
+            )
+        return await _merge_and_commit(existing=existing, **merge_kwargs)
+
+    return AddEntryResult(
+        merged=False,
+        entry=_build_add_entry_out(entry, variant, tpp),
+        merge_summary=None,
+    )
+
+
+async def add_entry(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    medication_registry_id: uuid.UUID,
+    package_count: int,
+    partial_tablet_count: int | None,
+    expiry_date: date,
+) -> AddEntryResult:
+    """Validate, dedup/merge, persist, and return the add result.
+
+    Orchestrates the full add flow: looks up the registry variant, validates
+    tablet/non-tablet constraints, checks for an existing entry with the same
+    dedup key, merges (FR-010) or inserts, computes status, and returns an
+    ``AddEntryResult`` envelope.
+
+    On a concurrent-add race (two simultaneous POSTs with the same dedup key),
+    the ``IntegrityError`` from the failed insert is caught, the transaction is
+    rolled back, and the winning row is re-fetched so the same merge path runs.
+
+    Args:
+        session: Active async database session.
+        user_id: Authenticated user's UUID.
+        medication_registry_id: UUID of the selected registry variant.
+        package_count: Number of packages to add (>= 1).
+        partial_tablet_count: Tablets in the last package, or None.
+        expiry_date: Expiry date for the entry.
+
+    Returns:
+        AddEntryResult with merged flag, the resulting entry, and an optional
+        MergeSummary.
+
+    Raises:
+        MedicationNotFoundError: When the registry variant does not exist.
+        InvalidPartialTabletCountError: When partial_tablet_count is supplied
+            for a non-tablet variant, or outside the valid range.
+    """
+    variant = await _get_variant_or_raise(session, medication_registry_id)
+    tpp = _validate_and_get_tpp(variant, partial_tablet_count)
+    return await _dedup_or_insert(
+        session=session,
+        user_id=user_id,
+        medication_registry_id=medication_registry_id,
+        package_count=package_count,
+        partial_tablet_count=partial_tablet_count,
+        expiry_date=expiry_date,
+        variant=variant,
+        tpp=tpp,
+    )
+
+
+async def _merge_and_commit(
+    *,
+    session: AsyncSession,
+    existing: CabinetEntry,
+    new_package_count: int,
+    new_partial: int | None,
+    variant: MedicationRegistry,
+    tpp: int | None,
+) -> AddEntryResult:
+    """Apply FR-010 merge math, persist the update, and return AddEntryResult.
+
+    Args:
+        session: Active async database session.
+        existing: The existing CabinetEntry to merge into.
+        new_package_count: Package count of the incoming add.
+        new_partial: Partial tablet count of the incoming add, or None.
+        variant: The MedicationRegistry row for display fields.
+        tpp: Tablets per package (int) for tablet-based variants, None otherwise.
+
+    Returns:
+        AddEntryResult with merged=True and populated merge_summary.
+    """
+    prev_pkg = existing.package_count
+    prev_partial = existing.partial_tablet_count
+
+    if tpp is not None:
+        prev_total = total_tablets(prev_pkg, prev_partial, tpp)
+        added_total = total_tablets(new_package_count, new_partial, tpp)
+        pool = merge_tablet_entry(
+            prev_pkg, prev_partial, new_package_count, new_partial, tpp
+        )
+        new_pkg = pool.package_count
+        new_partial_result: int | None = pool.partial_tablet_count
+        summary = MergeSummary(
+            previous_package_count=prev_pkg,
+            previous_partial_tablet_count=prev_partial,
+            previous_total_tablets=prev_total,
+            added_total_tablets=added_total,
+            new_total_tablets=total_tablets(new_pkg, new_partial_result, tpp),
+        )
+    else:
+        new_pkg = merge_non_tablet_entry(prev_pkg, new_package_count)
+        new_partial_result = None
+        summary = MergeSummary(
+            previous_package_count=prev_pkg,
+            previous_partial_tablet_count=None,
+            previous_total_tablets=None,
+            added_total_tablets=None,
+            new_total_tablets=None,
+        )
+
+    updated = await crud.update_entry_counts(
+        session, existing, new_pkg, new_partial_result
+    )
+
+    return AddEntryResult(
+        merged=True,
+        entry=_build_add_entry_out(updated, variant, tpp),
+        merge_summary=summary,
+    )

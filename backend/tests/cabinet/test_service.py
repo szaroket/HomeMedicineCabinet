@@ -1,17 +1,30 @@
-"""Unit tests for cabinet domain logic (no DB, no I/O)."""
+"""Unit tests for cabinet service layer: pure domain logic and add_entry orchestration."""
 
 from datetime import date, timedelta
+from decimal import Decimal
+from unittest.mock import AsyncMock, MagicMock
+from uuid import uuid4
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
+from app.api.v1.cabinet.models import CabinetEntry
+from app.api.v1.cabinet.schemas import AddEntryResult
 from app.api.v1.cabinet.service import (
     Status,
     TabletPool,
+    add_entry,
     classify_status,
     merge_non_tablet_entry,
     merge_tablet_entry,
     normalize_tablet_pool,
     total_tablets,
+)
+from app.api.v1.medicines.models import MedicationRegistry
+from app.utilities.errors import (
+    CabinetInvariantError,
+    InvalidPartialTabletCountError,
+    MedicationNotFoundError,
 )
 
 # ---------------------------------------------------------------------------
@@ -186,3 +199,257 @@ class TestClassifyStatus:
             )
             == expected
         )
+
+
+# ---------------------------------------------------------------------------
+# add_entry orchestration
+# ---------------------------------------------------------------------------
+
+_USER_ID = uuid4()
+_REGISTRY_ID = uuid4()
+_EXPIRY = date(2027, 6, 1)
+_TPP = 20
+
+
+def _make_variant(
+    *,
+    is_tablet_based: bool = True,
+    capacity: Decimal | None = Decimal(_TPP),
+) -> MagicMock:
+    v = MagicMock(spec=MedicationRegistry)
+    v.id = _REGISTRY_ID
+    v.is_tablet_based = is_tablet_based
+    v.capacity = capacity
+    v.name = "Apap"
+    v.strength = "500 mg"
+    v.pharmaceutical_form = "tabletki"
+    v.capacity_unit = "tabl."
+    return v
+
+
+def _make_entry(package_count: int = 1, partial: int | None = None) -> MagicMock:
+    e = MagicMock(spec=CabinetEntry)
+    e.id = uuid4()
+    e.user_id = _USER_ID
+    e.medication_registry_id = _REGISTRY_ID
+    e.package_count = package_count
+    e.partial_tablet_count = partial
+    e.expiry_date = _EXPIRY
+    return e
+
+
+@pytest.fixture
+def mock_crud(mocker):
+    """Patch the entire cabinet crud module used by service."""
+    return mocker.patch("app.api.v1.cabinet.service.crud", autospec=True)
+
+
+class TestAddEntryFreshInsert:
+    async def test_tablet_fresh_insert_returns_merged_false(
+        self, mock_session: AsyncMock, mock_crud
+    ):
+        variant = _make_variant()
+        entry = _make_entry(package_count=2, partial=5)
+        mock_crud.get_registry_by_id = AsyncMock(return_value=variant)
+        mock_crud.find_entry = AsyncMock(return_value=None)
+        mock_crud.insert_entry = AsyncMock(return_value=entry)
+
+        result = await add_entry(
+            session=mock_session,
+            user_id=_USER_ID,
+            medication_registry_id=_REGISTRY_ID,
+            package_count=2,
+            partial_tablet_count=5,
+            expiry_date=_EXPIRY,
+        )
+
+        assert isinstance(result, AddEntryResult)
+        assert result.merged is False
+        assert result.merge_summary is None
+        assert result.entry.package_count == 2
+        assert result.entry.partial_tablet_count == 5
+        assert result.entry.total_tablets == 25  # (2-1)*20 + 5
+
+    async def test_non_tablet_fresh_insert_has_null_total_tablets(
+        self, mock_session: AsyncMock, mock_crud
+    ):
+        variant = _make_variant(is_tablet_based=False, capacity=None)
+        entry = _make_entry(package_count=3)
+        mock_crud.get_registry_by_id = AsyncMock(return_value=variant)
+        mock_crud.find_entry = AsyncMock(return_value=None)
+        mock_crud.insert_entry = AsyncMock(return_value=entry)
+
+        result = await add_entry(
+            session=mock_session,
+            user_id=_USER_ID,
+            medication_registry_id=_REGISTRY_ID,
+            package_count=3,
+            partial_tablet_count=None,
+            expiry_date=_EXPIRY,
+        )
+
+        assert result.merged is False
+        assert result.entry.total_tablets is None
+
+
+class TestAddEntryMerge:
+    async def test_tablet_merge_returns_merged_true_with_summary(
+        self, mock_session: AsyncMock, mock_crud
+    ):
+        variant = _make_variant()
+        existing = _make_entry(package_count=1, partial=None)  # 20 tablets
+        updated = _make_entry(package_count=2, partial=5)  # 45 tablets after merge
+        mock_crud.get_registry_by_id = AsyncMock(return_value=variant)
+        mock_crud.find_entry = AsyncMock(return_value=existing)
+        mock_crud.update_entry_counts = AsyncMock(return_value=updated)
+
+        result = await add_entry(
+            session=mock_session,
+            user_id=_USER_ID,
+            medication_registry_id=_REGISTRY_ID,
+            package_count=1,
+            partial_tablet_count=5,
+            expiry_date=_EXPIRY,
+        )
+
+        assert result.merged is True
+        assert result.merge_summary is not None
+        assert result.merge_summary.previous_total_tablets == 20
+        assert result.merge_summary.added_total_tablets == 5  # (1-1)*20+5
+        assert result.merge_summary.new_total_tablets == 25
+
+    async def test_non_tablet_merge_sums_package_counts(
+        self, mock_session: AsyncMock, mock_crud
+    ):
+        variant = _make_variant(is_tablet_based=False, capacity=None)
+        existing = _make_entry(package_count=3)
+        updated = _make_entry(package_count=5)
+        mock_crud.get_registry_by_id = AsyncMock(return_value=variant)
+        mock_crud.find_entry = AsyncMock(return_value=existing)
+        mock_crud.update_entry_counts = AsyncMock(return_value=updated)
+
+        result = await add_entry(
+            session=mock_session,
+            user_id=_USER_ID,
+            medication_registry_id=_REGISTRY_ID,
+            package_count=2,
+            partial_tablet_count=None,
+            expiry_date=_EXPIRY,
+        )
+
+        assert result.merged is True
+        assert result.entry.package_count == 5
+        assert result.merge_summary.previous_package_count == 3
+
+
+class TestAddEntryRaceCondition:
+    async def test_integrity_error_falls_through_to_merge(
+        self, mock_session: AsyncMock, mock_crud
+    ):
+        variant = _make_variant()
+        existing = _make_entry(package_count=1)
+        updated = _make_entry(package_count=2)
+        mock_crud.get_registry_by_id = AsyncMock(return_value=variant)
+        mock_crud.find_entry = AsyncMock(side_effect=[None, existing])
+        mock_crud.insert_entry = AsyncMock(
+            side_effect=IntegrityError("unique", {}, Exception())
+        )
+        mock_crud.update_entry_counts = AsyncMock(return_value=updated)
+
+        result = await add_entry(
+            session=mock_session,
+            user_id=_USER_ID,
+            medication_registry_id=_REGISTRY_ID,
+            package_count=1,
+            partial_tablet_count=None,
+            expiry_date=_EXPIRY,
+        )
+
+        assert result.merged is True
+
+    async def test_integrity_error_with_missing_row_raises_invariant_error(
+        self, mock_session: AsyncMock, mock_crud
+    ):
+        variant = _make_variant()
+        mock_crud.get_registry_by_id = AsyncMock(return_value=variant)
+        mock_crud.find_entry = AsyncMock(return_value=None)
+        mock_crud.insert_entry = AsyncMock(
+            side_effect=IntegrityError("unique", {}, Exception())
+        )
+
+        with pytest.raises(CabinetInvariantError):
+            await add_entry(
+                session=mock_session,
+                user_id=_USER_ID,
+                medication_registry_id=_REGISTRY_ID,
+                package_count=1,
+                partial_tablet_count=None,
+                expiry_date=_EXPIRY,
+            )
+
+
+class TestAddEntryValidation:
+    async def test_unknown_registry_id_raises_not_found(
+        self, mock_session: AsyncMock, mock_crud
+    ):
+        mock_crud.get_registry_by_id = AsyncMock(return_value=None)
+
+        with pytest.raises(MedicationNotFoundError):
+            await add_entry(
+                session=mock_session,
+                user_id=_USER_ID,
+                medication_registry_id=_REGISTRY_ID,
+                package_count=1,
+                partial_tablet_count=None,
+                expiry_date=_EXPIRY,
+            )
+
+    @pytest.mark.parametrize("partial", [0, 20, 21])
+    async def test_out_of_range_partial_raises_error(
+        self, partial, mock_session: AsyncMock, mock_crud
+    ):
+        mock_crud.get_registry_by_id = AsyncMock(return_value=_make_variant())
+
+        with pytest.raises(InvalidPartialTabletCountError):
+            await add_entry(
+                session=mock_session,
+                user_id=_USER_ID,
+                medication_registry_id=_REGISTRY_ID,
+                package_count=1,
+                partial_tablet_count=partial,
+                expiry_date=_EXPIRY,
+            )
+
+    async def test_partial_on_non_tablet_raises_error(
+        self, mock_session: AsyncMock, mock_crud
+    ):
+        mock_crud.get_registry_by_id = AsyncMock(
+            return_value=_make_variant(is_tablet_based=False, capacity=None)
+        )
+
+        with pytest.raises(InvalidPartialTabletCountError):
+            await add_entry(
+                session=mock_session,
+                user_id=_USER_ID,
+                medication_registry_id=_REGISTRY_ID,
+                package_count=1,
+                partial_tablet_count=3,
+                expiry_date=_EXPIRY,
+            )
+
+    async def test_null_capacity_on_tablet_variant_raises_invariant_error(
+        self, mock_session: AsyncMock, mock_crud
+    ):
+        mock_crud.get_registry_by_id = AsyncMock(
+            return_value=_make_variant(is_tablet_based=True, capacity=None)
+        )
+
+        with pytest.raises(CabinetInvariantError):
+            await add_entry(
+                session=mock_session,
+                user_id=_USER_ID,
+                medication_registry_id=_REGISTRY_ID,
+                package_count=1,
+                partial_tablet_count=None,
+                expiry_date=_EXPIRY,
+            )
