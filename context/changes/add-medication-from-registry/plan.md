@@ -466,12 +466,12 @@ None — the schema from F-02 already supports this slice; no new migrations.
 
 #### Automated
 
-- [ ] 3.1 Lint/format clean
-- [ ] 3.2 Existing tests still pass (pytest)
+- [x] 3.1 Lint/format clean
+- [x] 3.2 Existing tests still pass (pytest)
 
 #### Manual
 
-- [ ] 3.3 PowerShell: variants ordered by capacity; is_tablet_based correct; NULL strength matches
+- [x] 3.3 PowerShell: variants ordered by capacity; is_tablet_based correct; NULL strength matches
 
 ### Phase 4: Backend — `POST /api/v1/cabinet/entries` (add with FR-010 merge)
 

@@ -1,13 +1,15 @@
 """Unit tests for medicines service layer (business logic, no HTTP or live DB)."""
 
+import uuid
+from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
 from pytest_mock import MockerFixture
 
-from app.api.v1.medicines.schemas import ProductOut
-from app.api.v1.medicines.service import _build_tsquery, search_products
+from app.api.v1.medicines.schemas import ProductOut, VariantOut
+from app.api.v1.medicines.service import _build_tsquery, list_variants, search_products
 
 
 def _registry_row(
@@ -22,6 +24,31 @@ def _registry_row(
         strength=strength,
         pharmaceutical_form=pharmaceutical_form,
         active_ingredient=active_ingredient,
+    )
+
+
+def _variant_row(
+    id: uuid.UUID | None = None,
+    name: str = "Apap",
+    strength: str | None = "500 mg",
+    pharmaceutical_form: str | None = "tabletki",
+    capacity: Decimal | None = Decimal("20"),
+    capacity_unit: str | None = "tabl.",
+    is_tablet_based: bool = True,
+    active_ingredient: str | None = "paracetamol",
+    route_of_administration: str | None = "doustnie",
+) -> SimpleNamespace:
+    """Build a stand-in for a CRUD result row exposing all VariantOut columns."""
+    return SimpleNamespace(
+        id=id or uuid.uuid4(),
+        name=name,
+        strength=strength,
+        pharmaceutical_form=pharmaceutical_form,
+        capacity=capacity,
+        capacity_unit=capacity_unit,
+        is_tablet_based=is_tablet_based,
+        active_ingredient=active_ingredient,
+        route_of_administration=route_of_administration,
     )
 
 
@@ -81,7 +108,6 @@ class TestBuildTsquery:
 
 
 class TestSearchProducts:
-    @pytest.mark.asyncio
     async def test_short_query_returns_empty_without_hitting_crud(
         self, mock_session: AsyncMock, mocker: MockerFixture
     ):
@@ -95,7 +121,6 @@ class TestSearchProducts:
         assert result == []
         mock_crud.assert_not_awaited()
 
-    @pytest.mark.asyncio
     async def test_maps_rows_to_product_out(
         self, mock_session: AsyncMock, mocker: MockerFixture
     ):
@@ -131,7 +156,6 @@ class TestSearchProducts:
             ),
         ]
 
-    @pytest.mark.asyncio
     async def test_passes_built_tsquery_to_crud(
         self, mock_session: AsyncMock, mocker: MockerFixture
     ):
@@ -145,7 +169,6 @@ class TestSearchProducts:
 
         mock_crud.assert_awaited_once_with(mock_session, "apap:* & forte:*", 20)
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         ("limit", "expected_limit"),
         [
@@ -167,3 +190,67 @@ class TestSearchProducts:
         await search_products(mock_session, "apap", limit=limit)
 
         mock_crud.assert_awaited_once_with(mock_session, "apap:*", expected_limit)
+
+
+# ---------------------------------------------------------------------------
+# list_variants
+# ---------------------------------------------------------------------------
+
+
+class TestListVariants:
+    async def test_maps_rows_to_variant_out(
+        self, mock_session: AsyncMock, mocker: MockerFixture
+    ):
+        row = _variant_row()
+        mocker.patch(
+            "app.api.v1.medicines.service.crud.list_variants",
+            autospec=True,
+            return_value=[row],
+        )
+
+        result = await list_variants(mock_session, "Apap", "500 mg", "tabletki")
+
+        assert len(result) == 1
+        assert isinstance(result[0], VariantOut)
+        assert result[0].id == row.id
+        assert result[0].name == row.name
+        assert result[0].is_tablet_based is True
+
+    async def test_passes_args_to_crud(
+        self, mock_session: AsyncMock, mocker: MockerFixture
+    ):
+        mock_crud = mocker.patch(
+            "app.api.v1.medicines.service.crud.list_variants",
+            autospec=True,
+            return_value=[],
+        )
+
+        await list_variants(mock_session, "Apap", "500 mg", "tabletki")
+
+        mock_crud.assert_awaited_once_with(mock_session, "Apap", "500 mg", "tabletki")
+
+    async def test_none_strength_and_form_passed_through(
+        self, mock_session: AsyncMock, mocker: MockerFixture
+    ):
+        mock_crud = mocker.patch(
+            "app.api.v1.medicines.service.crud.list_variants",
+            autospec=True,
+            return_value=[],
+        )
+
+        await list_variants(mock_session, "Apap", None, None)
+
+        mock_crud.assert_awaited_once_with(mock_session, "Apap", None, None)
+
+    async def test_empty_result_returns_empty_list(
+        self, mock_session: AsyncMock, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.medicines.service.crud.list_variants",
+            autospec=True,
+            return_value=[],
+        )
+
+        result = await list_variants(mock_session, "Unknown", None, None)
+
+        assert result == []

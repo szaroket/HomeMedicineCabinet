@@ -5,6 +5,7 @@ import pytest
 
 from scripts.registry_import.parser import (
     TABLET_UNITS,
+    _clean,
     _is_tablet_based,
     _parse_capacity,
     parse_registry,
@@ -92,6 +93,29 @@ class TestParseRegistry:
             "Edelan",
             "FANHDI",
         }
+
+
+class TestClean:
+    def test_none_returns_none(self):
+        assert _clean(None) is None
+
+    def test_empty_string_returns_none(self):
+        assert _clean("") is None
+
+    def test_whitespace_only_returns_none(self):
+        assert _clean("   ") is None
+
+    def test_strips_whitespace(self):
+        assert _clean("  apap  ") == "apap"
+
+    def test_dash_sentinel_returns_none(self):
+        assert _clean("-") is None
+
+    def test_dash_with_whitespace_returns_none(self):
+        assert _clean("  -  ") is None
+
+    def test_non_sentinel_value_returned(self):
+        assert _clean("500 mg") == "500 mg"
 
 
 class TestParseCapacity:

@@ -2,27 +2,27 @@
 
 from typing import Annotated
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Security, status
 from pydantic import StringConstraints
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.v1.medicines import service as medicines_service
-from app.api.v1.medicines.schemas import ProductOut
+from app.api.v1.medicines.schemas import ProductOut, VariantOut
 from app.core.jwt_security import get_current_user
 from app.db.connector import get_session
 from app.utilities.errors import MedicineSearchError
 
-# Whitespace is stripped before validation, so a blank/whitespace-only query
-# is rejected with 422 (malformed input) rather than silently returning [].
-# A real-but-too-short query (e.g. "a") still passes here; the service returns
-# [] for fewer than two effective characters.
+# Stripped, non-empty string — the shared constraint for all query-string params
+# in this router.  Each endpoint wraps it in Annotated[NonEmptyStr, Query(...)]
+# with its own description rather than bundling the Query() here, so the
+# description stays co-located with the param that uses it.
 # Query() must stay INSIDE Annotated (not a default value) or the constraints
 # are silently dropped — see lessons.md L-003.
-SearchQuery = Annotated[
-    str,
-    StringConstraints(strip_whitespace=True, min_length=1),
-    Query(description="Search term (matches name or active ingredient)."),
-]
+NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+logger = logging.getLogger("app.medicines.router")
 
 router = APIRouter(
     prefix="/medicines", tags=["medicines"], dependencies=[Security(get_current_user)]
@@ -31,7 +31,10 @@ router = APIRouter(
 
 @router.get("/products", response_model=list[ProductOut])
 async def search_products(
-    query: SearchQuery,
+    query: Annotated[
+        NonEmptyStr,
+        Query(description="Search term (matches name or active ingredient)."),
+    ],
     limit: int = Query(20, ge=1, le=50, description="Maximum number of products."),
     session: AsyncSession = Depends(get_session),
 ) -> list[ProductOut]:
@@ -46,4 +49,44 @@ async def search_products(
     except MedicineSearchError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
+        ) from exc
+    except Exception as exc:
+        logger.exception("Unexpected error in list_variants: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred.",
+        ) from exc
+
+
+@router.get("/variants", response_model=list[VariantOut])
+async def list_variants(
+    name: Annotated[
+        NonEmptyStr,
+        Query(description="Product name (as returned by /products)."),
+    ],
+    strength: str | None = Query(
+        None, description="Dosage strength; omit to match NULL."
+    ),
+    form: str | None = Query(
+        None, description="Pharmaceutical form; omit to match NULL."
+    ),
+    session: AsyncSession = Depends(get_session),
+) -> list[VariantOut]:
+    """Return all pack-size variants for a selected product.
+
+    Pass the ``name``, ``strength``, and ``form`` values exactly as returned
+    by ``/products``. Absent ``strength`` or ``form`` matches registry rows
+    where those fields are NULL.
+    """
+    try:
+        return await medicines_service.list_variants(session, name, strength, form)
+    except MedicineSearchError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
+        ) from exc
+    except Exception as exc:
+        logger.exception("Unexpected error in list_variants: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred.",
         ) from exc

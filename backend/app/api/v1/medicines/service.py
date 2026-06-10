@@ -5,7 +5,7 @@ import re
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.v1.medicines import crud
-from app.api.v1.medicines.schemas import ProductOut
+from app.api.v1.medicines.schemas import ProductOut, VariantOut
 
 _MIN_QUERY_LENGTH = 2
 _DEFAULT_LIMIT = 20
@@ -59,12 +59,26 @@ async def search_products(
         return []
     limit = max(1, min(limit, _MAX_LIMIT))
     rows = await crud.search_products(session, tsquery, limit)
-    return [
-        ProductOut(
-            name=row.name,
-            strength=row.strength,
-            pharmaceutical_form=row.pharmaceutical_form,
-            active_ingredient=row.active_ingredient,
-        )
-        for row in rows
-    ]
+    return [ProductOut.model_validate(row) for row in rows]
+
+
+async def list_variants(
+    session: AsyncSession,
+    name: str,
+    strength: str | None,
+    pharmaceutical_form: str | None,
+) -> list[VariantOut]:
+    """Return all pack-size variants for a given product.
+
+    Args:
+        session: Active async database session.
+        name: Product name as returned by the products endpoint.
+        strength: Dosage strength, or None to match products with no strength recorded.
+        pharmaceutical_form: Pharmaceutical form, or None to match products with no form.
+
+    Returns:
+        All registry rows that share the same case-folded product key, ordered
+        by capacity ascending.
+    """
+    rows = await crud.list_variants(session, name, strength, pharmaceutical_form)
+    return [VariantOut.model_validate(row) for row in rows]

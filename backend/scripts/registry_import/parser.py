@@ -27,12 +27,17 @@ TABLET_UNITS: frozenset[str] = frozenset(
 )
 
 
+_SENTINEL_VALUES: frozenset[str] = frozenset({"-"})
+
+
 def _clean(value: str | None) -> str | None:
-    """Trim a raw attribute; treat empty/whitespace as missing (None)."""
+    """Trim a raw attribute; treat empty, whitespace, or sentinel values as missing (None)."""
     if value is None:
         return None
     value = value.strip()
-    return value or None
+    if not value or value in _SENTINEL_VALUES:
+        return None
+    return value
 
 
 def _distinct_attr(product: Element, path: str, attr: str) -> list[str]:

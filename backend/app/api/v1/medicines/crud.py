@@ -3,38 +3,14 @@
 import logging
 from collections.abc import Sequence
 
-from sqlalchemy import Row, text
+from sqlalchemy import Row
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.medicines import queries
 from app.utilities.errors import MedicineSearchError
 
 logger = logging.getLogger("app.medicines.crud")
-
-# Group case-insensitively on (name, strength, form): the source registry holds
-# the same product under inconsistent casing (e.g. "Apap" vs "APAP"), and a
-# plain DISTINCT would surface each casing as a separate pick. DISTINCT ON keeps
-# one representative row per case-folded group; the trailing ORDER BY columns
-# make that representative deterministic. Phase 3's variants lookup must match
-# the same case-folded key so selecting a product still fetches every variant.
-_SEARCH_PRODUCTS_SQL = text(
-    """
-    SELECT DISTINCT ON (
-            lower(name),
-            lower(coalesce(strength, '')),
-            lower(coalesce(pharmaceutical_form, ''))
-        )
-        name, strength, pharmaceutical_form, active_ingredient
-    FROM medication_registry
-    WHERE search_vector @@ to_tsquery('simple', :tsquery)
-    ORDER BY
-        lower(name),
-        lower(coalesce(strength, '')),
-        lower(coalesce(pharmaceutical_form, '')),
-        name, strength, pharmaceutical_form
-    LIMIT :limit
-    """
-)
 
 
 async def search_products(
@@ -65,9 +41,51 @@ async def search_products(
     """
     try:
         result = await session.execute(
-            _SEARCH_PRODUCTS_SQL, {"tsquery": tsquery, "limit": limit}
+            queries.SEARCH_PRODUCTS, {"tsquery": tsquery, "limit": limit}
         )
     except SQLAlchemyError as exc:
         logger.error("Medicines registry search failed: %s", exc, exc_info=True)
         raise MedicineSearchError() from exc
+    return result.all()
+
+
+async def list_variants(
+    session: AsyncSession,
+    name: str,
+    strength: str | None,
+    pharmaceutical_form: str | None,
+) -> Sequence[Row]:
+    """Fetch all pack-size variants for a given product key.
+
+    The product key is matched case-insensitively and NULL-safely so that
+    selecting a product from the Phase 2 results always returns its full
+    set of variants regardless of casing inconsistencies in the source
+    registry.
+
+    Args:
+        session: Active async database session.
+        name: Product name (case-insensitive match).
+        strength: Dosage strength, or None to match rows where strength is NULL.
+        pharmaceutical_form: Pharmaceutical form, or None to match NULL rows.
+
+    Returns:
+        Rows of (id, name, strength, pharmaceutical_form, capacity, capacity_unit,
+        is_tablet_based, active_ingredient, route_of_administration) ordered by
+        ``capacity`` ascending (NULLs last).
+
+    Raises:
+        MedicineSearchError: If the database query fails.
+    """
+    try:
+        result = await session.execute(
+            queries.LIST_VARIANTS,
+            {
+                "name": name,
+                "strength": strength,
+                "pharmaceutical_form": pharmaceutical_form,
+            },
+        )
+    except SQLAlchemyError as exc:
+        logger.error("Medicines variants lookup failed: %s", exc, exc_info=True)
+        raise MedicineSearchError("Failed to fetch medicine variants.") from exc
     return result.all()
