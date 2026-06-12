@@ -4,7 +4,7 @@
 - **Plan**: context/changes/add-medication-from-registry/plan.md
 - **Scope**: Phase 4 of 6 — `POST /api/v1/cabinet/entries` (add with FR-010 merge)
 - **Date**: 2026-06-10
-- **Verdict**: REJECTED
+- **Verdict**: REJECTED — _resolved 2026-06-12: all 6 findings fixed or documented (see per-finding `Decision:` fields); re-review APPROVED, gates green (188 unit tests pass, ruff clean)._
 - **Findings**: 1 critical, 3 warnings, 2 observations
 
 ## Verdicts
@@ -34,7 +34,7 @@ Automated gates verified: `ruff check` clean, `ruff format --check` clean, 187 u
   - Tradeoff: Slightly widens crud's exception surface (one error type now escapes the SQLAlchemyError funnel by design).
   - Confidence: HIGH — exception subclassing confirmed by reading both handlers; `persist()` already rolls back on any exception so the session is clean for the re-read.
   - Blind spot: Haven't run a live two-request race (needs PowerShell/DB per L-001); asyncpg post-rollback re-read should be fine but is unverified against a real connection.
-- **Decision**: PENDING
+- **Decision**: FIXED — added `except IntegrityError: raise` before the SQLAlchemyError block in `crud.insert_entry`; new test `test_integrity_error_propagates_untouched` exercises the real conversion path.
 
 ### F2 — `updated_at` never bumped on FR-010 merge-update
 
@@ -44,7 +44,7 @@ Automated gates verified: `ruff check` clean, `ruff format --check` clean, 187 u
 - **Location**: backend/app/api/v1/cabinet/crud.py:174-183; backend/app/api/v1/cabinet/models.py:35-37
 - **Detail**: `update_entry_counts` mutates package_count/partial_tablet_count but never touches `updated_at`. The model sets `updated_at` only via `default_factory` at construction, with no `onupdate`, and the DB column has no server-side default/trigger. After a merge, `updated_at` still shows creation time. Nothing in this slice consumes `updated_at` yet, so impact is latent — but any future audit/sync/"recently changed" logic will be wrong, and a merge is exactly the event you'd want timestamped.
 - **Fix**: Set `entry.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)` in `update_entry_counts`, or add `sa_column_kwargs={"onupdate": ...}` to the column so every UPDATE bumps it.
-- **Decision**: PENDING
+- **Decision**: FIXED — added `sa_column_kwargs={"onupdate": ...}` to `updated_at` so every UPDATE (incl. merge) bumps it self-maintainingly.
 
 ### F3 — Unplanned: tz-naive datetime written into a TIMESTAMPTZ column
 
@@ -63,7 +63,7 @@ Automated gates verified: `ruff check` clean, `ruff format --check` clean, 187 u
   - Tradeoff: Entrenches naive-UTC against a TIMESTAMPTZ column — the weaker convention; relies on DB session TZ always = UTC.
   - Confidence: MED.
   - Blind spot: Supabase session TZ assumption unverified.
-- **Decision**: PENDING
+- **Decision**: FIXED via Fix A — dropped `.replace(tzinfo=None)` from `created_at`/`updated_at` (and the new onupdate) so values are aware UTC matching the TIMESTAMPTZ column. Verified no naive/aware comparison exists in cabinet code, so the workaround was not load-bearing here.
 
 ### F4 — POST response drops `status`; diverges from the plan's contract
 
@@ -82,7 +82,7 @@ Automated gates verified: `ruff check` clean, `ruff format --check` clean, 187 u
   - Tradeoff: Re-introduces the preferences fetch + classify on the write path that the impl deliberately removed.
   - Confidence: HIGH.
   - Blind spot: None significant.
-- **Decision**: PENDING
+- **Decision**: FIXED via Fix A — recorded as a Phase 4 addendum in plan.md (POST omits `status`; GET serves it; Phase 6 must read status from GET).
 
 ### F5 — `tpp` NULL-capacity invariant is a 500 domain-error path
 
@@ -92,7 +92,7 @@ Automated gates verified: `ruff check` clean, `ruff format --check` clean, 187 u
 - **Location**: backend/app/api/v1/cabinet/service.py (_validate_and_get_tpp) + new CabinetInvariantError in errors.py
 - **Detail**: The plan called for `tpp = int(capacity)` guarded by a "cheap assert/log (NOT a domain-error path)". The impl instead raises a typed `CabinetInvariantError` → 500. Arguably better (loud, mapped, testable) but contradicts the explicit instruction. No action needed beyond acknowledging; the typed error is the stronger choice.
 - **Fix**: Accept as-is (improvement over the plan), optionally note the deviation in the plan.
-- **Decision**: PENDING
+- **Decision**: ACCEPTED — kept the typed `CabinetInvariantError` as an improvement; recorded the deviation as a Phase 4 addendum in plan.md.
 
 ### F6 — Minor mock-spec gaps in new tests
 
@@ -102,4 +102,4 @@ Automated gates verified: `ruff check` clean, `ruff format --check` clean, 187 u
 - **Location**: backend/tests/cabinet/test_crud.py:120,138,151,176,190; backend/tests/db/test_connector.py:11
 - **Detail**: `patch("...persist")` calls omit `autospec=True`, and test_connector's `_make_session()` returns a bare `AsyncMock()` with no `spec=`. Project rule: always pass spec=/autospec=. (The landed test_crud/test_router/test_connector are legitimate pure-unit tests with mocked sessions — they do NOT hit a DB, so the "no integration tests" guardrail is respected.)
 - **Fix**: Add `autospec=True` to the persist patches; `spec=AsyncSession` to the connector test's mock session.
-- **Decision**: PENDING
+- **Decision**: FIXED — added `autospec=True` to all `persist` patches in test_crud.py and `spec=AsyncSession` to test_connector's `_make_session()`.

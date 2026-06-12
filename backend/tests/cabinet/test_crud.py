@@ -6,7 +6,7 @@ from uuid import uuid4
 
 import pytest
 from sqlalchemy import Result
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.api.v1.cabinet.crud import (
     find_entry,
@@ -117,7 +117,7 @@ class TestFindEntry:
 
 class TestInsertEntry:
     async def test_success_returns_entry(self, mock_session: AsyncMock):
-        with patch("app.api.v1.cabinet.crud.persist") as mock_persist_cm:
+        with patch("app.api.v1.cabinet.crud.persist", autospec=True) as mock_persist_cm:
             mock_persist_cm.return_value.__aenter__ = AsyncMock(return_value=None)
             mock_persist_cm.return_value.__aexit__ = AsyncMock(return_value=False)
 
@@ -135,7 +135,7 @@ class TestInsertEntry:
     async def test_db_error_raises_cabinet_database_error(
         self, mock_session: AsyncMock
     ):
-        with patch("app.api.v1.cabinet.crud.persist") as mock_persist_cm:
+        with patch("app.api.v1.cabinet.crud.persist", autospec=True) as mock_persist_cm:
             mock_persist_cm.return_value.__aenter__ = AsyncMock(return_value=None)
             mock_persist_cm.return_value.__aexit__ = AsyncMock(
                 side_effect=SQLAlchemyError("disk full")
@@ -148,7 +148,7 @@ class TestInsertEntry:
 
     async def test_db_error_is_chained(self, mock_session: AsyncMock):
         original = SQLAlchemyError("disk full")
-        with patch("app.api.v1.cabinet.crud.persist") as mock_persist_cm:
+        with patch("app.api.v1.cabinet.crud.persist", autospec=True) as mock_persist_cm:
             mock_persist_cm.return_value.__aenter__ = AsyncMock(return_value=None)
             mock_persist_cm.return_value.__aexit__ = AsyncMock(side_effect=original)
 
@@ -158,6 +158,24 @@ class TestInsertEntry:
                 )
 
         assert exc_info.value.__cause__ is original
+
+    async def test_integrity_error_propagates_untouched(self, mock_session: AsyncMock):
+        # A duplicate-key IntegrityError must NOT be wrapped in
+        # CabinetDatabaseError: it has to reach the service-layer race guard so
+        # the concurrent-add merge (FR-010) can run.
+        integrity_error = IntegrityError("unique", {}, Exception())
+        with patch("app.api.v1.cabinet.crud.persist", autospec=True) as mock_persist_cm:
+            mock_persist_cm.return_value.__aenter__ = AsyncMock(return_value=None)
+            mock_persist_cm.return_value.__aexit__ = AsyncMock(
+                side_effect=integrity_error
+            )
+
+            with pytest.raises(IntegrityError) as exc_info:
+                await insert_entry(
+                    mock_session, _USER_ID, _REGISTRY_ID, 1, None, _EXPIRY
+                )
+
+        assert exc_info.value is integrity_error
 
 
 class TestUpdateEntryCounts:
@@ -173,7 +191,7 @@ class TestUpdateEntryCounts:
 
     async def test_success_updates_and_returns_entry(self, mock_session: AsyncMock):
         entry = self._make_entry()
-        with patch("app.api.v1.cabinet.crud.persist") as mock_persist_cm:
+        with patch("app.api.v1.cabinet.crud.persist", autospec=True) as mock_persist_cm:
             mock_persist_cm.return_value.__aenter__ = AsyncMock(return_value=None)
             mock_persist_cm.return_value.__aexit__ = AsyncMock(return_value=False)
 
@@ -187,7 +205,7 @@ class TestUpdateEntryCounts:
         self, mock_session: AsyncMock
     ):
         entry = self._make_entry()
-        with patch("app.api.v1.cabinet.crud.persist") as mock_persist_cm:
+        with patch("app.api.v1.cabinet.crud.persist", autospec=True) as mock_persist_cm:
             mock_persist_cm.return_value.__aenter__ = AsyncMock(return_value=None)
             mock_persist_cm.return_value.__aexit__ = AsyncMock(
                 side_effect=SQLAlchemyError("lock timeout")

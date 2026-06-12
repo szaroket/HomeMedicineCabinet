@@ -19,6 +19,7 @@ Frontend: auth feature complete; TanStack Query, react-hook-form, zod, react-rou
 
 - **The DB unique constraint already encodes the FR-010 dedup key.** Each registry row is one `(drug + pack-size)` variant and "tablet count" = `capacity`. So "same drug + tablet count" == "same `medication_registry_id`", and `(user_id, medication_registry_id, expiry_date)` covers both the tablet dedup key `(drug + tablet count + expiry)` and the non-tablet key `(drug + expiry)`. No schema change is needed.
 - **`capacity` is `Decimal`.** For tablet-based meds it must be coerced to an `int` (`tablets_per_package`) for the merge math. Verified invariant (DB query, 2026-06-09): zero `is_tablet_based=true` rows have NULL/non-integer `capacity`, and this slice does not change registry data — so `int(capacity)` cannot fail in practice. Keep only a cheap defensive `assert`/log (not a domain-error path) so a future re-import that breaks the invariant surfaces loudly rather than silently miscomputing.
+  > **Addendum (Phase 4 impl):** The impl raises a typed `CabinetInvariantError` (→ 500) instead of a bare `assert`/log. Accepted as an improvement — the violation is loud, router-mapped, and unit-testable — superseding the "not a domain-error path" instruction above for this invariant.
 - **Status is computed, never stored** — it depends on the user-configurable `expiry_threshold_days`, so it is derived on read from `expiry_date` + the user's preference.
 - **Full-text search infra already exists** — query the `search_vector` GIN index with a prefix `to_tsquery('simple', '<term>:*')`; no new index/extension needed.
 - **Error conventions** (per repo memory): English-only error messages; `HTTPException` only at the router layer; domain errors live in `app/utilities/errors.py`. Google-style docstrings throughout (`Args`/`Returns`/`Raises`).
@@ -244,6 +245,8 @@ The write path. Validates input, looks up the registry variant, applies the FR-0
 - `CabinetEntryOut`: `id`, registry display fields (`name`, `strength`, `pharmaceutical_form`, `capacity`, `capacity_unit`, `is_tablet_based`), `package_count`, `partial_tablet_count`, `expiry_date`, `total_tablets: int | None`, `status: str`.
 - `MergeSummary`: `previous_package_count`, `previous_partial_tablet_count`, `previous_total_tablets`, `added_total_tablets`, `new_total_tablets` (tablet meds); package-count before/after for non-tablet.
 - `AddEntryResult`: `merged: bool`, `entry: CabinetEntryOut`, `merge_summary: MergeSummary | None`.
+
+> **Addendum (Phase 4 impl):** The add path returns a new `AddEntryOut` schema that intentionally **omits `status`** — status is date-derived (depends on the user's expiry preferences) and is served fresh by `GET /api/v1/cabinet/entries`, so the impl does not fetch preferences / run `classify_status` on the write path. `CabinetEntryOut` (with `status`) remains the GET contract. Recorded here so the contract diff isn't re-flagged as drift. **Phase 6 (frontend) must read status from GET, not from the add response.**
 
 #### 3. Cabinet crud
 

@@ -5,7 +5,7 @@ import uuid
 from datetime import date
 
 from sqlalchemy import select
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlmodel import col
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -133,7 +133,10 @@ async def insert_entry(
         The newly created CabinetEntry (committed).
 
     Raises:
-        CabinetDatabaseError: If the insert, flush, or commit fails.
+        IntegrityError: On a duplicate-key violation (concurrent add); propagated
+            untouched for the service-layer race guard to handle.
+        CabinetDatabaseError: If the insert, flush, or commit fails for any other
+            database reason.
     """
     entry = CabinetEntry(
         user_id=user_id,
@@ -145,6 +148,10 @@ async def insert_entry(
     try:
         async with persist(session, entry):
             session.add(entry)
+    except IntegrityError:
+        # Duplicate-key (concurrent add) must reach the service-layer race guard
+        # untouched so it can roll back, re-read, and merge (FR-010).
+        raise
     except SQLAlchemyError as exc:
         logger.error("Failed to insert cabinet entry: %s", exc, exc_info=True)
         raise CabinetDatabaseError() from exc

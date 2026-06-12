@@ -4,12 +4,13 @@ from unittest.mock import AsyncMock, MagicMock, call
 
 import pytest
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.connector import persist
 
 
 def _make_session() -> AsyncMock:
-    return AsyncMock()
+    return AsyncMock(spec=AsyncSession)
 
 
 class TestPersist:
