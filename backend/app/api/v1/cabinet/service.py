@@ -2,7 +2,7 @@
 
 import logging
 import uuid
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from enum import StrEnum
 from typing import NamedTuple
 
@@ -161,11 +161,22 @@ async def list_entries(
     Returns:
         List of CabinetEntryOut items ordered by medication name.
     """
-    today = date.today()
+    today = datetime.now(timezone.utc).date()
 
     rows = await crud.list_entries(session, user_id)
     result: list[CabinetEntryOut] = []
     for entry, variant in rows:
+        if variant.is_tablet_based and variant.capacity is None:
+            # Data invariant: tablet-based registry rows always carry an integer
+            # capacity. The write path raises CabinetInvariantError on violation;
+            # the read path keeps serving the list (one bad row must not fail the
+            # whole response) but logs loudly so the breach surfaces.
+            logger.warning(
+                "Tablet-based registry row %s has NULL capacity; "
+                "total_tablets left None for cabinet entry %s",
+                variant.id,
+                entry.id,
+            )
         tpp = (
             int(variant.capacity)
             if variant.is_tablet_based and variant.capacity is not None

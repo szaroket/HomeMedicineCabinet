@@ -30,11 +30,11 @@ class CabinetEntry(SQLModel, table=True):
     dosage_start_date: date | None = None
     dosage_end_date: date | None = None
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_type=sa.DateTime(timezone=True),
     )
     updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
-        sa_column_kwargs={
-            "onupdate": lambda: datetime.now(timezone.utc).replace(tzinfo=None)
-        },
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_type=sa.DateTime(timezone=True),
+        sa_column_kwargs={"onupdate": lambda: datetime.now(timezone.utc)},
     )

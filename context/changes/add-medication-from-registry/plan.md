@@ -313,6 +313,8 @@ Read path for the minimal cabinet list: the current user's entries joined to reg
 
 **Contract**: `GET /entries` → `list[CabinetEntryOut]`, scoped to `current_user.id` (strict per-account isolation). Reuses the user's `expiry_threshold_days` for status.
 
+> **Addendum (Phase 5 impl):** Beyond the planned crud/service/route, this phase also landed the cross-domain wiring the cabinet→users preference lookup required: a new `cabinet/facade.py` (per the standing facade rule — cross-domain calls go through the facade, not service→other-domain), extraction of `get_user_preferences` into a new `users` domain (`users/{crud,service}.py`) with a `UserError`/`UserDatabaseError` taxonomy, a new `app/utilities/const.py` for preference defaults, and an AGENTS.md amendment formalizing the facade layer. Tests were added for the moved code. Recorded here so the scope expansion isn't re-flagged as drift.
+
 ### Success Criteria:
 
 #### Automated Verification:
@@ -495,12 +497,12 @@ None — the schema from F-02 already supports this slice; no new migrations.
 
 #### Automated
 
-- [x] 5.1 Lint/format clean
-- [x] 5.2 Existing tests still pass (pytest)
+- [x] 5.1 Lint/format clean — c3d1082
+- [x] 5.2 Existing tests still pass (pytest) — c3d1082
 
 #### Manual
 
-- [x] 5.3 PowerShell: per-user isolation; status correct for past / within-30d / beyond expiry
+- [x] 5.3 PowerShell: per-user isolation; status correct for past / within-30d / beyond expiry — c3d1082
 
 ### Phase 6: Frontend — `cabinet` feature (add flow + minimal list)
 
