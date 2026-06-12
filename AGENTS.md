@@ -68,8 +68,9 @@ See `docs/reference/frontend-structure.md` for frontend directory rules, the fea
 - `app/db/supabase_auth.py` — configured `supabase-py` client plus thin, domain-agnostic Supabase Auth operations (`sign_up`, `sign_in_with_password`, `refresh_session`); consumed by `auth/crud.py`, never imported directly by `service.py`.
 - `app/api/v1/router.py` — imports and includes every domain router. No route logic here.
 - Domain directories live under `app/api/v1/<domain>/`. URL paths mirror the directory path: `app/api/v1/<domain>/<endpoint>` → `/api/v1/<domain>/<endpoint>`.
-- `router.py` — route decorators only; calls service functions.
-- `service.py` — business logic and orchestration; calls crud functions.
+- `router.py` — route decorators only; calls facade (or service when no cross-domain work is needed).
+- `facade.py` — cross-domain orchestration layer, sits between router and service. **Only the facade may call services or cruds from other domains.** Services and cruds are strictly limited to their own domain. Create `facade.py` as soon as a service needs data from another domain; thin pass-throughs from router to service are acceptable without a facade.
+- `service.py` — business logic and orchestration; calls only this domain's crud functions.
 - `crud.py` — raw database operations; no business logic.
 - `queries.py` — raw SQL statements as module-level `text(...)` constants; no execution. When a domain uses hand-written SQL, keep the SQL here and have `crud.py` import `queries` and execute the constants. Inline SQL inside `crud.py` only for trivial one-liners; anything multi-line or reused belongs in `queries.py`.
 - Domains with no DB access (e.g. `health/`) may omit `service.py` and `crud.py`.

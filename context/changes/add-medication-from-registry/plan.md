@@ -495,12 +495,12 @@ None — the schema from F-02 already supports this slice; no new migrations.
 
 #### Automated
 
-- [ ] 5.1 Lint/format clean
-- [ ] 5.2 Existing tests still pass (pytest)
+- [x] 5.1 Lint/format clean
+- [x] 5.2 Existing tests still pass (pytest)
 
 #### Manual
 
-- [ ] 5.3 PowerShell: per-user isolation; status correct for past / within-30d / beyond expiry
+- [x] 5.3 PowerShell: per-user isolation; status correct for past / within-30d / beyond expiry
 
 ### Phase 6: Frontend — `cabinet` feature (add flow + minimal list)
 

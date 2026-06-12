@@ -14,6 +14,7 @@ from app.api.v1.cabinet.models import CabinetEntry
 from app.api.v1.cabinet.schemas import (
     AddEntryOut,
     AddEntryResult,
+    CabinetEntryOut,
     MergeSummary,
 )
 from app.api.v1.medicines.models import MedicationRegistry
@@ -143,6 +144,50 @@ def classify_status(
     if expiry_date <= today + timedelta(days=expiry_threshold_days):
         return Status.EXPIRING
     return Status.VALID
+
+
+async def list_entries(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    expiry_threshold_days: int,
+) -> list[CabinetEntryOut]:
+    """Return all cabinet entries for a user with computed expiry status.
+
+    Args:
+        session: Active async database session.
+        user_id: Authenticated user's UUID.
+        expiry_threshold_days: Days ahead that triggers "expiring" status.
+
+    Returns:
+        List of CabinetEntryOut items ordered by medication name.
+    """
+    today = date.today()
+
+    rows = await crud.list_entries(session, user_id)
+    result: list[CabinetEntryOut] = []
+    for entry, variant in rows:
+        tpp = (
+            int(variant.capacity)
+            if variant.is_tablet_based and variant.capacity is not None
+            else None
+        )
+        result.append(
+            CabinetEntryOut(
+                id=entry.id,
+                name=variant.name,
+                strength=variant.strength,
+                pharmaceutical_form=variant.pharmaceutical_form,
+                capacity=variant.capacity,
+                capacity_unit=variant.capacity_unit,
+                is_tablet_based=variant.is_tablet_based,
+                package_count=entry.package_count,
+                partial_tablet_count=entry.partial_tablet_count,
+                expiry_date=entry.expiry_date,
+                total_tablets=_computed_total(entry, tpp),
+                status=classify_status(entry.expiry_date, today, expiry_threshold_days),
+            )
+        )
+    return result
 
 
 async def _get_variant_or_raise(

@@ -11,13 +11,11 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from app.api.v1.cabinet.crud import (
     find_entry,
     get_registry_by_id,
-    get_user_preferences,
     insert_entry,
     update_entry_counts,
 )
 from app.api.v1.cabinet.models import CabinetEntry
 from app.api.v1.medicines.models import MedicationRegistry
-from app.api.v1.users.models import UserPreferences
 from app.utilities.errors import CabinetDatabaseError
 
 _USER_ID = uuid4()
@@ -63,31 +61,6 @@ class TestGetRegistryById:
             await get_registry_by_id(mock_session, _REGISTRY_ID)
 
         assert exc_info.value.__cause__ is original
-
-
-class TestGetUserPreferences:
-    async def test_returns_prefs_when_found(self, mock_session: AsyncMock):
-        prefs = MagicMock(spec=UserPreferences)
-        mock_session.execute.return_value = _scalar_result(prefs)
-
-        result = await get_user_preferences(mock_session, _USER_ID)
-
-        assert result is prefs
-
-    async def test_returns_none_when_not_found(self, mock_session: AsyncMock):
-        mock_session.execute.return_value = _scalar_result(None)
-
-        result = await get_user_preferences(mock_session, _USER_ID)
-
-        assert result is None
-
-    async def test_db_error_raises_cabinet_database_error(
-        self, mock_session: AsyncMock
-    ):
-        mock_session.execute.side_effect = SQLAlchemyError("timeout")
-
-        with pytest.raises(CabinetDatabaseError):
-            await get_user_preferences(mock_session, _USER_ID)
 
 
 class TestFindEntry:

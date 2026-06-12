@@ -127,6 +127,42 @@ class RateLimitError(AuthError):
         super().__init__(message)
 
 
+class UserError(Exception):
+    """Base class for users domain errors.
+
+    Attributes:
+        message: Human-readable description of the error (English).
+    """
+
+    def __init__(self, message: str) -> None:
+        """Initialise the error with a message.
+
+        Args:
+            message: Description of what went wrong.
+        """
+        super().__init__(message)
+        self.message = message
+
+
+class UserDatabaseError(UserError):
+    """Raised when a users database query fails (e.g. connection unavailable).
+
+    Wraps a SQLAlchemy error so callers can map it to 503 rather than leaking
+    a raw 500.
+    """
+
+    def __init__(
+        self,
+        message: str = "A database error occurred in the users domain.",
+    ) -> None:
+        """Initialise with a default message.
+
+        Args:
+            message: Description of what went wrong.
+        """
+        super().__init__(message)
+
+
 class MedicinesError(Exception):
     """Base class for medicines domain errors.
 

@@ -10,12 +10,18 @@ from fastapi import status
 from httpx import AsyncClient
 from pytest_mock import MockerFixture
 
-from app.api.v1.cabinet.schemas import AddEntryOut, AddEntryResult, MergeSummary
+from app.api.v1.cabinet.schemas import (
+    AddEntryOut,
+    AddEntryResult,
+    CabinetEntryOut,
+    MergeSummary,
+)
 from app.utilities.errors import (
     CabinetDatabaseError,
     CabinetInvariantError,
     InvalidPartialTabletCountError,
     MedicationNotFoundError,
+    UserDatabaseError,
 )
 
 _REGISTRY_ID = uuid4()
@@ -202,3 +208,94 @@ class TestAddEntryRequestValidation:
         body = {k: v for k, v in _VALID_BODY.items() if k != "medication_registry_id"}
         response = await authed_client.post("/api/v1/cabinet/entries", json=body)
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+
+def _make_cabinet_entry_out(**overrides) -> CabinetEntryOut:
+    defaults = dict(
+        id=_ENTRY_ID,
+        name="Apap",
+        strength="500 mg",
+        pharmaceutical_form="tabletki",
+        capacity=Decimal(20),
+        capacity_unit="tabl.",
+        is_tablet_based=True,
+        package_count=2,
+        partial_tablet_count=5,
+        expiry_date=date(2027, 6, 1),
+        total_tablets=25,
+        status="valid",
+    )
+    return CabinetEntryOut(**(defaults | overrides))
+
+
+class TestListEntriesAuthGuard:
+    @pytest.mark.asyncio
+    async def test_missing_token_returns_401(self, client: AsyncClient):
+        response = await client.get("/api/v1/cabinet/entries")
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+class TestListEntriesSuccess:
+    @pytest.mark.asyncio
+    async def test_returns_200_with_entry_list(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.list_entries",
+            new_callable=AsyncMock,
+            return_value=[_make_cabinet_entry_out()],
+        )
+
+        response = await authed_client.get("/api/v1/cabinet/entries")
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["name"] == "Apap"
+        assert data[0]["status"] == "valid"
+        assert data[0]["total_tablets"] == 25
+
+    @pytest.mark.asyncio
+    async def test_returns_empty_list_when_no_entries(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.list_entries",
+            new_callable=AsyncMock,
+            return_value=[],
+        )
+
+        response = await authed_client.get("/api/v1/cabinet/entries")
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json() == []
+
+
+class TestListEntriesErrorMapping:
+    @pytest.mark.asyncio
+    async def test_database_error_returns_503(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.list_entries",
+            new_callable=AsyncMock,
+            side_effect=CabinetDatabaseError(),
+        )
+
+        response = await authed_client.get("/api/v1/cabinet/entries")
+
+        assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+
+    @pytest.mark.asyncio
+    async def test_user_database_error_returns_503(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.list_entries",
+            new_callable=AsyncMock,
+            side_effect=UserDatabaseError(),
+        )
+
+        response = await authed_client.get("/api/v1/cabinet/entries")
+
+        assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE

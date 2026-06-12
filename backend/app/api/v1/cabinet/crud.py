@@ -11,7 +11,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.cabinet.models import CabinetEntry
 from app.api.v1.medicines.models import MedicationRegistry
-from app.api.v1.users.models import UserPreferences
 from app.db.connector import persist
 from app.utilities.errors import CabinetDatabaseError
 
@@ -41,34 +40,6 @@ async def get_registry_by_id(
     except SQLAlchemyError as exc:
         logger.error(
             "Failed to fetch registry row %s: %s", registry_id, exc, exc_info=True
-        )
-        raise CabinetDatabaseError() from exc
-    return result.scalar_one_or_none()
-
-
-async def get_user_preferences(
-    session: AsyncSession,
-    user_id: uuid.UUID,
-) -> UserPreferences | None:
-    """Fetch the UserPreferences row for a given user.
-
-    Args:
-        session: Active async database session.
-        user_id: UUID of the user.
-
-    Returns:
-        The UserPreferences instance, or None if not found.
-
-    Raises:
-        CabinetDatabaseError: If the database query fails.
-    """
-    try:
-        result = await session.execute(
-            select(UserPreferences).where(col(UserPreferences.user_id) == user_id)
-        )
-    except SQLAlchemyError as exc:
-        logger.error(
-            "Failed to fetch preferences for user %s: %s", user_id, exc, exc_info=True
         )
         raise CabinetDatabaseError() from exc
     return result.scalar_one_or_none()
@@ -156,6 +127,43 @@ async def insert_entry(
         logger.error("Failed to insert cabinet entry: %s", exc, exc_info=True)
         raise CabinetDatabaseError() from exc
     return entry
+
+
+async def list_entries(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+) -> list[tuple[CabinetEntry, MedicationRegistry]]:
+    """Fetch all cabinet entries for a user, joined to their registry rows.
+
+    Args:
+        session: Active async database session.
+        user_id: UUID of the authenticated user.
+
+    Returns:
+        List of (CabinetEntry, MedicationRegistry) tuples ordered by registry name.
+
+    Raises:
+        CabinetDatabaseError: If the database query fails.
+    """
+    try:
+        result = await session.execute(
+            select(CabinetEntry, MedicationRegistry)
+            .join(
+                MedicationRegistry,
+                col(CabinetEntry.medication_registry_id) == col(MedicationRegistry.id),
+            )
+            .where(col(CabinetEntry.user_id) == user_id)
+            .order_by(col(MedicationRegistry.name))
+        )
+    except SQLAlchemyError as exc:
+        logger.error(
+            "Failed to list cabinet entries for user %s: %s",
+            user_id,
+            exc,
+            exc_info=True,
+        )
+        raise CabinetDatabaseError() from exc
+    return list(result.tuples().all())
 
 
 async def update_entry_counts(

@@ -15,6 +15,7 @@ from app.api.v1.cabinet.service import (
     TabletPool,
     add_entry,
     classify_status,
+    list_entries,
     merge_non_tablet_entry,
     merge_tablet_entry,
     normalize_tablet_pool,
@@ -207,6 +208,7 @@ class TestClassifyStatus:
 
 _USER_ID = uuid4()
 _REGISTRY_ID = uuid4()
+_ENTRY_ID = uuid4()
 _EXPIRY = date(2027, 6, 1)
 _TPP = 20
 
@@ -453,3 +455,105 @@ class TestAddEntryValidation:
                 partial_tablet_count=None,
                 expiry_date=_EXPIRY,
             )
+
+
+# ---------------------------------------------------------------------------
+# list_entries
+# ---------------------------------------------------------------------------
+
+
+def _make_real_entry(
+    package_count: int = 1,
+    partial_tablet_count: int | None = None,
+    expiry_date: date = _EXPIRY,
+) -> CabinetEntry:
+    return CabinetEntry(
+        id=_ENTRY_ID,
+        user_id=_USER_ID,
+        medication_registry_id=_REGISTRY_ID,
+        package_count=package_count,
+        partial_tablet_count=partial_tablet_count,
+        expiry_date=expiry_date,
+    )
+
+
+@pytest.fixture
+def mock_list_crud(mocker):
+    return mocker.patch("app.api.v1.cabinet.service.crud", autospec=True)
+
+
+class TestListEntries:
+    async def test_returns_cabinet_entry_out_with_status(
+        self, mock_session: AsyncMock, mock_list_crud
+    ):
+        today = date.today()
+        future = today + timedelta(days=60)
+        entry = _make_real_entry(
+            package_count=2, partial_tablet_count=5, expiry_date=future
+        )
+        variant = _make_variant(is_tablet_based=True, capacity=Decimal(20))
+        mock_list_crud.list_entries = AsyncMock(return_value=[(entry, variant)])
+
+        result = await list_entries(
+            session=mock_session,
+            user_id=_USER_ID,
+            expiry_threshold_days=30,
+        )
+
+        assert len(result) == 1
+        assert result[0].status == Status.VALID
+        assert result[0].total_tablets == 25  # (2-1)*20 + 5
+        assert result[0].name == variant.name
+
+    async def test_expired_entry_returns_expired_status(
+        self, mock_session: AsyncMock, mock_list_crud
+    ):
+        past = date.today() - timedelta(days=1)
+        entry = _make_real_entry(expiry_date=past)
+        variant = _make_variant(is_tablet_based=False)
+        mock_list_crud.list_entries = AsyncMock(return_value=[(entry, variant)])
+
+        result = await list_entries(
+            session=mock_session, user_id=_USER_ID, expiry_threshold_days=30
+        )
+
+        assert result[0].status == Status.EXPIRED
+
+    async def test_expiring_entry_returns_expiring_status(
+        self, mock_session: AsyncMock, mock_list_crud
+    ):
+        soon = date.today() + timedelta(days=10)
+        entry = _make_real_entry(expiry_date=soon)
+        variant = _make_variant(is_tablet_based=False)
+        mock_list_crud.list_entries = AsyncMock(return_value=[(entry, variant)])
+
+        result = await list_entries(
+            session=mock_session, user_id=_USER_ID, expiry_threshold_days=30
+        )
+
+        assert result[0].status == Status.EXPIRING
+
+    async def test_non_tablet_variant_has_none_total_tablets(
+        self, mock_session: AsyncMock, mock_list_crud
+    ):
+        entry = _make_real_entry(package_count=3)
+        variant = _make_variant(is_tablet_based=False)
+        mock_list_crud.list_entries = AsyncMock(return_value=[(entry, variant)])
+
+        result = await list_entries(
+            session=mock_session, user_id=_USER_ID, expiry_threshold_days=30
+        )
+
+        assert result[0].total_tablets is None
+        assert result[0].package_count == 3
+
+    async def test_empty_cabinet_returns_empty_list(
+        self, mock_session: AsyncMock, mock_list_crud
+    ):
+        mock_list_crud.list_entries = AsyncMock(return_value=[])
+
+        result = await list_entries(
+            session=mock_session, user_id=_USER_ID, expiry_threshold_days=30
+        )
+
+        assert result == []
