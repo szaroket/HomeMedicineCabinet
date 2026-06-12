@@ -39,9 +39,9 @@ export function ProductAutocomplete({ onSelect, selected }: Props) {
       />
       {open && products && products.length > 0 && (
         <ul className="absolute top-full z-10 mt-1 w-full rounded border border-slate-600 bg-slate-800 shadow-lg">
-          {products.map((p, i) => (
+          {products.map((p) => (
             <li
-              key={i}
+              key={`${p.name}|${p.strength}|${p.pharmaceutical_form}`}
               onMouseDown={() => handleSelect(p)}
               className="cursor-pointer px-3 py-2 text-sm text-white hover:bg-slate-700"
             >

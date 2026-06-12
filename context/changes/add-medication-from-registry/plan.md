@@ -411,6 +411,8 @@ A single `features/cabinet/` feature: a debounced two-step add form, conditional
 
 **Implementation Note**: After automated verification passes, pause for human confirmation that manual testing succeeded.
 
+**Addendum (impl)**: A shared `app/components/app-header.tsx` + `assets/logo.png` landed alongside the cabinet pages (the cabinet pages need a header); the same branding was applied to the login/register/dashboard pages and `index.css`. Recorded here so it isn't re-flagged as scope drift in later reviews.
+
 ---
 
 ## Phase 7: Backend — deduplicate `GET /api/v1/medicines/variants`
@@ -543,15 +545,15 @@ None — the schema from F-02 already supports this slice; no new migrations.
 
 #### Automated
 
-- [x] 6.1 Build clean (npm run build)
-- [x] 6.2 Lint clean (npm run lint)
-- [x] 6.3 Format clean (prettier --check src/)
+- [x] 6.1 Build clean (npm run build) — 326e636
+- [x] 6.2 Lint clean (npm run lint) — 326e636
+- [x] 6.3 Format clean (prettier --check src/) — 326e636
 
 #### Manual
 
-- [x] 6.4 Two-step add flow: product → variant → conditional tablet fields
-- [x] 6.5 Success popup add-another vs navigate-to-list; entry visible with status badge
-- [x] 6.6 Merge notice with before/after on duplicate add
+- [x] 6.4 Two-step add flow: product → variant → conditional tablet fields — 326e636
+- [x] 6.5 Success popup add-another vs navigate-to-list; entry visible with status badge — 326e636
+- [x] 6.6 Merge notice with before/after on duplicate add — 326e636
 - [ ] 6.7 All text Polish; usable at mobile width — Polish text confirmed; mobile width deferred (not yet released)
 
 ### Phase 7: Backend — deduplicate `GET /api/v1/medicines/variants`

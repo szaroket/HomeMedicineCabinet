@@ -30,6 +30,7 @@ export function AddMedicationForm() {
     register,
     handleSubmit,
     setValue,
+    setError,
     reset,
     formState: { errors },
   } = useForm<AddEntryValues>({ resolver: zodResolver(addEntrySchema) });
@@ -54,9 +55,10 @@ export function AddMedicationForm() {
     ) {
       const tpp = selectedVariant.capacity ?? 0;
       if (values.partial_tablet_count >= tpp) {
-        setServerError(
-          `Częściowa liczba tabletek musi być mniejsza niż ${tpp}.`,
-        );
+        setError("partial_tablet_count", {
+          type: "manual",
+          message: `Częściowa liczba tabletek musi być mniejsza niż ${tpp}.`,
+        });
         return;
       }
     }
