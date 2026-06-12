@@ -413,6 +413,41 @@ A single `features/cabinet/` feature: a debounced two-step add form, conditional
 
 ---
 
+## Phase 7: Backend — deduplicate `GET /api/v1/medicines/variants`
+
+### Overview
+
+The variants endpoint currently returns duplicate rows for the same `(capacity, capacity_unit)` pair (e.g. "10 tabl." appearing 8 times for Aspirin 500mg). The registry holds multiple rows per logical pack size — imported duplicates with distinct `id`s but identical display attributes. The picker must show one selectable option per distinct pack size; once selected, any one of the underlying rows is a valid `medication_registry_id` to submit.
+
+### Changes Required:
+
+#### 1. Deduplicate the variants query
+
+**File**: `backend/app/api/v1/medicines/queries.py`, `backend/app/api/v1/medicines/crud.py`
+
+**Intent**: Return exactly one row per distinct `(capacity, capacity_unit)` pair for the matched product, using `DISTINCT ON` (or a subquery) so the picker list has no duplicates. The chosen representative row must be deterministic (e.g. `ORDER BY capacity, id` inside the `DISTINCT ON`).
+
+**Contract**: The query selects `DISTINCT ON (capacity, capacity_unit)` one representative `MedicationRegistry` row per pair, ordered by `capacity NULLS LAST, id`. The rest of the `LIST_VARIANTS` contract (case-insensitive product-key match, NULL-safe strength/form, full row returned so the caller has `id`, `is_tablet_based`, etc.) is unchanged.
+
+#### 2. Verify no schema/service/router changes needed
+
+The dedup is a pure query change. `VariantOut`, the service, and the router are unchanged — confirm by inspection.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- [ ] Lint/format clean: `cd backend && uv run ruff check . && uv run ruff format --check .`
+- [ ] Existing tests still pass: `cd backend && uv run pytest`
+
+#### Manual Verification:
+
+- [ ] From PowerShell: selecting a product (e.g. "Aspirin 500mg") returns one row per distinct capacity/capacity_unit pair — no duplicates; ordering by capacity still holds.
+
+**Implementation Note**: Pause for human confirmation before closing the phase.
+
+---
+
 ## Testing Strategy
 
 ### Unit Tests:
@@ -508,13 +543,24 @@ None — the schema from F-02 already supports this slice; no new migrations.
 
 #### Automated
 
-- [ ] 6.1 Build clean (npm run build)
-- [ ] 6.2 Lint clean (npm run lint)
-- [ ] 6.3 Format clean (prettier --check src/)
+- [x] 6.1 Build clean (npm run build)
+- [x] 6.2 Lint clean (npm run lint)
+- [x] 6.3 Format clean (prettier --check src/)
 
 #### Manual
 
-- [ ] 6.4 Two-step add flow: product → variant → conditional tablet fields
-- [ ] 6.5 Success popup add-another vs navigate-to-list; entry visible with status badge
-- [ ] 6.6 Merge notice with before/after on duplicate add
-- [ ] 6.7 All text Polish; usable at mobile width
+- [x] 6.4 Two-step add flow: product → variant → conditional tablet fields
+- [x] 6.5 Success popup add-another vs navigate-to-list; entry visible with status badge
+- [x] 6.6 Merge notice with before/after on duplicate add
+- [ ] 6.7 All text Polish; usable at mobile width — Polish text confirmed; mobile width deferred (not yet released)
+
+### Phase 7: Backend — deduplicate `GET /api/v1/medicines/variants`
+
+#### Automated
+
+- [ ] 7.1 Lint/format clean (ruff check + format --check)
+- [ ] 7.2 Existing tests still pass (pytest)
+
+#### Manual
+
+- [ ] 7.3 PowerShell: selecting a product (e.g. "Aspirin 500mg") returns one row per distinct capacity/capacity_unit pair — no duplicates; ordering by capacity still holds

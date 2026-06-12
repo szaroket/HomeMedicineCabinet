@@ -4,6 +4,8 @@ import { ProtectedLayout } from "@/app/layouts/protected-layout";
 import { LoginPage } from "@/features/auth/components/login-page";
 import { RegisterPage } from "@/features/auth/components/register-page";
 import { DashboardPage } from "@/features/dashboard/components/dashboard-page";
+import { CabinetPage } from "@/features/cabinet/components/cabinet-page";
+import { AddMedicationPage } from "@/features/cabinet/components/add-medication-page";
 
 export const router = createBrowserRouter([
   {
@@ -15,6 +17,10 @@ export const router = createBrowserRouter([
   },
   {
     element: <ProtectedLayout />,
-    children: [{ path: "/", element: <DashboardPage /> }],
+    children: [
+      { path: "/", element: <DashboardPage /> },
+      { path: "/cabinet", element: <CabinetPage /> },
+      { path: "/cabinet/add", element: <AddMedicationPage /> },
+    ],
   },
 ]);
