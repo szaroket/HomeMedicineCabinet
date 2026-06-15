@@ -448,6 +448,8 @@ The dedup is a pure query change. `VariantOut`, the service, and the router are 
 
 **Implementation Note**: Pause for human confirmation before closing the phase.
 
+> **Addendum (Phase 7 impl):** The duplicate-variant problem was solved at **import time in the parser** rather than via the planned read-time `DISTINCT ON (capacity, capacity_unit)` in `LIST_VARIANTS`. `scripts/registry_import/parser.py` now runs a two-pass dedup (`_scan_original_keys` + `parse_registry`): when an original authorization (NAR/MRP/DCP/CEN) exists for a logical pack, IR parallel-import duplicates are suppressed; otherwise first-seen wins. This yields one canonical row per pack size at the source, so `queries.py`/`crud.py` were left unchanged (last touched in Phase 3, `c29d1ec`) and `LIST_VARIANTS` has **no** `DISTINCT ON`. 7.3 was verified live after a re-import. Two consequences recorded here so they aren't re-flagged as drift: (1) the parser dedup is **forward-only** (affects future imports, not rows already served) — outside this slice's "no registry data changes" guardrail, mirroring the Phase 3 parser-fix addendum; (2) a manual-verification helper `scripts/find_ir_only_product.py` landed to support the 7.3 check. **Trade accepted:** variant uniqueness now depends on the import always running dedup — the API carries no defensive `DISTINCT ON`. If a fresh DB is loaded without re-import or via another path, duplicates could resurface at the endpoint with no guard; defense-in-depth at the query layer was deliberately deferred.
+
 ---
 
 ## Testing Strategy

@@ -198,7 +198,9 @@ def _rows_for_product(product: Element) -> Iterator[dict]:
 def parse_registry(source) -> Iterator[dict]:
     """Stream-parse the registry export, yielding one dict per package unit.
 
-    ``source`` is a path or a file object. Uses namespace-aware ``iterparse``
+    ``source`` is a path or a **seekable** file object: parsing runs two passes
+    over the source, so a non-seekable stream is exhausted by pass 1 and yields
+    nothing in pass 2 (no error raised). Uses namespace-aware ``iterparse``
     and clears each processed element (and the root) so memory stays flat over
     the hundreds-of-MB production file. Products whose ``rodzajPreparatu`` is
     not ``ludzki`` (human) are skipped; withdrawn packages (``skasowane="TAK"``)
