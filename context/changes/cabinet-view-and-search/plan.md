@@ -7,7 +7,7 @@ entry, unsorted-beyond-name, with a computed expiry status. S-02 turns that flat
 list into the cabinet the PRD describes (US-03, FR-004, FR-006): a list the user
 can **filter by expiry status**, **search by medication name or active
 ingredient**, **sort by name**, and **page through**, where each entry also shows
-its registry-sourced **producer**, **route of administration**, and **leaflet /
+its registry-sourced **route of administration** and **leaflet /
 specification links** (FR-011, FR-012).
 
 We deliver this in four small, independently verifiable phases: (1) backend adds
@@ -116,7 +116,9 @@ frontend keeps all list state in the URL.
   `GET /cabinet/entries` from `list[CabinetEntryOut]` to
   `{ items, total, page, page_size }` breaks the Phase-1/2 frontend until Phase 4
   lands. This is expected; between Phase 3 and Phase 4 the list is verified via
-  Swagger, not the UI.
+  Swagger, not the UI. **Deploy constraint:** Phases 3 and 4 land in the same
+  merge/deploy — Phase 3 is never shipped standalone to any environment, or the
+  live cabinet list breaks.
 - **`page_size` allow-list.** Only 20 / 50 / 100 are accepted; any other value is
   a 422. Do not accept arbitrary page sizes (prevents unbounded result sets).
 
@@ -137,7 +139,7 @@ list ordered by name.
 **File**: `backend/app/api/v1/cabinet/schemas.py`
 
 **Intent**: Add the FR-011/FR-012 display fields to `CabinetEntryOut` so each
-entry carries its producer, route of administration, and document links.
+entry carries its route of administration and document links.
 
 **Contract**: Add to `CabinetEntryOut`: `route_of_administration: str | None`,
 `leaflet_url: str | None`, `specification_url: str | None`. (`AddEntryOut` is
@@ -148,7 +150,7 @@ unchanged — the add flow does not display these.)
 **File**: `backend/app/api/v1/cabinet/service.py`
 
 **Intent**: Populate the new fields when building each `CabinetEntryOut` in
-`list_entries`, applying the producer fallback rule.
+`list_entries`.
 
 **Contract**: In the `list_entries` row loop (`service.py:187`), set
 `route_of_administration = variant.route_of_administration`,
@@ -167,7 +169,7 @@ crud change is needed.
 
 #### Manual Verification:
 
-- In Swagger (`/docs`), `GET /cabinet/entries` shows the four new fields on each
+- In Swagger (`/docs`), `GET /cabinet/entries` shows the three new fields on each
   item, populated for a real entry.
 
 **Implementation Note**: After completing this phase and all automated
@@ -179,7 +181,7 @@ verification passes, pause for manual confirmation before proceeding.
 
 ### Overview
 
-Show the producer, route of administration, and leaflet/specification links per
+Show the route of administration and leaflet/specification links per
 entry, consuming the still-bare list. Keeps the table scannable on mobile by
 revealing details in an expandable row.
 
@@ -189,7 +191,7 @@ revealing details in an expandable row.
 
 **File**: `frontend/src/features/cabinet/api/cabinet-api.ts`
 
-**Intent**: Mirror the four new backend fields on the TS `CabinetEntryOut`.
+**Intent**: Mirror the three new backend fields on the TS `CabinetEntryOut`.
 
 **Contract**: Add `route_of_administration: string | null`,
 `leaflet_url: string | null`, `specification_url: string | null` to the
@@ -200,7 +202,7 @@ revealing details in an expandable row.
 **File**: `frontend/src/features/cabinet/components/cabinet-list.tsx`
 
 **Intent**: Add a per-row expand affordance that reveals a detail panel with
-Producent, Droga podania, and links to Ulotka / Charakterystyka. Links open in a
+Droga podania and links to Ulotka / Charakterystyka. Links open in a
 new tab; missing values show "—"; missing links are omitted (no dead link).
 
 **Contract**: Each entry row gains a toggle (chevron) controlling a collapsible
@@ -277,7 +279,10 @@ join (`crud.py:132`):
   Critical Implementation Details;
 - search → `text("medication_registry.search_vector @@ to_tsquery('simple', :tsquery)")`
   with `tsquery` bound (never interpolated);
-- sort → `ORDER BY lower(medication_registry.name)` asc/desc;
+- sort → `ORDER BY lower(medication_registry.name) <asc|desc>, cabinet_entries.id ASC`
+  — the `id` tiebreaker makes paging deterministic when names collide; the
+  asc/desc toggle flips only the name key, not the tiebreaker. The COUNT query
+  needs no ORDER BY.
 - pagination → `LIMIT/OFFSET`; total → `select(func.count())` over the same
   filtered join (no limit/offset).
 
@@ -311,16 +316,35 @@ string into a safe tsquery via the medicines builder, then delegate.
 `status`, `order`, `page`, `page_size`, and the resolved `threshold` to
 `cabinet_service.list_entries`. Returns `CabinetPageOut`.
 
-#### 6. Router params + envelope
+#### 6. Shared `NonEmptyStr` alias
+
+**File**: `backend/app/utilities/types.py` (new),
+`backend/app/api/v1/medicines/router.py`
+
+**Intent**: Give the stripped, non-empty query-string alias a shared home so the
+cabinet router reuses it instead of importing a sibling router's private alias or
+redefining it.
+
+**Contract**: Create `app/utilities/types.py` defining
+`NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]`
+(move the existing L-003 comment from `medicines/router.py:17-23` with it).
+Update `medicines/router.py` to import `NonEmptyStr` from `app.utilities.types`
+and delete its local definition (behaviour identical; existing
+`Annotated[NonEmptyStr, Query(...)]` call sites unchanged).
+
+#### 7. Router params + envelope
 
 **File**: `backend/app/api/v1/cabinet/router.py`
 
 **Intent**: Expose the query parameters with validation and return the envelope.
 
-**Contract**: `GET /cabinet/entries` `response_model=CabinetPageOut`, params
-(all `Query()` **inside** `Annotated`, L-003):
+**Contract**: `GET /cabinet/entries` `response_model=CabinetPageOut`; import
+`NonEmptyStr` from `app.utilities.types`. Params (all `Query()` **inside**
+`Annotated`, L-003):
 - `status: Literal["valid","expiring","expired"] | None = None`
-- `q: NonEmptyStr | None = None` (stripped; None when absent)
+- `q: Annotated[NonEmptyStr, Query(description=...)] | None = None` (stripped;
+  None when absent — `Query()` stays inside `Annotated` so the OpenAPI
+  description is preserved and the L-003 convention holds)
 - `sort: Literal["name"] = "name"`
 - `order: Literal["asc","desc"] = "asc"`
 - `page: int = Query(1, ge=1)`
@@ -494,7 +518,7 @@ schema change.
 
 #### Manual
 
-- [ ] 1.4 Swagger shows the four new fields populated on a real entry
+- [ ] 1.4 Swagger shows the three new fields populated on a real entry
 
 ### Phase 2: Frontend — render entry display fields
 
