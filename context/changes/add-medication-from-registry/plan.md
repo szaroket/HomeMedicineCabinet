@@ -560,9 +560,9 @@ None — the schema from F-02 already supports this slice; no new migrations.
 
 #### Automated
 
-- [x] 7.1 Lint/format clean (ruff check + format --check)
-- [x] 7.2 Existing tests still pass (pytest)
+- [x] 7.1 Lint/format clean (ruff check + format --check) — 16cfdd3
+- [x] 7.2 Existing tests still pass (pytest) — 16cfdd3
 
 #### Manual
 
-- [ ] 7.3 PowerShell: selecting a product (e.g. "Aspirin 500mg") returns one row per distinct capacity/capacity_unit pair — no duplicates; ordering by capacity still holds
+- [x] 7.3 PowerShell: selecting a product (e.g. "Aspirin 500mg") returns one row per distinct capacity/capacity_unit pair — no duplicates; ordering by capacity still holds — 16cfdd3
