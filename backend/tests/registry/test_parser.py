@@ -1,3 +1,4 @@
+import io
 from decimal import Decimal
 from pathlib import Path
 
@@ -5,6 +6,7 @@ import pytest
 
 from scripts.registry_import.parser import (
     TABLET_UNITS,
+    _clean,
     _is_tablet_based,
     _parse_capacity,
     parse_registry,
@@ -82,9 +84,20 @@ class TestParseRegistry:
         joined = "Ludzki VIII czynnik krzepnięcia krwi + Ludzki czynnik von Willebranda"
         assert powder["active_ingredient"] == joined
 
+    def test_nar_wins_over_ir_regardless_of_document_order(self, rows):
+        # APAP (Delfarma, IR) appears BEFORE Apap (US Pharmacia, NAR) in the
+        # fixture — the two-pass dedup must still suppress the IR entry and keep
+        # the NAR row as the canonical source for the 6/12/24 tabl. packs.
+        assert by_name(rows, "APAP") == []
+        apap = by_name(rows, "Apap")
+        assert any(
+            r["marketing_authorization_holder"] == "US Pharmacia Sp. z o.o."
+            for r in apap
+        )
+
     def test_veterinary_product_excluded(self, rows):
         assert by_name(rows, "Vetmedin") == []
-        # only the five human products yield rows
+        # APAP parallel import is fully deduped; only the five canonical products yield rows
         assert {r["name"] for r in rows} == {
             "Apap",
             "Acodin Duo",
@@ -92,6 +105,54 @@ class TestParseRegistry:
             "Edelan",
             "FANHDI",
         }
+
+
+class TestParseRegistrySource:
+    def test_seekable_file_object_yields_rows(self):
+        # A seekable file object is rewound between the two passes.
+        with FIXTURE.open("rb") as fh:
+            rows = list(parse_registry(fh))
+        assert by_name(rows, "Apap")
+
+    def test_non_seekable_stream_raises_value_error(self):
+        # A non-seekable stream cannot be rewound for pass 2; it must fail loudly
+        # rather than silently import zero rows.
+        class _NonSeekable:
+            def __init__(self, data: bytes):
+                self._buf = io.BytesIO(data)
+
+            def read(self, *args):
+                return self._buf.read(*args)
+
+            def seekable(self) -> bool:
+                return False
+
+        stream = _NonSeekable(FIXTURE.read_bytes())
+        with pytest.raises(ValueError, match="seekable"):
+            list(parse_registry(stream))
+
+
+class TestClean:
+    def test_none_returns_none(self):
+        assert _clean(None) is None
+
+    def test_empty_string_returns_none(self):
+        assert _clean("") is None
+
+    def test_whitespace_only_returns_none(self):
+        assert _clean("   ") is None
+
+    def test_strips_whitespace(self):
+        assert _clean("  apap  ") == "apap"
+
+    def test_dash_sentinel_returns_none(self):
+        assert _clean("-") is None
+
+    def test_dash_with_whitespace_returns_none(self):
+        assert _clean("  -  ") is None
+
+    def test_non_sentinel_value_returned(self):
+        assert _clean("500 mg") == "500 mg"
 
 
 class TestParseCapacity:

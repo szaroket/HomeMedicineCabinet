@@ -68,9 +68,11 @@ See `docs/reference/frontend-structure.md` for frontend directory rules, the fea
 - `app/db/supabase_auth.py` — configured `supabase-py` client plus thin, domain-agnostic Supabase Auth operations (`sign_up`, `sign_in_with_password`, `refresh_session`); consumed by `auth/crud.py`, never imported directly by `service.py`.
 - `app/api/v1/router.py` — imports and includes every domain router. No route logic here.
 - Domain directories live under `app/api/v1/<domain>/`. URL paths mirror the directory path: `app/api/v1/<domain>/<endpoint>` → `/api/v1/<domain>/<endpoint>`.
-- `router.py` — route decorators only; calls service functions.
-- `service.py` — business logic and orchestration; calls crud functions.
+- `router.py` — route decorators only; calls facade (or service when no cross-domain work is needed).
+- `facade.py` — cross-domain orchestration layer, sits between router and service. **Only the facade may call services or cruds from other domains.** Services and cruds are strictly limited to their own domain. Create `facade.py` as soon as a service needs data from another domain; thin pass-throughs from router to service are acceptable without a facade.
+- `service.py` — business logic and orchestration; calls only this domain's crud functions.
 - `crud.py` — raw database operations; no business logic.
+- `queries.py` — raw SQL statements as module-level `text(...)` constants; no execution. When a domain uses hand-written SQL, keep the SQL here and have `crud.py` import `queries` and execute the constants. Inline SQL inside `crud.py` only for trivial one-liners; anything multi-line or reused belongs in `queries.py`.
 - Domains with no DB access (e.g. `health/`) may omit `service.py` and `crud.py`.
 - To add a new domain: create `app/api/v1/<domain>/` with `__init__.py`, `router.py`, `service.py`, `crud.py`; import and include the router in `app/api/v1/router.py`.
 - New protected domain routers must add `dependencies=[Security(get_current_user)]` (use `Security`, not `Depends`, so the OpenAPI lock icon renders); only `health/` and public `auth/` endpoints are unguarded.
@@ -111,7 +113,10 @@ Frontend: TypeScript strict mode (`frontend/tsconfig.app.json`). **Files and fol
 
 ## Testing Guidelines
 
-Backend: pytest with pytest-asyncio; test files in `backend/tests/` (directory not yet created — place tests there). Use `httpx.AsyncClient` as the FastAPI test client.
+Backend: pytest with pytest-asyncio; test files in `backend/tests/`, mirroring the `app/api/v1/<domain>/` layout (one subpackage per domain). Use `httpx.AsyncClient` as the FastAPI test client.
+
+- **Reuse shared fixtures; never duplicate mocks.** Common mocks live in `backend/tests/conftest.py` (`mock_session`, `fake_user`, `client`, `authed_client`) — request them by name instead of constructing your own. If a mock setup is repeated across tests, promote it to a fixture (domain-local `conftest.py` or a helper) and reuse it rather than copy-pasting.
+- **Always pass `spec=` when building a `MagicMock`/`AsyncMock`** (e.g. `AsyncMock(spec=AsyncSession)`); use `autospec=True` for `mocker.patch` of functions/methods so signatures are validated.
 
 Frontend: Vitest + React Testing Library (not yet configured — add `vitest.config.ts` when writing first test). Playwright covers one golden-path E2E: login → add medication → verify cabinet entry.
 

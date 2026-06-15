@@ -9,6 +9,7 @@ the network; every function is unit-testable against a committed XML fixture.
 """
 
 import logging
+import os
 import xml.etree.ElementTree as ET
 from collections.abc import Iterator
 from decimal import Decimal, InvalidOperation
@@ -43,12 +44,17 @@ TABLET_UNITS: frozenset[str] = frozenset(
 )
 
 
+_SENTINEL_VALUES: frozenset[str] = frozenset({"-"})
+
+
 def _clean(value: str | None) -> str | None:
-    """Trim a raw attribute; treat empty/whitespace as missing (None)."""
+    """Trim a raw attribute; treat empty, whitespace, or sentinel values as missing (None)."""
     if value is None:
         return None
     value = value.strip()
-    return value or None
+    if not value or value in _SENTINEL_VALUES:
+        return None
+    return value
 
 
 def _distinct_attr(product: Element, path: str, attr: str) -> list[str]:
@@ -106,6 +112,54 @@ def _is_tablet_based(unit: str | None) -> bool:
     return unit in TABLET_UNITS
 
 
+def _variant_key(row: dict) -> tuple:
+    """Return the case-folded dedup key for a parsed row."""
+    return (
+        (row["name"] or "").lower(),
+        (row["strength"] or "").lower(),
+        (row["pharmaceutical_form"] or "").lower(),
+        row["capacity"],
+        row["capacity_unit"],
+    )
+
+
+def _scan_original_keys(source) -> frozenset[tuple]:
+    """First-pass scan: return variant keys that have an original authorization.
+
+    The registry export lists the same logical pack under multiple
+    ``produktLeczniczy`` entries — one original authorization (NAR, MRP, DCP,
+    or CEN) plus any number of parallel imports (IR). This pass identifies which
+    variant keys have an original authorization so the second pass can suppress
+    IR duplicates for those keys, regardless of document order.
+
+    Procedure types:
+    - NAR — Polish national authorization
+    - MRP — Mutual Recognition Procedure (EU)
+    - DCP — Decentralised Procedure (EU)
+    - CEN — Centralised Procedure (EMA)
+    - IR  — Parallel Import (not original; suppressed when any of the above exists)
+
+    Args:
+        source: Path or seekable file object for the registry XML export.
+
+    Returns:
+        Frozenset of ``(name_lc, strength_lc, form_lc, capacity, unit)`` tuples
+        that appear under at least one non-IR ``produktLeczniczy`` entry.
+    """
+    original_keys: set[tuple] = set()
+    context = ET.iterparse(source, events=("start", "end"))
+    _event, root = next(context)
+    for event, elem in context:
+        if event != "end" or elem.tag != f"{NS}produktLeczniczy":
+            continue
+        if elem.get("rodzajPreparatu") == "ludzki" and elem.get("typProcedury") != "IR":
+            for row in _rows_for_product(elem):
+                original_keys.add(_variant_key(row))
+        elem.clear()
+        root.clear()
+    return frozenset(original_keys)
+
+
 def _rows_for_product(product: Element) -> Iterator[dict]:
     """Yield one row dict per distinct package size of a single (human) product.
 
@@ -158,14 +212,52 @@ def _rows_for_product(product: Element) -> Iterator[dict]:
             }
 
 
+def _rewind_for_pass_two(source) -> None:
+    """Rewind a file-object source before pass 2; reject non-seekable streams.
+
+    A path source is left untouched because ``iterparse`` re-opens it for each
+    pass. A file object is rewound with ``seek(0)``. A non-seekable stream (e.g.
+    a live HTTP response) would be exhausted by pass 1 and silently yield zero
+    rows in pass 2, so it is rejected loudly instead.
+
+    Args:
+        source: Path or file object passed to ``parse_registry``.
+
+    Raises:
+        ValueError: When ``source`` is a non-seekable stream that cannot be
+            re-read for the second pass.
+    """
+    if isinstance(source, (str, bytes, os.PathLike)):
+        return  # iterparse re-opens the path each pass
+    if not hasattr(source, "seek") or (
+        hasattr(source, "seekable") and not source.seekable()
+    ):
+        raise ValueError(
+            "parse_registry requires a path or a seekable file object; the given "
+            "stream cannot be rewound for the second (yield) pass."
+        )
+    source.seek(0)
+
+
 def parse_registry(source) -> Iterator[dict]:
     """Stream-parse the registry export, yielding one dict per package unit.
 
-    ``source`` is a path or a file object. Uses namespace-aware ``iterparse``
+    ``source`` is a path or a **seekable** file object: parsing runs two passes
+    over the source. A non-seekable stream cannot be rewound for pass 2 and is
+    rejected with a ``ValueError`` rather than silently importing nothing. Uses
+    namespace-aware ``iterparse``
     and clears each processed element (and the root) so memory stays flat over
     the hundreds-of-MB production file. Products whose ``rodzajPreparatu`` is
     not ``ludzki`` (human) are skipped; withdrawn packages (``skasowane="TAK"``)
     are skipped inside ``_rows_for_product``.
+
+    Cross-product deduplication: the registry export includes multiple
+    ``produktLeczniczy`` entries for the same logical product (one per parallel
+    importer / marketing-authorization holder). Entries are deduped on
+    ``(lower(name), lower(strength), lower(form), capacity, capacity_unit)``
+    across the whole file — first occurrence wins (document order). Original
+    (NAR) authorizations appear before parallel imports (IR) in the standard
+    government export, so they naturally win the race.
 
     Security note: stdlib ElementTree never resolves external entities, so there
     is no XXE file-read/SSRF here. The only residual XML risk is an internal
@@ -174,12 +266,50 @@ def parse_registry(source) -> Iterator[dict]:
     on a one-off basis. Swap to ``defusedxml.ElementTree.iterparse`` if this ever
     parses untrusted input.
     """
+    # Pass 1 — find all variant keys that have an original authorization
+    # (NAR / MRP / DCP / CEN). IR (parallel import) entries are suppressed
+    # whenever an original entry exists for the same variant, regardless of
+    # document order.
+    original_keys = _scan_original_keys(source)
+    _rewind_for_pass_two(source)
+
+    # Pass 2 — stream and yield, skipping IR rows shadowed by an original row
+    # and deduplicating any remaining same-procedure duplicates (first-seen wins).
+    seen_variants: set[tuple] = set()
     context = ET.iterparse(source, events=("start", "end"))
     _event, root = next(context)  # capture the <produktyLecznicze> root
     for event, elem in context:
         if event != "end" or elem.tag != f"{NS}produktLeczniczy":
             continue
         if elem.get("rodzajPreparatu") == "ludzki":
-            yield from _rows_for_product(elem)
+            is_ir = elem.get("typProcedury") == "IR"
+            for row in _rows_for_product(elem):
+                key = _variant_key(row)
+                if key in original_keys and is_ir:
+                    logger.debug(
+                        "Skipping IR variant '%s' %s %s cap=%s %s "
+                        "(product id %s; original authorization exists)",
+                        row["name"],
+                        row["strength"],
+                        row["pharmaceutical_form"],
+                        row["capacity"],
+                        row["capacity_unit"],
+                        row["source_product_id"],
+                    )
+                    continue
+                if key in seen_variants:
+                    logger.debug(
+                        "Skipping duplicate variant '%s' %s %s cap=%s %s "
+                        "(product id %s)",
+                        row["name"],
+                        row["strength"],
+                        row["pharmaceutical_form"],
+                        row["capacity"],
+                        row["capacity_unit"],
+                        row["source_product_id"],
+                    )
+                    continue
+                seen_variants.add(key)
+                yield row
         elem.clear()
         root.clear()  # drop the processed product from root so memory stays flat

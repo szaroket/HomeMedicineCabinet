@@ -5,14 +5,11 @@ from uuid import uuid4
 
 import jwt
 import pytest
-import pytest_asyncio
 from fastapi import status
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 from pytest_mock import MockerFixture
 
 from app.api.v1.auth.schemas import AuthResponse, UserOut
-from app.db.connector import get_session
-from app.main import app
 from app.utilities.errors import (
     DuplicateEmailError,
     InvalidCredentialsError,
@@ -38,22 +35,6 @@ def _fake_auth_response() -> tuple[AuthResponse, str]:
         ),
         _FAKE_REFRESH_TOKEN,
     )
-
-
-@pytest_asyncio.fixture
-async def client():
-    """Async HTTPX client with DB session dependency overridden."""
-    mock_session = AsyncMock()
-
-    async def override_get_session():
-        yield mock_session
-
-    app.dependency_overrides[get_session] = override_get_session
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as c:
-        yield c
-    app.dependency_overrides.pop(get_session, None)
 
 
 class TestAuthGuard:
