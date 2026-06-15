@@ -211,6 +211,13 @@ detail sub-row. Detail labels (Polish): `Droga podania`, `Ulotka`,
 `<a target="_blank" rel="noopener noreferrer">`; render the link only when the
 URL is non-null. Expansion state is local component state (not URL).
 
+**Addendum (2026-06-15, impl review F1)**: To meet the Overview goal of keeping
+the table scannable on mobile, `Dawka` (strength) and `Postać`
+(pharmaceutical_form) were moved out of the main table columns into the
+expandable detail panel, slimming the table from 7 to 5 columns. The three
+required detail labels above remain present; `Dawka` / `Postać` join them in the
+detail. Accepted as an improvement aligned with the phase intent.
+
 ### Success Criteria:
 
 #### Automated Verification:
@@ -524,14 +531,14 @@ schema change.
 
 #### Automated
 
-- [x] 2.1 Build passes (`npm run build`)
-- [x] 2.2 Lint passes (`npm run lint`)
-- [x] 2.3 Format passes (`prettier --check src/`)
+- [x] 2.1 Build passes (`npm run build`) — c493cf7
+- [x] 2.2 Lint passes (`npm run lint`) — c493cf7
+- [x] 2.3 Format passes (`prettier --check src/`) — c493cf7
 
 #### Manual
 
-- [x] 2.4 Expanding a row shows route of administration and working leaflet/spec links
-- [x] 2.5 Missing route/link degrades gracefully ("—" / omitted link)
+- [x] 2.4 Expanding a row shows route of administration and working leaflet/spec links — c493cf7
+- [x] 2.5 Missing route/link degrades gracefully ("—" / omitted link) — c493cf7
 - [ ] 2.6 Usable on a narrow (mobile) viewport
 
 ### Phase 3: Backend — filtering, search, sort, pagination

@@ -51,7 +51,18 @@ function EntryRow({ e }: { e: CabinetEntryOut }) {
       >
         <td className="px-4 py-3">
           <span className="inline-flex items-center gap-1">
-            <ChevronIcon expanded={expanded} />
+            <button
+              type="button"
+              aria-expanded={expanded}
+              aria-label="Pokaż szczegóły"
+              onClick={(ev) => {
+                ev.stopPropagation();
+                setExpanded((v) => !v);
+              }}
+              className="inline-flex items-center rounded text-slate-400 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+            >
+              <ChevronIcon expanded={expanded} />
+            </button>
             {e.name}
           </span>
         </td>
