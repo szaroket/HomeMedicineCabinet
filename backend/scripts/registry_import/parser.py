@@ -95,6 +95,54 @@ def _is_tablet_based(unit: str | None) -> bool:
     return unit in TABLET_UNITS
 
 
+def _variant_key(row: dict) -> tuple:
+    """Return the case-folded dedup key for a parsed row."""
+    return (
+        (row["name"] or "").lower(),
+        (row["strength"] or "").lower(),
+        (row["pharmaceutical_form"] or "").lower(),
+        row["capacity"],
+        row["capacity_unit"],
+    )
+
+
+def _scan_original_keys(source) -> frozenset[tuple]:
+    """First-pass scan: return variant keys that have an original authorization.
+
+    The registry export lists the same logical pack under multiple
+    ``produktLeczniczy`` entries — one original authorization (NAR, MRP, DCP,
+    or CEN) plus any number of parallel imports (IR). This pass identifies which
+    variant keys have an original authorization so the second pass can suppress
+    IR duplicates for those keys, regardless of document order.
+
+    Procedure types:
+    - NAR — Polish national authorization
+    - MRP — Mutual Recognition Procedure (EU)
+    - DCP — Decentralised Procedure (EU)
+    - CEN — Centralised Procedure (EMA)
+    - IR  — Parallel Import (not original; suppressed when any of the above exists)
+
+    Args:
+        source: Path or seekable file object for the registry XML export.
+
+    Returns:
+        Frozenset of ``(name_lc, strength_lc, form_lc, capacity, unit)`` tuples
+        that appear under at least one non-IR ``produktLeczniczy`` entry.
+    """
+    original_keys: set[tuple] = set()
+    context = ET.iterparse(source, events=("start", "end"))
+    _event, root = next(context)
+    for event, elem in context:
+        if event != "end" or elem.tag != f"{NS}produktLeczniczy":
+            continue
+        if elem.get("rodzajPreparatu") == "ludzki" and elem.get("typProcedury") != "IR":
+            for row in _rows_for_product(elem):
+                original_keys.add(_variant_key(row))
+        elem.clear()
+        root.clear()
+    return frozenset(original_keys)
+
+
 def _rows_for_product(product: Element) -> Iterator[dict]:
     """Yield one row dict per distinct package size of a single (human) product.
 
@@ -156,6 +204,14 @@ def parse_registry(source) -> Iterator[dict]:
     not ``ludzki`` (human) are skipped; withdrawn packages (``skasowane="TAK"``)
     are skipped inside ``_rows_for_product``.
 
+    Cross-product deduplication: the registry export includes multiple
+    ``produktLeczniczy`` entries for the same logical product (one per parallel
+    importer / marketing-authorization holder). Entries are deduped on
+    ``(lower(name), lower(strength), lower(form), capacity, capacity_unit)``
+    across the whole file — first occurrence wins (document order). Original
+    (NAR) authorizations appear before parallel imports (IR) in the standard
+    government export, so they naturally win the race.
+
     Security note: stdlib ElementTree never resolves external entities, so there
     is no XXE file-read/SSRF here. The only residual XML risk is an internal
     entity-expansion (billion-laughs) DoS, which we accept: the source is a
@@ -163,12 +219,51 @@ def parse_registry(source) -> Iterator[dict]:
     on a one-off basis. Swap to ``defusedxml.ElementTree.iterparse`` if this ever
     parses untrusted input.
     """
+    # Pass 1 — find all variant keys that have an original authorization
+    # (NAR / MRP / DCP / CEN). IR (parallel import) entries are suppressed
+    # whenever an original entry exists for the same variant, regardless of
+    # document order.
+    original_keys = _scan_original_keys(source)
+    if hasattr(source, "seek"):
+        source.seek(0)
+
+    # Pass 2 — stream and yield, skipping IR rows shadowed by an original row
+    # and deduplicating any remaining same-procedure duplicates (first-seen wins).
+    seen_variants: set[tuple] = set()
     context = ET.iterparse(source, events=("start", "end"))
     _event, root = next(context)  # capture the <produktyLecznicze> root
     for event, elem in context:
         if event != "end" or elem.tag != f"{NS}produktLeczniczy":
             continue
         if elem.get("rodzajPreparatu") == "ludzki":
-            yield from _rows_for_product(elem)
+            is_ir = elem.get("typProcedury") == "IR"
+            for row in _rows_for_product(elem):
+                key = _variant_key(row)
+                if key in original_keys and is_ir:
+                    logger.debug(
+                        "Skipping IR variant '%s' %s %s cap=%s %s "
+                        "(product id %s; original authorization exists)",
+                        row["name"],
+                        row["strength"],
+                        row["pharmaceutical_form"],
+                        row["capacity"],
+                        row["capacity_unit"],
+                        row["source_product_id"],
+                    )
+                    continue
+                if key in seen_variants:
+                    logger.debug(
+                        "Skipping duplicate variant '%s' %s %s cap=%s %s "
+                        "(product id %s)",
+                        row["name"],
+                        row["strength"],
+                        row["pharmaceutical_form"],
+                        row["capacity"],
+                        row["capacity_unit"],
+                        row["source_product_id"],
+                    )
+                    continue
+                seen_variants.add(key)
+                yield row
         elem.clear()
         root.clear()  # drop the processed product from root so memory stays flat

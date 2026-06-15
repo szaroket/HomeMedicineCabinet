@@ -1,5 +1,43 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <produktyLecznicze stanNaDzien="2026-06-03" xmlns="http://rejestry.ezdrowie.gov.pl/rpl/eksport-danych-v6.0.0">
+    <produktLeczniczy nazwaProduktu="APAP" rodzajPreparatu="ludzki" nazwaPowszechnieStosowana="Paracetamolum" nazwaPoprzedniaProduktu="brak" moc="500 mg" nazwaPostaciFarmaceutycznej="Tabletki powlekane" podmiotOdpowiedzialny="Delfarma Sp. z o.o." typProcedury="IR" numerPozwolenia="60/21" waznoscPozwolenia="2026-02-18" zakazStosowaniaUZwierzat="" id="100447749">
+        <kodyATC>
+            <kodATC>N02BE01</kodATC>
+        </kodyATC>
+        <drogiPodania>
+            <drogaPodania drogaPodaniaNazwa="doustna"/>
+        </drogiPodania>
+        <substancjeCzynne>
+            <substancjaCzynna nazwaSubstancji="Paracetamolum" iloscSubstancji="500" jednostkaMiaryIlosciSubstancji="mg" iloscPreparatu="" jednostkaMiaryIlosciPreparatu="" innyOpisIlosci=""/>
+        </substancjeCzynne>
+        <opakowania>
+            <opakowanie kodGTIN="05909991448479" kategoriaDostepnosci="OTC" skasowane="NIE" numerEu="" dystrybutorRownolegly="" id="139275">
+                <jednostkiOpakowania>
+                    <jednostkaOpakowania liczbaOpakowan="" rodzajOpakowania="" pojemnosc="6" jednostkaPojemnosci="tabl." informacjeDodatkowe=""/>
+                </jednostkiOpakowania>
+                <zgodyPrezesa/>
+            </opakowanie>
+            <opakowanie kodGTIN="05909991448486" kategoriaDostepnosci="OTC" skasowane="NIE" numerEu="" dystrybutorRownolegly="" id="139276">
+                <jednostkiOpakowania>
+                    <jednostkaOpakowania liczbaOpakowan="" rodzajOpakowania="" pojemnosc="12" jednostkaPojemnosci="tabl." informacjeDodatkowe=""/>
+                </jednostkiOpakowania>
+                <zgodyPrezesa/>
+            </opakowanie>
+            <opakowanie kodGTIN="05909991448493" kategoriaDostepnosci="OTC" skasowane="NIE" numerEu="" dystrybutorRownolegly="" id="139277">
+                <jednostkiOpakowania>
+                    <jednostkaOpakowania liczbaOpakowan="" rodzajOpakowania="" pojemnosc="24" jednostkaPojemnosci="tabl." informacjeDodatkowe=""/>
+                </jednostkiOpakowania>
+                <zgodyPrezesa/>
+            </opakowanie>
+        </opakowania>
+        <daneOWytworcy>
+            <wytworcy podmiotOdpowiedzialnywKrajuEksportu="US Pharmacia Sp. z o.o." krajEksportu="Litwa"/>
+        </daneOWytworcy>
+        <materialyEdukacyjne>
+            <dlaPacjenta/>
+            <dlaMedyka/>
+        </materialyEdukacyjne>
+    </produktLeczniczy>
     <produktLeczniczy nazwaProduktu="Apap" rodzajPreparatu="ludzki" nazwaPowszechnieStosowana="Paracetamolum" nazwaPoprzedniaProduktu="brak" moc="500 mg" nazwaPostaciFarmaceutycznej="Tabletki powlekane" podmiotOdpowiedzialny="US Pharmacia Sp. z o.o." typProcedury="NAR" numerPozwolenia="02960" waznoscPozwolenia="Bezterminowe" podstawaPrawna="art. 15 ust. 1 pkt 2" zakazStosowaniaUZwierzat="" ulotka="https://rejestry.ezdrowie.gov.pl/api/rpl/medicinal-products/649/leaflet" charakterystyka="https://rejestry.ezdrowie.gov.pl/api/rpl/medicinal-products/649/characteristic" id="100006494">
         <kodyATC>
             <kodATC>N02BE01</kodATC>

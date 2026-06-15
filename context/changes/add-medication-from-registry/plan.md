@@ -560,8 +560,8 @@ None — the schema from F-02 already supports this slice; no new migrations.
 
 #### Automated
 
-- [ ] 7.1 Lint/format clean (ruff check + format --check)
-- [ ] 7.2 Existing tests still pass (pytest)
+- [x] 7.1 Lint/format clean (ruff check + format --check)
+- [x] 7.2 Existing tests still pass (pytest)
 
 #### Manual
 

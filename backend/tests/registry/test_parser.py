@@ -83,9 +83,20 @@ class TestParseRegistry:
         joined = "Ludzki VIII czynnik krzepnięcia krwi + Ludzki czynnik von Willebranda"
         assert powder["active_ingredient"] == joined
 
+    def test_nar_wins_over_ir_regardless_of_document_order(self, rows):
+        # APAP (Delfarma, IR) appears BEFORE Apap (US Pharmacia, NAR) in the
+        # fixture — the two-pass dedup must still suppress the IR entry and keep
+        # the NAR row as the canonical source for the 6/12/24 tabl. packs.
+        assert by_name(rows, "APAP") == []
+        apap = by_name(rows, "Apap")
+        assert any(
+            r["marketing_authorization_holder"] == "US Pharmacia Sp. z o.o."
+            for r in apap
+        )
+
     def test_veterinary_product_excluded(self, rows):
         assert by_name(rows, "Vetmedin") == []
-        # only the five human products yield rows
+        # APAP parallel import is fully deduped; only the five canonical products yield rows
         assert {r["name"] for r in rows} == {
             "Apap",
             "Acodin Duo",
