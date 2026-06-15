@@ -16,25 +16,39 @@ Home Medicine Cabinet — a Polish-language web app for tracking medication inve
 backend/
   app/
     main.py          sole entry point: create_app() factory, middleware, uvicorn __main__
-    v1/
-      router.py      aggregates all domain routers under prefix /v1
-      health/
-        router.py    GET /v1/health/ — router layer only
-      auth/
-        router.py    route definitions only
-        service.py   business logic
-        crud.py      database operations
-      medicines/
-        router.py
-        service.py
-        crud.py
+    core/
+      config.py      pydantic-settings — single source of truth for env config
+    db/
+      connector.py   async engine, session factory, get_session dependency, init_db
+    api/
+      v1/
+        router.py    aggregates all domain routers under prefix /api/v1
+        health/
+          router.py  GET /api/v1/health/ — router layer only
+        auth/
+          router.py  route definitions only
+          service.py business logic
+          crud.py    database operations
+        medicines/
+          router.py
+          service.py
+          crud.py
   pyproject.toml     dependencies and uv config
 frontend/
+  e2e/               Playwright specs (*.spec.ts) + auth.setup.ts
   src/
-    components/      React components (PascalCase.tsx)
-    pages/           page-level components
-    hooks/           custom React hooks
-  vite.config.ts
+    app/             composition root: App, providers, router.tsx, layouts/
+    components/
+      ui/            shared, domain-agnostic primitives (button, input, modal)
+      layout/        shared composite layout pieces
+    features/        one folder per domain feature; each owns its slice
+      <feature>/     components/ hooks/ api/ schemas/ types.ts (+ store.ts if needed)
+    lib/             configured third-party wrappers: api-client, query-client, utils (cn)
+    hooks/           generic shared hooks only
+    types/           genuinely cross-feature types only
+    utils/           shared pure helpers
+    test/setup.ts    Vitest setup (jest-dom, cleanup)
+  vite.config.ts     Vite + @tailwindcss/vite + Vitest (test block) + @/ alias
 context/             project documentation — PRD, shape-notes, tech-stack hand-off
 docs/
   reference/
@@ -43,17 +57,35 @@ docs/
 
 See `context/foundation/prd.md` for full functional requirements and business logic.
 See `docs/reference/backend-structure.md` for backend directory rules, layer responsibilities, and instructions for adding new domains or API versions.
+See `docs/reference/frontend-structure.md` for frontend directory rules, the feature-based layout, and instructions for adding new features.
 
 ### Backend layer rules
 
 - `app/main.py` — app factory and middleware only. No domain routes.
-- `app/v1/router.py` — imports and includes every domain router. No route logic here.
-- Domain directories live under `app/v1/<domain>/`. URL paths mirror the directory path: `app/v1/<domain>/<endpoint>` → `/v1/<domain>/<endpoint>`.
-- `router.py` — route decorators only; calls service functions.
-- `service.py` — business logic and orchestration; calls crud functions.
+- `app/core/config.py` — pydantic-settings `Settings` singleton; import `settings` from here everywhere.
+- `app/core/jwt_security.py` — JWT guard (`get_current_user`, `get_token_claims`); import guard from here in all protected routers.
+- `app/db/connector.py` — async engine, session factory, `get_session` dependency, `init_db`.
+- `app/db/supabase_auth.py` — configured `supabase-py` client plus thin, domain-agnostic Supabase Auth operations (`sign_up`, `sign_in_with_password`, `refresh_session`); consumed by `auth/crud.py`, never imported directly by `service.py`.
+- `app/api/v1/router.py` — imports and includes every domain router. No route logic here.
+- Domain directories live under `app/api/v1/<domain>/`. URL paths mirror the directory path: `app/api/v1/<domain>/<endpoint>` → `/api/v1/<domain>/<endpoint>`.
+- `router.py` — route decorators only; calls facade (or service when no cross-domain work is needed).
+- `facade.py` — cross-domain orchestration layer, sits between router and service. **Only the facade may call services or cruds from other domains.** Services and cruds are strictly limited to their own domain. Create `facade.py` as soon as a service needs data from another domain; thin pass-throughs from router to service are acceptable without a facade.
+- `service.py` — business logic and orchestration; calls only this domain's crud functions.
 - `crud.py` — raw database operations; no business logic.
+- `queries.py` — raw SQL statements as module-level `text(...)` constants; no execution. When a domain uses hand-written SQL, keep the SQL here and have `crud.py` import `queries` and execute the constants. Inline SQL inside `crud.py` only for trivial one-liners; anything multi-line or reused belongs in `queries.py`.
 - Domains with no DB access (e.g. `health/`) may omit `service.py` and `crud.py`.
-- To add a new domain: create `app/v1/<domain>/` with `__init__.py`, `router.py`, `service.py`, `crud.py`; import and include the router in `app/v1/router.py`.
+- To add a new domain: create `app/api/v1/<domain>/` with `__init__.py`, `router.py`, `service.py`, `crud.py`; import and include the router in `app/api/v1/router.py`.
+- New protected domain routers must add `dependencies=[Security(get_current_user)]` (use `Security`, not `Depends`, so the OpenAPI lock icon renders); only `health/` and public `auth/` endpoints are unguarded.
+
+### Frontend structure rules
+
+- **Feature-based layout**: most code lives in `src/features/<feature>/`. A feature owns its `components/`, `hooks/`, `api/` (typed fetchers + TanStack Query hooks + query-key factory), `schemas/` (zod), and `types.ts`. Create feature folders **just-in-time** per roadmap slice — do not scaffold all features up front, and do not create empty `api/`/`schemas/` until needed.
+- **Shared layer is thin**: only genuinely cross-feature code goes in top-level `components/`, `hooks/`, `types/`, `utils/`, `lib/`. Promote feature code to shared only when a second feature needs it ("colocate first, extract later"). Domain-agnostic UI primitives live in `components/ui/`; anything that knows the domain stays in its feature.
+- **Composition at `app/`**: routing, providers, and layouts live in `src/app/`. Compose features there; avoid cross-feature imports.
+- **No barrel files**: import directly via the `@/*` path alias (configured in `tsconfig.app.json` + `vite.config.ts`). Avoid `index.ts` re-exports — they hurt Vite tree-shaking and hide circular dependencies.
+- **Data access**: FastAPI is the sole backend client — the frontend never calls Supabase/DB directly. One `lib/api-client.ts` wraps `${VITE_API_URL}/api/v1/...` and attaches `Authorization: Bearer <jwt>`; per-feature `api/` functions are the typed REST contract, Query hooks are the cache layer.
+- **Tailwind v4**: the CSS entry is `src/index.css` (`@import "tailwindcss"` + an `@theme` token block — config lives in CSS). The `cn()` helper (clsx + tailwind-merge) lives in `lib/utils.ts`.
+- Full rules and recommended tree: `docs/reference/frontend-structure.md`. Rationale, paradigm comparison, and migration path: `context/changes/frontend-structure/research.md`.
 
 ## Build, Test, and Dev Commands
 
@@ -73,13 +105,18 @@ See `docs/reference/backend-structure.md` for backend directory rules, layer res
 
 ## Coding Style & Naming Conventions
 
-Backend: Python 3.13, enforced by ruff v0.11.12 (lint + format). See `.pre-commit-config.yaml` for active rule set. Place SQLModel table models in `backend/app/v1/<domain>/models.py` (one file per domain). Place FastAPI routers in `backend/app/v1/<domain>/router.py`; router files use `snake_case`.
+Backend: Python 3.13, enforced by ruff v0.11.12 (lint + format). See `.pre-commit-config.yaml` for active rule set. Place SQLModel table models in `backend/app/api/v1/<domain>/models.py` (one file per domain). Place FastAPI routers in `backend/app/api/v1/<domain>/router.py`; router files use `snake_case`.
 
-Frontend: TypeScript strict mode (`frontend/tsconfig.app.json`). Components `PascalCase.tsx`, utilities `camelCase.ts`. ESLint enforces `react-hooks` and `react-refresh` rules; Prettier formats `src/**/*.{ts,tsx,css}`.
+Docstrings follow the **Google style** convention (`Args:`/`Returns:`/`Raises:` sections), enforced by ruff's pydocstyle rules (`convention = "google"` in `backend/pyproject.toml`). Docstrings are not required everywhere (`D1` rules are ignored), but any docstring you write must follow Google formatting. Alembic migrations under `backend/migrations/` are exempt.
+
+Frontend: TypeScript strict mode (`frontend/tsconfig.app.json`). **Files and folders use `kebab-case`** (`medication-form.tsx`, `use-debounce.ts`, `api-client.ts`) — chosen for cross-OS safety (Windows dev, Linux deploy). Component *identifiers* are still `PascalCase` (`export function MedicationForm`); only the filename is kebab-case. Folders: lowercase, plural for type buckets (`components/`, `hooks/`), singular for feature names (`auth/`, `cabinet/`). ESLint enforces `react-hooks` and `react-refresh` rules; Prettier formats `src/**/*.{ts,tsx,css}`.
 
 ## Testing Guidelines
 
-Backend: pytest with pytest-asyncio; test files in `backend/tests/` (directory not yet created — place tests there). Use `httpx.AsyncClient` as the FastAPI test client.
+Backend: pytest with pytest-asyncio; test files in `backend/tests/`, mirroring the `app/api/v1/<domain>/` layout (one subpackage per domain). Use `httpx.AsyncClient` as the FastAPI test client.
+
+- **Reuse shared fixtures; never duplicate mocks.** Common mocks live in `backend/tests/conftest.py` (`mock_session`, `fake_user`, `client`, `authed_client`) — request them by name instead of constructing your own. If a mock setup is repeated across tests, promote it to a fixture (domain-local `conftest.py` or a helper) and reuse it rather than copy-pasting.
+- **Always pass `spec=` when building a `MagicMock`/`AsyncMock`** (e.g. `AsyncMock(spec=AsyncSession)`); use `autospec=True` for `mocker.patch` of functions/methods so signatures are validated.
 
 Frontend: Vitest + React Testing Library (not yet configured — add `vitest.config.ts` when writing first test). Playwright covers one golden-path E2E: login → add medication → verify cabinet entry.
 
