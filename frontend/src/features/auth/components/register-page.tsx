@@ -1,10 +1,11 @@
 import { Link } from "react-router-dom";
 import { RegisterForm } from "@/features/auth/components/register-form";
 import logo from "@/assets/logo.png";
+import { AppFooter } from "@/app/components/app-footer";
 
 export function RegisterPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-900">
+    <div className="relative flex min-h-screen items-center justify-center bg-slate-900">
       <div className="w-full max-w-md rounded-lg border border-slate-700 bg-slate-800 p-8 shadow-xl">
         <div className="mb-6">
           <div className="mb-3 flex flex-col items-center gap-0">
@@ -31,6 +32,9 @@ export function RegisterPage() {
             Zaloguj się
           </Link>
         </p>
+      </div>
+      <div className="absolute bottom-0 w-full">
+        <AppFooter />
       </div>
     </div>
   );
