@@ -425,8 +425,8 @@ Create `backend/tests/` with a `conftest.py` that provides a test DB session, an
 
 #### Manual
 
-- [ ] 1.4 `backend/app/db/connector.py` exists and is importable
-- [ ] 1.5 `backend/app/main.py` references the lifespan
+- [x] 1.4 `backend/app/db/connector.py` exists and is importable
+- [x] 1.5 `backend/app/main.py` references the lifespan
 
 ### Phase 2: SQLModel Models and Domain Stubs
 
@@ -437,8 +437,8 @@ Create `backend/tests/` with a `conftest.py` that provides a test DB session, an
 
 #### Manual
 
-- [ ] 2.3 All four model classes importable from their modules
-- [ ] 2.4 `cabinet/` and `users/` directories exist with all four layer files each
+- [x] 2.3 All four model classes importable from their modules
+- [x] 2.4 `cabinet/` and `users/` directories exist with all four layer files each
 
 ### Phase 3: Alembic Setup and First Migration
 
