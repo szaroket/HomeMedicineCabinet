@@ -28,7 +28,7 @@ A single adult can't reliably track their home medication inventory — what the
 | ID   | Change ID                    | Outcome (user can …)                                                                                                                                 | Prerequisites    | PRD refs                          | Status   |
 |------|------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|------------------|-----------------------------------|----------|
 | F-01 | auth-scaffold                | (foundation) auth entry screen in place; register/login/logout UI wired to Supabase Auth, plus FastAPI route protection                              | Supabase project created | FR-001, FR-002, Access Control | done    |
-| F-02 | data-layer-scaffold          | (foundation) SQLModel models, Supabase PostgreSQL connection, and Alembic migration tooling ready                                                    | Supabase project created | FR-003, FR-010, NFR data-isolation | implemented |
+| F-02 | data-layer-scaffold          | (foundation) SQLModel models, Supabase PostgreSQL connection, and Alembic migration tooling ready                                                    | Supabase project created | FR-003, FR-010, NFR data-isolation | done |
 | F-03 | registry-import              | (foundation) Polish medicines XML dataset loaded into PostgreSQL and queryable for autocomplete                                                       | F-02             | FR-003, FR-011, FR-012            | implemented |
 | F-04 | ci-cd-wiring                 | (foundation) GitHub Actions auto-deploys backend and frontend to Render on merge to main                                                             | —                | NFR persist-across-sessions       | ready    |
 | S-01 | add-medication-from-registry | add a medication by searching the Polish registry autocomplete, choosing tablet count, entering package count and expiry date; entry appears in cabinet with correct status; duplicate entries merge per dedup rule | F-01, F-02, F-03 | US-01, FR-003, FR-010, FR-022 | proposed |
@@ -90,7 +90,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Schema design decisions here ripple through all slices — modelling the deduplication key (drug + tablet count + expiry date, FR-010) correctly up front avoids a disruptive migration mid-build. A full-text index on medication name and active ingredient should be included here to satisfy the < 500ms p95 autocomplete NFR before S-01 is built.
-- **Status:** implemented
+- **Status:** done
 
 ### F-03: Registry import
 
@@ -244,3 +244,4 @@ _(none — all questions resolved before roadmap finalisation)_
 (Empty on first generation. `/10x-archive` appends an entry here — and flips that item's `Status` to `done` — when a change whose `Change ID` matches the item is archived.)
 
 - **F-01: (foundation) Supabase Auth integrated end-to-end. The unauthenticated entry screen presents register and login forms plus a logout control, all wired to Supabase Auth; users can register, log in, and log out; a FastAPI dependency guard rejects unauthenticated requests on all protected routes. Scope is the minimal auth UI needed to exercise the flow — not account settings or profile management.** — Archived 2026-06-15 → `context/archive/2026-06-05-auth-scaffold/`. Lesson: —.
+- **F-02: (foundation) SQLModel installed; cabinet, medication-registry, and user-preference models defined; Alembic migration tooling wired; FastAPI connects to Supabase PostgreSQL via `DATABASE_URL`.** — Archived 2026-06-15 → `context/archive/2026-06-04-data-layer-scaffold/`. Lesson: —.

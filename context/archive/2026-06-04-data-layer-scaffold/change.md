@@ -2,9 +2,10 @@
 change_id: data-layer-scaffold
 roadmap_id: F-02
 title: "Data layer: SQLModel models + Alembic migrations + Supabase PostgreSQL"
-status: impl_reviewed
+status: archived
 created: 2026-06-04
-updated: 2026-06-04
+updated: 2026-06-15
+archived_at: 2026-06-15T16:48:13Z
 ---
 
 ## What
