@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { useCabinetEntries } from "@/features/cabinet/api/cabinet-queries";
-import type { CabinetEntryOut } from "@/features/cabinet/api/cabinet-api";
+import type {
+  CabinetEntryOut,
+  CabinetPageOut,
+} from "@/features/cabinet/api/cabinet-api";
 
 function ChevronIcon({ expanded }: { expanded: boolean }) {
   return (
@@ -36,10 +38,10 @@ function formatDate(dateStr: string): string {
   });
 }
 
-function EntryRow({ e }: { e: CabinetEntryOut }) {
+function EntryRow({ entry }: { entry: CabinetEntryOut }) {
   const [expanded, setExpanded] = useState(false);
-  const statusInfo = STATUS_LABEL[e.status] ?? {
-    label: e.status,
+  const statusInfo = STATUS_LABEL[entry.status] ?? {
+    label: entry.status,
     className: "text-slate-400",
   };
 
@@ -47,7 +49,7 @@ function EntryRow({ e }: { e: CabinetEntryOut }) {
     <>
       <tr
         className="border-b border-slate-700 last:border-0 hover:bg-slate-800/50 cursor-pointer"
-        onClick={() => setExpanded((v) => !v)}
+        onClick={() => setExpanded((prev) => !prev)}
       >
         <td className="px-4 py-3">
           <span className="inline-flex items-center gap-1">
@@ -57,20 +59,20 @@ function EntryRow({ e }: { e: CabinetEntryOut }) {
               aria-label="Pokaż szczegóły"
               onClick={(ev) => {
                 ev.stopPropagation();
-                setExpanded((v) => !v);
+                setExpanded((prev) => !prev);
               }}
               className="inline-flex items-center rounded text-slate-400 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
             >
               <ChevronIcon expanded={expanded} />
             </button>
-            {e.name}
+            {entry.name}
           </span>
         </td>
-        <td className="px-4 py-3">{e.package_count}</td>
+        <td className="px-4 py-3">{entry.package_count}</td>
         <td className="px-4 py-3">
-          {e.total_tablets != null ? e.total_tablets : "—"}
+          {entry.total_tablets != null ? entry.total_tablets : "—"}
         </td>
-        <td className="px-4 py-3">{formatDate(e.expiry_date)}</td>
+        <td className="px-4 py-3">{formatDate(entry.expiry_date)}</td>
         <td className={`px-4 py-3 font-medium ${statusInfo.className}`}>
           {statusInfo.label}
         </td>
@@ -81,24 +83,26 @@ function EntryRow({ e }: { e: CabinetEntryOut }) {
             <dl className="flex flex-wrap gap-x-8 gap-y-1 text-sm">
               <div className="flex gap-2">
                 <dt className="text-slate-400">Dawka:</dt>
-                <dd className="text-white">{e.strength ?? "—"}</dd>
+                <dd className="text-white">{entry.strength ?? "—"}</dd>
               </div>
               <div className="flex gap-2">
                 <dt className="text-slate-400">Postać:</dt>
-                <dd className="text-white">{e.pharmaceutical_form ?? "—"}</dd>
+                <dd className="text-white">
+                  {entry.pharmaceutical_form ?? "—"}
+                </dd>
               </div>
               <div className="flex gap-2">
                 <dt className="text-slate-400">Droga podania:</dt>
                 <dd className="text-white">
-                  {e.route_of_administration ?? "—"}
+                  {entry.route_of_administration ?? "—"}
                 </dd>
               </div>
               <div className="flex gap-2">
                 <dt className="text-slate-400">Ulotka:</dt>
                 <dd>
-                  {e.leaflet_url ? (
+                  {entry.leaflet_url ? (
                     <a
-                      href={e.leaflet_url}
+                      href={entry.leaflet_url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-400 hover:underline"
@@ -114,9 +118,9 @@ function EntryRow({ e }: { e: CabinetEntryOut }) {
               <div className="flex gap-2">
                 <dt className="text-slate-400">Charakterystyka:</dt>
                 <dd>
-                  {e.specification_url ? (
+                  {entry.specification_url ? (
                     <a
-                      href={e.specification_url}
+                      href={entry.specification_url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-400 hover:underline"
@@ -137,9 +141,21 @@ function EntryRow({ e }: { e: CabinetEntryOut }) {
   );
 }
 
-export function CabinetList() {
-  const { data: entries, isLoading, isError } = useCabinetEntries();
+interface CabinetListProps {
+  pageData: CabinetPageOut | undefined;
+  isLoading: boolean;
+  isError: boolean;
+  hasFilters: boolean;
+  onClearFilters: () => void;
+}
 
+export function CabinetList({
+  pageData,
+  isLoading,
+  isError,
+  hasFilters,
+  onClearFilters,
+}: CabinetListProps) {
   if (isLoading) {
     return <p className="text-sm text-slate-400">Ładowanie…</p>;
   }
@@ -148,7 +164,21 @@ export function CabinetList() {
     return <p className="text-sm text-red-400">Błąd ładowania danych.</p>;
   }
 
-  if (!entries || entries.length === 0) {
+  if (!pageData || pageData.total === 0) {
+    if (hasFilters) {
+      return (
+        <div className="text-sm text-slate-400">
+          <p>Brak leków spełniających kryteria.</p>
+          <button
+            type="button"
+            onClick={onClearFilters}
+            className="mt-2 text-blue-400 hover:underline focus:outline-none"
+          >
+            Wyczyść filtry
+          </button>
+        </div>
+      );
+    }
     return (
       <p className="text-sm text-slate-400">
         Apteczka jest pusta. Dodaj pierwszy lek.
@@ -179,8 +209,8 @@ export function CabinetList() {
           </tr>
         </thead>
         <tbody>
-          {entries.map((e) => (
-            <EntryRow key={e.id} e={e} />
+          {pageData.items.map((entry) => (
+            <EntryRow key={entry.id} entry={entry} />
           ))}
         </tbody>
       </table>

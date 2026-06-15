@@ -462,6 +462,73 @@ the URL params. Preserve loading/error states. Keep the Phase 2 expandable detai
 
 ---
 
+## Phase 5: Active ingredient — backend + frontend
+
+### Overview
+
+Surface the active ingredient on each cabinet entry. Purely additive: the field
+already lives on `medication_registry` and is returned by the existing join in
+`crud.list_entries` — nothing in the DB or query layer needs to change.
+
+### Changes Required:
+
+#### 1. Response schema
+
+**File**: `backend/app/api/v1/cabinet/schemas.py`
+
+**Intent**: Add `active_ingredient` to `CabinetEntryOut`.
+
+**Contract**: Add `active_ingredient: str | None` to `CabinetEntryOut`.
+`AddEntryOut` is unchanged.
+
+#### 2. Service mapping
+
+**File**: `backend/app/api/v1/cabinet/service.py`
+
+**Intent**: Populate the new field when building each `CabinetEntryOut` in
+`list_entries`.
+
+**Contract**: In the row loop, set
+`active_ingredient = variant.active_ingredient`. The existing join already
+returns the full `MedicationRegistry` row, so no crud change is needed.
+
+#### 3. Frontend type
+
+**File**: `frontend/src/features/cabinet/api/cabinet-api.ts`
+
+**Intent**: Mirror the new field on the TS `CabinetEntryOut`.
+
+**Contract**: Add `active_ingredient: string | null` to the `CabinetEntryOut`
+interface.
+
+#### 4. Frontend display
+
+**File**: `frontend/src/features/cabinet/components/cabinet-list.tsx`
+
+**Intent**: Show the active ingredient in the expandable detail panel alongside
+the other Phase 2 fields.
+
+**Contract**: Add a `Substancja czynna` row to the `<dl>` in the detail panel;
+render the value or `"—"` when null.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Backend lint + format: `cd backend && uv run ruff check . && uv run ruff format --check .`
+- Backend tests pass: `cd backend && uv run pytest`
+- Existing `list_entries` service test updated to assert the new field.
+- Frontend build passes: `cd frontend && npm run build`
+- Frontend lint passes: `cd frontend && npm run lint`
+- Frontend format passes: `cd frontend && npx prettier --check src/`
+
+#### Manual Verification:
+
+- Expanding a cabinet row shows the active ingredient (e.g. "Paracetamolum")
+  or "—" when the registry row has none.
+
+---
+
 ## Testing Strategy
 
 ### Unit Tests (backend, pytest):
@@ -545,30 +612,45 @@ schema change.
 
 #### Automated
 
-- [x] 3.1 Lint + format pass
-- [x] 3.2 Backend tests pass (`uv run pytest`)
-- [x] 3.3 Parity test: SQL status filter ↔ `classify_status` at boundary dates
-- [x] 3.4 Search test: name match and active-ingredient match; < 2 chars = no filter
-- [x] 3.5 Pagination test: correct `total`, page slicing, and `order=desc`
-- [x] 3.6 Validation test: `page_size=25` → 422; `status=foo` → 422
+- [x] 3.1 Lint + format pass — a7cd2a3
+- [x] 3.2 Backend tests pass (`uv run pytest`) — a7cd2a3
+- [x] 3.3 Parity test: SQL status filter ↔ `classify_status` at boundary dates — a7cd2a3
+- [x] 3.4 Search test: name match and active-ingredient match; < 2 chars = no filter — a7cd2a3
+- [x] 3.5 Pagination test: correct `total`, page slicing, and `order=desc` — a7cd2a3
+- [x] 3.6 Validation test: `page_size=25` → 422; `status=foo` → 422 — a7cd2a3
 
 #### Manual
 
-- [x] 3.7 Swagger: combined status + q + order + page + page_size returns a correct envelope
+- [x] 3.7 Swagger: combined status + q + order + page + page_size returns a correct envelope — a7cd2a3
 
 ### Phase 4: Frontend — controls + URL-driven state
 
 #### Automated
 
-- [ ] 4.1 Build passes (`npm run build`)
-- [ ] 4.2 Lint passes (`npm run lint`)
-- [ ] 4.3 Format passes (`prettier --check src/`)
+- [x] 4.1 Build passes (`npm run build`)
+- [x] 4.2 Lint passes (`npm run lint`)
+- [x] 4.3 Format passes (`prettier --check src/`)
 
 #### Manual
 
-- [ ] 4.4 Search narrows the list (debounced) and updates URL `q`
-- [ ] 4.5 Status filter + search intersect; clearing returns all
-- [ ] 4.6 Sort toggle, page-size selector, and prev/next pagination work with correct page count
-- [ ] 4.7 Reload and paste-into-new-tab restore full state from the URL
-- [ ] 4.8 Distinct empty states + "Wyczyść filtry" reset
+- [x] 4.4 Search narrows the list (debounced) and updates URL `search`
+- [x] 4.5 Status filter + search intersect; clearing returns all
+- [x] 4.6 Sort toggle, page-size selector, and prev/next pagination work with correct page count
+- [x] 4.7 Reload and paste-into-new-tab restore full state from the URL
+- [x] 4.8 Distinct empty states + "Wyczyść filtry" reset
 - [ ] 4.9 Usable on a narrow (mobile) viewport
+
+### Phase 5: Active ingredient — backend + frontend
+
+#### Automated
+
+- [ ] 5.1 Backend lint + format pass
+- [ ] 5.2 Backend tests pass (`uv run pytest`)
+- [ ] 5.3 `list_entries` service test asserts `active_ingredient` field
+- [ ] 5.4 Frontend build passes (`npm run build`)
+- [ ] 5.5 Frontend lint passes (`npm run lint`)
+- [ ] 5.6 Frontend format passes (`prettier --check src/`)
+
+#### Manual
+
+- [ ] 5.7 Expanding a row shows the active ingredient or "—" when absent

@@ -25,6 +25,7 @@ export function AddMedicationForm() {
   );
   const [result, setResult] = useState<AddEntryResult | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [formKey, setFormKey] = useState(0);
 
   const {
     register,
@@ -92,6 +93,7 @@ export function AddMedicationForm() {
     setSelectedProduct(null);
     setSelectedVariant(null);
     reset();
+    setFormKey((prev) => prev + 1);
   }
 
   function handleNavigate() {
@@ -112,6 +114,7 @@ export function AddMedicationForm() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
         <ProductAutocomplete
+          key={formKey}
           selected={selectedProduct}
           onSelect={handleProductSelect}
           onClear={handleProductClear}
@@ -135,6 +138,7 @@ export function AddMedicationForm() {
           <input
             type="number"
             min={1}
+            defaultValue={1}
             className="rounded border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             {...register("package_count", { valueAsNumber: true })}
           />

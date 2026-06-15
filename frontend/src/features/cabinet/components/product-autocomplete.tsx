@@ -9,14 +9,24 @@ interface Props {
   selected: ProductOut | null;
 }
 
+function productLabel(p: ProductOut): string {
+  return [
+    p.name,
+    p.strength,
+    p.pharmaceutical_form ? `· ${p.pharmaceutical_form}` : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 export function ProductAutocomplete({ onSelect, onClear, selected }: Props) {
-  const [query, setQuery] = useState(selected?.name ?? "");
+  const [query, setQuery] = useState(selected ? productLabel(selected) : "");
   const [open, setOpen] = useState(false);
   const debouncedQ = useDebounce(query, 250);
   const { data: products } = useProductSearch(debouncedQ);
 
   function handleSelect(p: ProductOut) {
-    setQuery(p.name);
+    setQuery(productLabel(p));
     setOpen(false);
     onSelect(p);
   }
@@ -45,16 +55,17 @@ export function ProductAutocomplete({ onSelect, onClear, selected }: Props) {
         className="rounded border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
       />
       {open && products && products.length > 0 && (
-        <ul className="absolute top-full z-10 mt-1 w-full rounded border border-slate-600 bg-slate-800 shadow-lg">
+        <ul
+          className="absolute top-full z-10 mt-1 w-full overflow-y-auto rounded border border-slate-600 bg-slate-800 shadow-lg"
+          style={{ maxHeight: "16rem" }}
+        >
           {products.map((p) => (
             <li
               key={`${p.name}|${p.strength}|${p.pharmaceutical_form}`}
               onMouseDown={() => handleSelect(p)}
               className="cursor-pointer px-3 py-2 text-sm text-white hover:bg-slate-700"
             >
-              {p.name}
-              {p.strength ? ` ${p.strength}` : ""}
-              {p.pharmaceutical_form ? ` · ${p.pharmaceutical_form}` : ""}
+              {productLabel(p)}
             </li>
           ))}
         </ul>
