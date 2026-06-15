@@ -226,6 +226,9 @@ def _make_variant(
     v.strength = "500 mg"
     v.pharmaceutical_form = "tabletki"
     v.capacity_unit = "tabl."
+    v.route_of_administration = "doustna"
+    v.leaflet_url = "https://example.com/leaflet"
+    v.specification_url = "https://example.com/spec"
     return v
 
 
@@ -509,6 +512,9 @@ class TestListEntries:
         assert result[0].status == Status.VALID
         assert result[0].total_tablets == 25  # (2-1)*20 + 5
         assert result[0].name == variant.name
+        assert result[0].route_of_administration == variant.route_of_administration
+        assert result[0].leaflet_url == variant.leaflet_url
+        assert result[0].specification_url == variant.specification_url
 
     async def test_expired_entry_returns_expired_status(
         self, mock_session: AsyncMock, mock_list_crud

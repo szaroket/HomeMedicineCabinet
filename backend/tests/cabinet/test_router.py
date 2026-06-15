@@ -224,6 +224,9 @@ def _make_cabinet_entry_out(**overrides) -> CabinetEntryOut:
         expiry_date=date(2027, 6, 1),
         total_tablets=25,
         status="valid",
+        route_of_administration="doustna",
+        leaflet_url="https://example.com/leaflet",
+        specification_url="https://example.com/spec",
     )
     return CabinetEntryOut(**(defaults | overrides))
 

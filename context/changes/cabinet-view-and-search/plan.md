@@ -512,13 +512,13 @@ schema change.
 
 #### Automated
 
-- [ ] 1.1 Lint + format pass (`ruff check` / `ruff format --check`)
-- [ ] 1.2 Backend tests pass (`uv run pytest`)
-- [ ] 1.3 `list_entries` test asserts the three new fields
+- [x] 1.1 Lint + format pass (`ruff check` / `ruff format --check`)
+- [x] 1.2 Backend tests pass (`uv run pytest`)
+- [x] 1.3 `list_entries` test asserts the three new fields
 
 #### Manual
 
-- [ ] 1.4 Swagger shows the three new fields populated on a real entry
+- [x] 1.4 Swagger shows the three new fields populated on a real entry
 
 ### Phase 2: Frontend — render entry display fields
 

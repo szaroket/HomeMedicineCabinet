@@ -216,6 +216,9 @@ async def list_entries(
                 expiry_date=entry.expiry_date,
                 total_tablets=_computed_total(entry, tpp),
                 status=classify_status(entry.expiry_date, today, expiry_threshold_days),
+                route_of_administration=variant.route_of_administration,
+                leaflet_url=variant.leaflet_url,
+                specification_url=variant.specification_url,
             )
         )
     return result
