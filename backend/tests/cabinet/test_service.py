@@ -9,7 +9,7 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 
 from app.api.v1.cabinet.models import CabinetEntry
-from app.api.v1.cabinet.schemas import AddEntryResult
+from app.api.v1.cabinet.schemas import AddEntryResult, CabinetPageOut
 from app.api.v1.cabinet.service import (
     Status,
     TabletPool,
@@ -199,6 +199,44 @@ class TestClassifyStatus:
                 expiry_threshold_days=expiry_threshold_days,
             )
             == expected
+        )
+
+
+# ---------------------------------------------------------------------------
+# SQL status filter ↔ classify_status parity
+# ---------------------------------------------------------------------------
+
+
+def _sql_status(expiry_date: date, today: date, threshold: int) -> str:
+    """Mirror the SQL date predicates from crud._build_base_query in Python."""
+    if expiry_date < today:
+        return "expired"
+    if expiry_date <= today + timedelta(days=threshold):
+        return "expiring"
+    return "valid"
+
+
+class TestStatusSQLParity:
+    """Assert that SQL predicates and classify_status agree on boundary dates."""
+
+    TODAY = date(2026, 6, 15)
+    THRESHOLD = 30
+
+    @pytest.mark.parametrize(
+        "expiry_date",
+        [
+            date(2026, 6, 15),  # today → expiring
+            date(2026, 7, 15),  # today + threshold → expiring
+            date(2026, 7, 16),  # today + threshold + 1 → valid
+            date(2026, 6, 14),  # yesterday → expired
+        ],
+        ids=["today", "today+threshold", "today+threshold+1", "yesterday"],
+    )
+    def test_parity_at_boundary(self, expiry_date: date):
+        sql_result = _sql_status(expiry_date, self.TODAY, self.THRESHOLD)
+        py_result = classify_status(expiry_date, self.TODAY, self.THRESHOLD)
+        assert sql_result == py_result, (
+            f"Mismatch for expiry_date={expiry_date}: SQL={sql_result}, classify_status={py_result}"
         )
 
 
@@ -491,7 +529,7 @@ def mock_list_crud(mocker):
 
 
 class TestListEntries:
-    async def test_returns_cabinet_entry_out_with_status(
+    async def test_returns_cabinet_page_out_with_status(
         self, mock_session: AsyncMock, mock_list_crud
     ):
         today = date.today()
@@ -500,7 +538,7 @@ class TestListEntries:
             package_count=2, partial_tablet_count=5, expiry_date=future
         )
         variant = _make_variant(is_tablet_based=True, capacity=Decimal(20))
-        mock_list_crud.list_entries = AsyncMock(return_value=[(entry, variant)])
+        mock_list_crud.list_entries = AsyncMock(return_value=([(entry, variant)], 1))
 
         result = await list_entries(
             session=mock_session,
@@ -508,13 +546,19 @@ class TestListEntries:
             expiry_threshold_days=30,
         )
 
-        assert len(result) == 1
-        assert result[0].status == Status.VALID
-        assert result[0].total_tablets == 25  # (2-1)*20 + 5
-        assert result[0].name == variant.name
-        assert result[0].route_of_administration == variant.route_of_administration
-        assert result[0].leaflet_url == variant.leaflet_url
-        assert result[0].specification_url == variant.specification_url
+        assert isinstance(result, CabinetPageOut)
+        assert result.total == 1
+        assert result.page == 1
+        assert result.page_size == 20
+        assert len(result.items) == 1
+        assert result.items[0].status == Status.VALID
+        assert result.items[0].total_tablets == 25  # (2-1)*20 + 5
+        assert result.items[0].name == variant.name
+        assert (
+            result.items[0].route_of_administration == variant.route_of_administration
+        )
+        assert result.items[0].leaflet_url == variant.leaflet_url
+        assert result.items[0].specification_url == variant.specification_url
 
     async def test_expired_entry_returns_expired_status(
         self, mock_session: AsyncMock, mock_list_crud
@@ -522,13 +566,13 @@ class TestListEntries:
         past = date.today() - timedelta(days=1)
         entry = _make_real_entry(expiry_date=past)
         variant = _make_variant(is_tablet_based=False)
-        mock_list_crud.list_entries = AsyncMock(return_value=[(entry, variant)])
+        mock_list_crud.list_entries = AsyncMock(return_value=([(entry, variant)], 1))
 
         result = await list_entries(
             session=mock_session, user_id=_USER_ID, expiry_threshold_days=30
         )
 
-        assert result[0].status == Status.EXPIRED
+        assert result.items[0].status == Status.EXPIRED
 
     async def test_expiring_entry_returns_expiring_status(
         self, mock_session: AsyncMock, mock_list_crud
@@ -536,35 +580,88 @@ class TestListEntries:
         soon = date.today() + timedelta(days=10)
         entry = _make_real_entry(expiry_date=soon)
         variant = _make_variant(is_tablet_based=False)
-        mock_list_crud.list_entries = AsyncMock(return_value=[(entry, variant)])
+        mock_list_crud.list_entries = AsyncMock(return_value=([(entry, variant)], 1))
 
         result = await list_entries(
             session=mock_session, user_id=_USER_ID, expiry_threshold_days=30
         )
 
-        assert result[0].status == Status.EXPIRING
+        assert result.items[0].status == Status.EXPIRING
 
     async def test_non_tablet_variant_has_none_total_tablets(
         self, mock_session: AsyncMock, mock_list_crud
     ):
         entry = _make_real_entry(package_count=3)
         variant = _make_variant(is_tablet_based=False)
-        mock_list_crud.list_entries = AsyncMock(return_value=[(entry, variant)])
+        mock_list_crud.list_entries = AsyncMock(return_value=([(entry, variant)], 1))
 
         result = await list_entries(
             session=mock_session, user_id=_USER_ID, expiry_threshold_days=30
         )
 
-        assert result[0].total_tablets is None
-        assert result[0].package_count == 3
+        assert result.items[0].total_tablets is None
+        assert result.items[0].package_count == 3
 
-    async def test_empty_cabinet_returns_empty_list(
+    async def test_empty_cabinet_returns_empty_page(
         self, mock_session: AsyncMock, mock_list_crud
     ):
-        mock_list_crud.list_entries = AsyncMock(return_value=[])
+        mock_list_crud.list_entries = AsyncMock(return_value=([], 0))
 
         result = await list_entries(
             session=mock_session, user_id=_USER_ID, expiry_threshold_days=30
         )
 
-        assert result == []
+        assert isinstance(result, CabinetPageOut)
+        assert result.items == []
+        assert result.total == 0
+
+    async def test_pagination_params_passed_to_crud(
+        self, mock_session: AsyncMock, mock_list_crud
+    ):
+        mock_list_crud.list_entries = AsyncMock(return_value=([], 0))
+
+        await list_entries(
+            session=mock_session,
+            user_id=_USER_ID,
+            expiry_threshold_days=30,
+            page=2,
+            page_size=50,
+            order="desc",
+        )
+
+        call_kwargs = mock_list_crud.list_entries.call_args.kwargs
+        assert call_kwargs["limit"] == 50
+        assert call_kwargs["offset"] == 50  # (page-1)*page_size = 1*50
+        assert call_kwargs["order"] == "desc"
+
+    async def test_search_q_converted_to_tsquery_for_crud(
+        self, mock_session: AsyncMock, mock_list_crud
+    ):
+        mock_list_crud.list_entries = AsyncMock(return_value=([], 0))
+
+        await list_entries(
+            session=mock_session,
+            user_id=_USER_ID,
+            expiry_threshold_days=30,
+            status="expiring",
+            search="apap",
+        )
+
+        call_kwargs = mock_list_crud.list_entries.call_args.kwargs
+        assert call_kwargs["status"] == "expiring"
+        assert call_kwargs["tsquery"] == "apap:*"
+
+    async def test_short_q_passes_none_tsquery_to_crud(
+        self, mock_session: AsyncMock, mock_list_crud
+    ):
+        mock_list_crud.list_entries = AsyncMock(return_value=([], 0))
+
+        await list_entries(
+            session=mock_session,
+            user_id=_USER_ID,
+            expiry_threshold_days=30,
+            search="a",
+        )
+
+        call_kwargs = mock_list_crud.list_entries.call_args.kwargs
+        assert call_kwargs["tsquery"] is None

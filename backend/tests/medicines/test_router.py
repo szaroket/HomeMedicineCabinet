@@ -20,7 +20,7 @@ class TestSearchProductsEndpoint:
 
     async def test_missing_token_returns_401_or_403(self, client: AsyncClient):
         # `client` overrides the session only, so the real auth guard runs.
-        response = await client.get(self.PRODUCTS_URL, params={"query": "apap"})
+        response = await client.get(self.PRODUCTS_URL, params={"search": "apap"})
         assert response.status_code in (
             status.HTTP_401_UNAUTHORIZED,
             status.HTTP_403_FORBIDDEN,
@@ -43,7 +43,7 @@ class TestSearchProductsEndpoint:
             return_value=products,
         )
 
-        response = await authed_client.get(self.PRODUCTS_URL, params={"query": "apap"})
+        response = await authed_client.get(self.PRODUCTS_URL, params={"search": "apap"})
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -66,7 +66,7 @@ class TestSearchProductsEndpoint:
             return_value=[],
         )
 
-        response = await authed_client.get(self.PRODUCTS_URL, params={"query": "a"})
+        response = await authed_client.get(self.PRODUCTS_URL, params={"search": "a"})
 
         assert response.status_code == status.HTTP_200_OK
         assert response.json() == []
@@ -80,7 +80,7 @@ class TestSearchProductsEndpoint:
             return_value=[],
         )
 
-        await authed_client.get(self.PRODUCTS_URL, params={"query": "apap"})
+        await authed_client.get(self.PRODUCTS_URL, params={"search": "apap"})
 
         # service called as search_products(session, query, limit)
         assert mock_search.await_args.args[1] == "apap"
@@ -95,7 +95,7 @@ class TestSearchProductsEndpoint:
             side_effect=MedicineSearchError(),
         )
 
-        response = await authed_client.get(self.PRODUCTS_URL, params={"query": "apap"})
+        response = await authed_client.get(self.PRODUCTS_URL, params={"search": "apap"})
 
         assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
 
@@ -105,7 +105,7 @@ class TestSearchProductsEndpoint:
 
     @pytest.mark.parametrize("query", ["", "   "])
     async def test_blank_query_returns_422(self, authed_client: AsyncClient, query):
-        response = await authed_client.get(self.PRODUCTS_URL, params={"query": query})
+        response = await authed_client.get(self.PRODUCTS_URL, params={"search": query})
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     @pytest.mark.parametrize("limit", [0, 51, -1])
@@ -119,7 +119,7 @@ class TestSearchProductsEndpoint:
         )
 
         response = await authed_client.get(
-            self.PRODUCTS_URL, params={"query": "apap", "limit": limit}
+            self.PRODUCTS_URL, params={"search": "apap", "limit": limit}
         )
 
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
@@ -133,7 +133,7 @@ class TestSearchProductsEndpoint:
             side_effect=RuntimeError("boom"),
         )
 
-        response = await authed_client.get(self.PRODUCTS_URL, params={"query": "apap"})
+        response = await authed_client.get(self.PRODUCTS_URL, params={"search": "apap"})
 
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 

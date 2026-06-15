@@ -1,0 +1,73 @@
+"""Unit tests for cabinet facade: cross-domain orchestration."""
+
+from unittest.mock import AsyncMock
+from uuid import uuid4
+
+import pytest
+from pytest_mock import MockerFixture
+
+from app.api.v1.cabinet.facade import list_entries
+from app.api.v1.cabinet.schemas import CabinetPageOut
+
+_USER_ID = uuid4()
+
+_EMPTY_PAGE = CabinetPageOut(items=[], total=0, page=1, page_size=20)
+
+
+@pytest.fixture
+def mock_users_service(mocker: MockerFixture):
+    svc = mocker.patch("app.api.v1.cabinet.facade.users_service", autospec=True)
+    svc.get_user_preferences = AsyncMock(return_value=None)
+    return svc
+
+
+@pytest.fixture
+def mock_cabinet_service(mocker: MockerFixture):
+    svc = mocker.patch("app.api.v1.cabinet.facade.cabinet_service", autospec=True)
+    svc.list_entries = AsyncMock(return_value=_EMPTY_PAGE)
+    return svc
+
+
+class TestFacadeListEntries:
+    async def test_search_forwarded_to_service(
+        self,
+        mock_session: AsyncMock,
+        mock_users_service,
+        mock_cabinet_service,
+    ):
+        await list_entries(session=mock_session, user_id=_USER_ID, search="apap")
+
+        call_kwargs = mock_cabinet_service.list_entries.call_args.kwargs
+        assert call_kwargs["search"] == "apap"
+
+    async def test_no_q_forwards_none(
+        self,
+        mock_session: AsyncMock,
+        mock_users_service,
+        mock_cabinet_service,
+    ):
+        await list_entries(session=mock_session, user_id=_USER_ID)
+
+        call_kwargs = mock_cabinet_service.list_entries.call_args.kwargs
+        assert call_kwargs["search"] is None
+
+    async def test_status_and_order_forwarded(
+        self,
+        mock_session: AsyncMock,
+        mock_users_service,
+        mock_cabinet_service,
+    ):
+        await list_entries(
+            session=mock_session,
+            user_id=_USER_ID,
+            status="expiring",
+            order="desc",
+            page=2,
+            page_size=50,
+        )
+
+        call_kwargs = mock_cabinet_service.list_entries.call_args.kwargs
+        assert call_kwargs["status"] == "expiring"
+        assert call_kwargs["order"] == "desc"
+        assert call_kwargs["page"] == 2
+        assert call_kwargs["page_size"] == 50

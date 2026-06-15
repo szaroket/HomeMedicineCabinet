@@ -65,9 +65,9 @@ export interface CabinetEntryOut {
   specification_url: string | null;
 }
 
-export function searchProducts(q: string): Promise<ProductOut[]> {
+export function searchProducts(search: string): Promise<ProductOut[]> {
   return apiJson<ProductOut[]>(
-    `/medicines/products?query=${encodeURIComponent(q)}`,
+    `/medicines/products?search=${encodeURIComponent(search)}`,
   );
 }
 

@@ -545,16 +545,16 @@ schema change.
 
 #### Automated
 
-- [ ] 3.1 Lint + format pass
-- [ ] 3.2 Backend tests pass (`uv run pytest`)
-- [ ] 3.3 Parity test: SQL status filter ↔ `classify_status` at boundary dates
-- [ ] 3.4 Search test: name match and active-ingredient match; < 2 chars = no filter
-- [ ] 3.5 Pagination test: correct `total`, page slicing, and `order=desc`
-- [ ] 3.6 Validation test: `page_size=25` → 422; `status=foo` → 422
+- [x] 3.1 Lint + format pass
+- [x] 3.2 Backend tests pass (`uv run pytest`)
+- [x] 3.3 Parity test: SQL status filter ↔ `classify_status` at boundary dates
+- [x] 3.4 Search test: name match and active-ingredient match; < 2 chars = no filter
+- [x] 3.5 Pagination test: correct `total`, page slicing, and `order=desc`
+- [x] 3.6 Validation test: `page_size=25` → 422; `status=foo` → 422
 
 #### Manual
 
-- [ ] 3.7 Swagger: combined status + q + order + page + page_size returns a correct envelope
+- [x] 3.7 Swagger: combined status + q + order + page + page_size returns a correct envelope
 
 ### Phase 4: Frontend — controls + URL-driven state
 

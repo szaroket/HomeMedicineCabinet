@@ -3,8 +3,41 @@
 import uuid
 from datetime import date
 from decimal import Decimal
+from typing import Literal
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from app.utilities.types import NonEmptyStr
+
+
+class CabinetListParams(BaseModel):
+    """Query parameters for GET /cabinet/entries."""
+
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    status: Literal["valid", "expiring", "expired"] | None = None
+    search: NonEmptyStr | None = None
+    order: Literal["asc", "desc"] = "asc"
+    page: int = Field(1, ge=1)
+    page_size: Literal[20, 50, 100] = 20
+
+    @field_validator("page_size", mode="before")
+    @classmethod
+    def coerce_page_size(cls, v: object) -> object:
+        """Coerce string query param to int before Literal validation.
+
+        Args:
+            v: The raw incoming value.
+
+        Returns:
+            Integer value when input is a numeric string, original value otherwise.
+        """
+        if isinstance(v, str):
+            try:
+                return int(v)
+            except ValueError:
+                pass
+        return v
 
 
 class AddEntryRequest(BaseModel):
@@ -90,6 +123,15 @@ class CabinetEntryOut(BaseModel):
     route_of_administration: str | None
     leaflet_url: str | None
     specification_url: str | None
+
+
+class CabinetPageOut(BaseModel):
+    """Paginated response envelope for GET /cabinet/entries."""
+
+    items: list[CabinetEntryOut]
+    total: int
+    page: int
+    page_size: int
 
 
 class MergeSummary(BaseModel):

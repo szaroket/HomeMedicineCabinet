@@ -1,12 +1,19 @@
 """Cabinet endpoints."""
 
 import logging
-from fastapi import APIRouter, Depends, HTTPException, Security, status
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Security, status
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.v1.cabinet import facade as cabinet_facade
 from app.api.v1.cabinet import service as cabinet_service
-from app.api.v1.cabinet.schemas import AddEntryRequest, AddEntryResult, CabinetEntryOut
+from app.api.v1.cabinet.schemas import (
+    AddEntryRequest,
+    AddEntryResult,
+    CabinetListParams,
+    CabinetPageOut,
+)
 from app.api.v1.auth.types import CurrentUser
 from app.core.jwt_security import get_current_user
 from app.db.connector import get_session
@@ -29,26 +36,28 @@ router = APIRouter(
 
 @router.get(
     "/entries",
-    response_model=list[CabinetEntryOut],
+    response_model=CabinetPageOut,
 )
 async def list_entries(
+    params: Annotated[CabinetListParams, Query()],
     current_user: CurrentUser = Security(get_current_user),
     session: AsyncSession = Depends(get_session),
-) -> list[CabinetEntryOut]:
-    """Return the authenticated user's cabinet entries with computed status."""
+) -> CabinetPageOut:
+    """Return the authenticated user's cabinet entries, filtered and paginated."""
     try:
         return await cabinet_facade.list_entries(
             session=session,
             user_id=current_user.id,
+            status=params.status,
+            search=params.search,
+            order=params.order,
+            page=params.page,
+            page_size=params.page_size,
         )
-    except (CabinetDatabaseError, UserDatabaseError) as e:
+    except (CabinetDatabaseError, UserDatabaseError) as exc:
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=e.message
-        ) from e
-    except CabinetError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=e.message
-        ) from e
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=exc.message
+        ) from exc
     except Exception as exc:
         logger.exception("Unexpected error when listing entries: %s", exc)
         raise HTTPException(

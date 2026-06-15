@@ -6,6 +6,19 @@ note. Newest first.
 
 ---
 
+## L-005 — Never use single-letter variable or argument names
+
+**Context**: Established during `cabinet-view-and-search` Phase 3 (2026-06-15) when `q` was used as a search parameter name and `e` as an exception variable.
+
+**The rule**:
+
+- Never name a variable, argument, or parameter with a single letter.
+- Common offenders and their replacements: `q` → `search`, `e` → `exc`, `v` → describe the value's role.
+- `v` is acceptable only in Pydantic `@field_validator` signatures where it is a framework convention — but prefer a descriptive name even there.
+- Trivial loop indices (`i`, `j`) are the only accepted exception, and only when the index itself carries no domain meaning.
+
+---
+
 ## L-004 — Wrap every `session.execute` / `session.flush` in `try/except SQLAlchemyError`
 
 **Context**: Applied consistently starting with `cabinet/crud.py` (S-01 Phase 4, 2026-06-10); the pattern was already present in `medicines/crud.py`.
