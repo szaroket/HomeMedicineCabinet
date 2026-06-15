@@ -146,6 +146,25 @@ def classify_status(
     return Status.VALID
 
 
+def _tablet_capacity_invalid(variant: MedicationRegistry) -> bool:
+    """Return True when a tablet-based variant has a missing or non-positive capacity.
+
+    Tablet-based registry rows must carry a positive integer capacity (tablets per
+    package). A NULL or non-positive capacity is a data-integrity breach: it cannot
+    yield a usable tablets-per-package and would drive tablet math toward a divide
+    -by-zero. Centralized so the read and write paths classify the breach identically.
+
+    Args:
+        variant: The MedicationRegistry row for the selected variant.
+
+    Returns:
+        True if the variant is tablet-based but its capacity is None or <= 0.
+    """
+    return variant.is_tablet_based and (
+        variant.capacity is None or variant.capacity <= 0
+    )
+
+
 async def list_entries(
     session: AsyncSession,
     user_id: uuid.UUID,
@@ -166,20 +185,21 @@ async def list_entries(
     rows = await crud.list_entries(session, user_id)
     result: list[CabinetEntryOut] = []
     for entry, variant in rows:
-        if variant.is_tablet_based and variant.capacity is None:
-            # Data invariant: tablet-based registry rows always carry an integer
-            # capacity. The write path raises CabinetInvariantError on violation;
-            # the read path keeps serving the list (one bad row must not fail the
-            # whole response) but logs loudly so the breach surfaces.
+        if _tablet_capacity_invalid(variant):
+            # Data invariant: tablet-based registry rows always carry a positive
+            # integer capacity. The write path raises CabinetInvariantError on
+            # violation; the read path keeps serving the list (one bad row must
+            # not fail the whole response) but logs loudly so the breach surfaces.
             logger.warning(
-                "Tablet-based registry row %s has NULL capacity; "
+                "Tablet-based registry row %s has invalid capacity %r; "
                 "total_tablets left None for cabinet entry %s",
                 variant.id,
+                variant.capacity,
                 entry.id,
             )
         tpp = (
             int(variant.capacity)
-            if variant.is_tablet_based and variant.capacity is not None
+            if variant.is_tablet_based and not _tablet_capacity_invalid(variant)
             else None
         )
         result.append(
@@ -237,13 +257,16 @@ def _validate_and_get_tpp(
         Tablets per package (int) for tablet-based variants, None otherwise.
 
     Raises:
+        CabinetInvariantError: When a tablet-based variant has a missing or
+            non-positive capacity (data-integrity breach).
         InvalidPartialTabletCountError: When partial_tablet_count is supplied for
             a non-tablet variant or is outside the valid range 1…tpp-1.
     """
     if variant.is_tablet_based:
-        if variant.capacity is None:
+        if _tablet_capacity_invalid(variant):
             raise CabinetInvariantError(
-                f"Registry invariant violated: tablet-based row {variant.id} has NULL capacity"
+                f"Registry invariant violated: tablet-based row {variant.id} "
+                f"has invalid capacity {variant.capacity!r}"
             )
         tpp = int(variant.capacity)
         if partial_tablet_count is not None and not (

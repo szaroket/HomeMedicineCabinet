@@ -5,10 +5,11 @@ import type { ProductOut } from "@/features/cabinet/api/cabinet-api";
 
 interface Props {
   onSelect: (product: ProductOut) => void;
+  onClear: () => void;
   selected: ProductOut | null;
 }
 
-export function ProductAutocomplete({ onSelect, selected }: Props) {
+export function ProductAutocomplete({ onSelect, onClear, selected }: Props) {
   const [query, setQuery] = useState(selected?.name ?? "");
   const [open, setOpen] = useState(false);
   const debouncedQ = useDebounce(query, 250);
@@ -21,8 +22,14 @@ export function ProductAutocomplete({ onSelect, selected }: Props) {
   }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setQuery(e.target.value);
+    const value = e.target.value;
+    setQuery(value);
     setOpen(true);
+    // Editing the text invalidates the current selection so the form can't
+    // submit a variant that no longer matches the visible name.
+    if (selected !== null && value !== selected.name) {
+      onClear();
+    }
   }
 
   return (

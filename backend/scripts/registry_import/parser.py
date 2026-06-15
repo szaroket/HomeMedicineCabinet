@@ -9,6 +9,7 @@ the network; every function is unit-testable against a committed XML fixture.
 """
 
 import logging
+import os
 import xml.etree.ElementTree as ET
 from collections.abc import Iterator
 from decimal import Decimal, InvalidOperation
@@ -195,12 +196,40 @@ def _rows_for_product(product: Element) -> Iterator[dict]:
             }
 
 
+def _rewind_for_pass_two(source) -> None:
+    """Rewind a file-object source before pass 2; reject non-seekable streams.
+
+    A path source is left untouched because ``iterparse`` re-opens it for each
+    pass. A file object is rewound with ``seek(0)``. A non-seekable stream (e.g.
+    a live HTTP response) would be exhausted by pass 1 and silently yield zero
+    rows in pass 2, so it is rejected loudly instead.
+
+    Args:
+        source: Path or file object passed to ``parse_registry``.
+
+    Raises:
+        ValueError: When ``source`` is a non-seekable stream that cannot be
+            re-read for the second pass.
+    """
+    if isinstance(source, (str, bytes, os.PathLike)):
+        return  # iterparse re-opens the path each pass
+    if not hasattr(source, "seek") or (
+        hasattr(source, "seekable") and not source.seekable()
+    ):
+        raise ValueError(
+            "parse_registry requires a path or a seekable file object; the given "
+            "stream cannot be rewound for the second (yield) pass."
+        )
+    source.seek(0)
+
+
 def parse_registry(source) -> Iterator[dict]:
     """Stream-parse the registry export, yielding one dict per package unit.
 
     ``source`` is a path or a **seekable** file object: parsing runs two passes
-    over the source, so a non-seekable stream is exhausted by pass 1 and yields
-    nothing in pass 2 (no error raised). Uses namespace-aware ``iterparse``
+    over the source. A non-seekable stream cannot be rewound for pass 2 and is
+    rejected with a ``ValueError`` rather than silently importing nothing. Uses
+    namespace-aware ``iterparse``
     and clears each processed element (and the root) so memory stays flat over
     the hundreds-of-MB production file. Products whose ``rodzajPreparatu`` is
     not ``ludzki`` (human) are skipped; withdrawn packages (``skasowane="TAK"``)
@@ -226,8 +255,7 @@ def parse_registry(source) -> Iterator[dict]:
     # whenever an original entry exists for the same variant, regardless of
     # document order.
     original_keys = _scan_original_keys(source)
-    if hasattr(source, "seek"):
-        source.seek(0)
+    _rewind_for_pass_two(source)
 
     # Pass 2 — stream and yield, skipping IR rows shadowed by an original row
     # and deduplicating any remaining same-procedure duplicates (first-seen wins).

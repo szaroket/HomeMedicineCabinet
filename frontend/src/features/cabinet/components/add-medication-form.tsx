@@ -41,6 +41,12 @@ export function AddMedicationForm() {
     setValue("medication_registry_id", "");
   }
 
+  function handleProductClear() {
+    setSelectedProduct(null);
+    setSelectedVariant(null);
+    setValue("medication_registry_id", "");
+  }
+
   function handleVariantChange(v: VariantOut) {
     setSelectedVariant(v);
     setValue("medication_registry_id", v.id);
@@ -108,6 +114,7 @@ export function AddMedicationForm() {
         <ProductAutocomplete
           selected={selectedProduct}
           onSelect={handleProductSelect}
+          onClear={handleProductClear}
         />
 
         <VariantSelect

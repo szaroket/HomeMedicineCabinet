@@ -1,3 +1,4 @@
+import io
 from decimal import Decimal
 from pathlib import Path
 
@@ -104,6 +105,31 @@ class TestParseRegistry:
             "Edelan",
             "FANHDI",
         }
+
+
+class TestParseRegistrySource:
+    def test_seekable_file_object_yields_rows(self):
+        # A seekable file object is rewound between the two passes.
+        with FIXTURE.open("rb") as fh:
+            rows = list(parse_registry(fh))
+        assert by_name(rows, "Apap")
+
+    def test_non_seekable_stream_raises_value_error(self):
+        # A non-seekable stream cannot be rewound for pass 2; it must fail loudly
+        # rather than silently import zero rows.
+        class _NonSeekable:
+            def __init__(self, data: bytes):
+                self._buf = io.BytesIO(data)
+
+            def read(self, *args):
+                return self._buf.read(*args)
+
+            def seekable(self) -> bool:
+                return False
+
+        stream = _NonSeekable(FIXTURE.read_bytes())
+        with pytest.raises(ValueError, match="seekable"):
+            list(parse_registry(stream))
 
 
 class TestClean:

@@ -439,11 +439,16 @@ class TestAddEntryValidation:
                 expiry_date=_EXPIRY,
             )
 
-    async def test_null_capacity_on_tablet_variant_raises_invariant_error(
-        self, mock_session: AsyncMock, mock_crud
+    @pytest.mark.parametrize(
+        "capacity", [None, Decimal(0), Decimal("-1")], ids=["null", "zero", "negative"]
+    )
+    async def test_invalid_capacity_on_tablet_variant_raises_invariant_error(
+        self, mock_session: AsyncMock, mock_crud, capacity: Decimal | None
     ):
+        # A non-positive capacity must be rejected like NULL: tpp=0 would drive
+        # normalize_tablet_pool into a divide-by-zero on the merge path.
         mock_crud.get_registry_by_id = AsyncMock(
-            return_value=_make_variant(is_tablet_based=True, capacity=None)
+            return_value=_make_variant(is_tablet_based=True, capacity=capacity)
         )
 
         with pytest.raises(CabinetInvariantError):
