@@ -524,14 +524,14 @@ schema change.
 
 #### Automated
 
-- [ ] 2.1 Build passes (`npm run build`)
-- [ ] 2.2 Lint passes (`npm run lint`)
-- [ ] 2.3 Format passes (`prettier --check src/`)
+- [x] 2.1 Build passes (`npm run build`)
+- [x] 2.2 Lint passes (`npm run lint`)
+- [x] 2.3 Format passes (`prettier --check src/`)
 
 #### Manual
 
-- [ ] 2.4 Expanding a row shows route of administration and working leaflet/spec links
-- [ ] 2.5 Missing route/link degrades gracefully ("—" / omitted link)
+- [x] 2.4 Expanding a row shows route of administration and working leaflet/spec links
+- [x] 2.5 Missing route/link degrades gracefully ("—" / omitted link)
 - [ ] 2.6 Usable on a narrow (mobile) viewport
 
 ### Phase 3: Backend — filtering, search, sort, pagination

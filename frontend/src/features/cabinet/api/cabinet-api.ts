@@ -60,6 +60,9 @@ export interface CabinetEntryOut {
   expiry_date: string;
   total_tablets: number | null;
   status: string;
+  route_of_administration: string | null;
+  leaflet_url: string | null;
+  specification_url: string | null;
 }
 
 export function searchProducts(q: string): Promise<ProductOut[]> {
