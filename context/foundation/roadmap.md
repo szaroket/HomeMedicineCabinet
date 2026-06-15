@@ -48,6 +48,7 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 | Stream | Theme                | Chain                                          | Note                                                                          |
 |--------|----------------------|------------------------------------------------|-------------------------------------------------------------------------------|
 | A      | Core trunk           | `F-01` → `F-02` → `F-03` → `S-01` → `S-02`   | Main dependency spine; north star (S-01) sits as early as Prerequisites allow |
+| A′     | Mobile polish        | `S-01` → `S-08`                                | Branches from S-01 in parallel with S-02; scoped to responsive layout only    |
 | B      | CI/CD                | `F-04`                                         | Standalone; run in parallel with Stream A from day one                        |
 | C      | Cabinet management   | `S-04` → `S-03`                                | Branches from S-02; S-03 needs category-aware zero behaviour from S-04        |
 | D      | Dosage tracking      | `S-05`                                         | Branches from S-02 in parallel with Stream C                                  |
@@ -228,6 +229,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | F-03       | registry-import              | Registry import: Polish medicines XML → PostgreSQL                            | no                    | Depends on F-02                   |
 | F-04       | ci-cd-wiring                 | CI/CD: GitHub Actions → Render deploy hooks                                   | yes                   | Run `/10x-plan ci-cd-wiring`      |
 | S-01       | add-medication-from-registry | Feature: add medication from Polish registry (autocomplete + add flow + dedup)| no                    | Depends on F-01, F-02, F-03       |
+| S-08       | mobile-responsive-cabinet    | Feature: mobile-responsive cabinet add flow and list                          | yes                   | Depends on S-01; parallel with S-02; run `/10x-plan mobile-responsive-cabinet` |
 | S-02       | cabinet-view-and-search      | Feature: cabinet list with filter, sort, search, and entry details            | no                    | Depends on S-01                   |
 | S-04       | important-category           | Feature: important category + global minimum + attention badge                | no                    | Depends on S-02; parallel with S-05 |
 | S-05       | dosage-tracking              | Feature: used category + dosage schedule + finish-date calculation            | no                    | Depends on S-02; parallel with S-04 |
