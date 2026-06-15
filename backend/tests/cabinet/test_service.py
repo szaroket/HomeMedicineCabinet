@@ -264,6 +264,7 @@ def _make_variant(
     v.strength = "500 mg"
     v.pharmaceutical_form = "tabletki"
     v.capacity_unit = "tabl."
+    v.active_ingredient = "Paracetamolum"
     v.route_of_administration = "doustna"
     v.leaflet_url = "https://example.com/leaflet"
     v.specification_url = "https://example.com/spec"
@@ -557,6 +558,7 @@ class TestListEntries:
         assert (
             result.items[0].route_of_administration == variant.route_of_administration
         )
+        assert result.items[0].active_ingredient == variant.active_ingredient
         assert result.items[0].leaflet_url == variant.leaflet_url
         assert result.items[0].specification_url == variant.specification_url
 

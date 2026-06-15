@@ -60,6 +60,7 @@ export interface CabinetEntryOut {
   expiry_date: string;
   total_tablets: number | null;
   status: string;
+  active_ingredient: string | null;
   route_of_administration: string | null;
   leaflet_url: string | null;
   specification_url: string | null;

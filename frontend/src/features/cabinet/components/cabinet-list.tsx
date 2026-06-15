@@ -92,6 +92,10 @@ function EntryRow({ entry }: { entry: CabinetEntryOut }) {
                 </dd>
               </div>
               <div className="flex gap-2">
+                <dt className="text-slate-400">Substancja czynna:</dt>
+                <dd className="text-white">{entry.active_ingredient ?? "—"}</dd>
+              </div>
+              <div className="flex gap-2">
                 <dt className="text-slate-400">Droga podania:</dt>
                 <dd className="text-white">
                   {entry.route_of_administration ?? "—"}

@@ -210,6 +210,7 @@ def _map_row_to_entry_out(
         expiry_date=entry.expiry_date,
         total_tablets=_computed_total(entry, tpp),
         status=classify_status(entry.expiry_date, today, expiry_threshold_days),
+        active_ingredient=variant.active_ingredient,
         route_of_administration=variant.route_of_administration,
         leaflet_url=variant.leaflet_url,
         specification_url=variant.specification_url,

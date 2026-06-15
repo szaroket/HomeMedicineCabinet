@@ -120,6 +120,7 @@ class CabinetEntryOut(BaseModel):
     expiry_date: date
     total_tablets: int | None
     status: str
+    active_ingredient: str | None
     route_of_administration: str | None
     leaflet_url: str | None
     specification_url: str | None

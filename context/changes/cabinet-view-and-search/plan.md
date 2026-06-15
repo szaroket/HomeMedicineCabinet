@@ -627,29 +627,29 @@ schema change.
 
 #### Automated
 
-- [x] 4.1 Build passes (`npm run build`)
-- [x] 4.2 Lint passes (`npm run lint`)
-- [x] 4.3 Format passes (`prettier --check src/`)
+- [x] 4.1 Build passes (`npm run build`) — 9156538
+- [x] 4.2 Lint passes (`npm run lint`) — 9156538
+- [x] 4.3 Format passes (`prettier --check src/`) — 9156538
 
 #### Manual
 
-- [x] 4.4 Search narrows the list (debounced) and updates URL `search`
-- [x] 4.5 Status filter + search intersect; clearing returns all
-- [x] 4.6 Sort toggle, page-size selector, and prev/next pagination work with correct page count
-- [x] 4.7 Reload and paste-into-new-tab restore full state from the URL
-- [x] 4.8 Distinct empty states + "Wyczyść filtry" reset
+- [x] 4.4 Search narrows the list (debounced) and updates URL `search` — 9156538
+- [x] 4.5 Status filter + search intersect; clearing returns all — 9156538
+- [x] 4.6 Sort toggle, page-size selector, and prev/next pagination work with correct page count — 9156538
+- [x] 4.7 Reload and paste-into-new-tab restore full state from the URL — 9156538
+- [x] 4.8 Distinct empty states + "Wyczyść filtry" reset — 9156538
 - [ ] 4.9 Usable on a narrow (mobile) viewport
 
 ### Phase 5: Active ingredient — backend + frontend
 
 #### Automated
 
-- [ ] 5.1 Backend lint + format pass
-- [ ] 5.2 Backend tests pass (`uv run pytest`)
-- [ ] 5.3 `list_entries` service test asserts `active_ingredient` field
-- [ ] 5.4 Frontend build passes (`npm run build`)
-- [ ] 5.5 Frontend lint passes (`npm run lint`)
-- [ ] 5.6 Frontend format passes (`prettier --check src/`)
+- [x] 5.1 Backend lint + format pass
+- [x] 5.2 Backend tests pass (`uv run pytest`)
+- [x] 5.3 `list_entries` service test asserts `active_ingredient` field
+- [x] 5.4 Frontend build passes (`npm run build`)
+- [x] 5.5 Frontend lint passes (`npm run lint`)
+- [x] 5.6 Frontend format passes (`prettier --check src/`)
 
 #### Manual
 
