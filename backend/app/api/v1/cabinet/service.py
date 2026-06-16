@@ -20,6 +20,7 @@ from app.api.v1.cabinet.schemas import (
 )
 from app.api.v1.medicines.models import MedicationRegistry
 from app.utilities.common import build_tsquery
+from app.utilities.const import DEFAULT_MIN_PACKAGE_COUNT
 from app.utilities.errors import (
     CabinetInvariantError,
     InvalidPartialTabletCountError,
@@ -190,7 +191,7 @@ def _map_row_to_entry_out(
     variant: MedicationRegistry,
     today: date,
     expiry_threshold_days: int,
-    min_package_count: int = 1,
+    min_package_count: int = DEFAULT_MIN_PACKAGE_COUNT,
 ) -> CabinetEntryOut:
     """Map a (CabinetEntry, MedicationRegistry) row to CabinetEntryOut.
 
@@ -251,7 +252,7 @@ async def list_entries(
     order: str = "asc",
     page: int = 1,
     page_size: int = 20,
-    min_package_count: int = 1,
+    min_package_count: int = DEFAULT_MIN_PACKAGE_COUNT,
     category: str | None = None,
 ) -> CabinetPageOut:
     """Return a paginated page of cabinet entries with computed expiry status.

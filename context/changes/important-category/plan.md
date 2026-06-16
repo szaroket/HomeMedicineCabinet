@@ -187,6 +187,8 @@ Surface `is_important` and a computed below-minimum out-of-stock boolean on each
 
 **Contract**: `CabinetListParams` gains `category: Literal["important"] | None = None`. `_build_base_query` adds `WHERE cabinet_entries.is_important IS TRUE` when `category == "important"`. The param threads through `crud.list_entries`, `service.list_entries`, and `facade.list_entries`.
 
+> **Addendum (impl review, 2026-06-16)**: shipped with three `StrEnum` classes (`CabinetStatus`, `CabinetOrder`, `CabinetCategory`) and the pre-existing `status`/`order` params converted from `Literal[...]` to those enums; `category` is `CabinetCategory` rather than the planned `Literal`. Behavior is unchanged (StrEnum serializes to identical strings, `== "important"`/`== "expired"` comparisons still hold, invalid values still 422). Benign EXTRA scope beyond the planned category addition; kept for the type-safety improvement.
+
 #### 4. Service mapping + facade min wiring
 
 **File**: `backend/app/api/v1/cabinet/service.py`, `backend/app/api/v1/cabinet/facade.py`
@@ -555,14 +557,14 @@ None — `is_important` and `min_package_count` columns already exist in the ini
 
 #### Automated
 
-- [x] 3.1 Backend tests pass: `uv run pytest`
-- [x] 3.2 Lint + format pass: `uv run ruff check . && uv run ruff format --check .`
-- [x] 3.3 Parametrized unit tests for `is_below_minimum`
-- [x] 3.4 Endpoint tests: new fields present; `?category=important` filters; invalid category → 422
+- [x] 3.1 Backend tests pass: `uv run pytest` — 3ba2461
+- [x] 3.2 Lint + format pass: `uv run ruff check . && uv run ruff format --check .` — 3ba2461
+- [x] 3.3 Parametrized unit tests for `is_below_minimum` — 3ba2461
+- [x] 3.4 Endpoint tests: new fields present; `?category=important` filters; invalid category → 422 — 3ba2461
 
 #### Manual
 
-- [ ] 3.5 `?category=important` returns only important entries with correct `below_minimum`
+- [x] 3.5 `?category=important` returns only important entries with correct `below_minimum`
 
 ### Phase 4: PATCH /cabinet/entries/{entry_id} — toggle importance
 
