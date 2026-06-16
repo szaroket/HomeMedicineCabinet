@@ -1,6 +1,7 @@
 """Cabinet endpoints."""
 
 import logging
+import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Security, status
@@ -11,8 +12,10 @@ from app.api.v1.cabinet import service as cabinet_service
 from app.api.v1.cabinet.schemas import (
     AddEntryRequest,
     AddEntryResult,
+    CabinetEntryOut,
     CabinetListParams,
     CabinetPageOut,
+    SetImportantRequest,
 )
 from app.api.v1.auth.types import CurrentUser
 from app.core.jwt_security import get_current_user
@@ -21,6 +24,7 @@ from app.utilities.errors import (
     CabinetDatabaseError,
     CabinetError,
     CabinetInvariantError,
+    EntryNotFoundError,
     InvalidPackageCountError,
     InvalidPartialTabletCountError,
     MedicationNotFoundError,
@@ -53,6 +57,8 @@ async def list_entries(
             order=params.order,
             page=params.page,
             page_size=params.page_size,
+            category=params.category,
+            below_minimum=params.below_minimum,
         )
     except (CabinetDatabaseError, UserDatabaseError) as exc:
         raise HTTPException(
@@ -92,6 +98,7 @@ async def add_entry(
             package_count=data.package_count,
             partial_tablet_count=data.partial_tablet_count,
             expiry_date=data.expiry_date,
+            is_important=data.is_important,
         )
     except MedicationNotFoundError as e:
         raise HTTPException(
@@ -115,6 +122,44 @@ async def add_entry(
         ) from e
     except Exception as exc:
         logger.exception("Unexpected error when adding new entry: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred.",
+        ) from exc
+
+
+@router.patch(
+    "/entries/{entry_id}",
+    response_model=CabinetEntryOut,
+)
+async def set_entry_importance(
+    entry_id: uuid.UUID,
+    data: SetImportantRequest,
+    current_user: CurrentUser = Security(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> CabinetEntryOut:
+    """Toggle the importance flag on a cabinet entry owned by the current user."""
+    try:
+        return await cabinet_facade.set_entry_importance(
+            session=session,
+            user_id=current_user.id,
+            entry_id=entry_id,
+            is_important=data.is_important,
+        )
+    except EntryNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=exc.message
+        ) from exc
+    except (CabinetDatabaseError, UserDatabaseError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=exc.message
+        ) from exc
+    except CabinetError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
+        ) from exc
+    except Exception as exc:
+        logger.exception("Unexpected error when toggling entry importance: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred.",

@@ -9,6 +9,7 @@ import {
   listVariants,
   addEntry,
   listEntries,
+  toggleImportant,
 } from "@/features/cabinet/api/cabinet-api";
 import type {
   ProductOut,
@@ -62,6 +63,17 @@ export function useAddEntry() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: AddEntryPayload) => addEntry(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: cabinetKeys.entriesAll() });
+    },
+  });
+}
+
+export function useToggleImportant() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, is_important }: { id: string; is_important: boolean }) =>
+      toggleImportant(id, is_important),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: cabinetKeys.entriesAll() });
     },

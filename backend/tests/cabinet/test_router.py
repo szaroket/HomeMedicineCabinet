@@ -21,6 +21,7 @@ from app.utilities.errors import (
     CabinetDatabaseError,
     CabinetError,
     CabinetInvariantError,
+    EntryNotFoundError,
     InvalidPartialTabletCountError,
     MedicationNotFoundError,
     UserDatabaseError,
@@ -51,6 +52,7 @@ def _make_add_entry_out(**overrides) -> AddEntryOut:
         partial_tablet_count=5,
         expiry_date=date(2027, 6, 1),
         total_tablets=25,
+        is_important=False,
     )
     return AddEntryOut(**(defaults | overrides))
 
@@ -120,6 +122,47 @@ class TestAddEntrySuccess:
         assert data["merged"] is True
         assert data["merge_summary"]["previous_total_tablets"] == 20
         assert data["merge_summary"]["new_total_tablets"] == 45
+
+    @pytest.mark.asyncio
+    async def test_add_with_is_important_true_returns_important_entry(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mock_add = mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_service.add_entry",
+            new_callable=AsyncMock,
+            return_value=AddEntryResult(
+                merged=False,
+                entry=_make_add_entry_out(is_important=True),
+                merge_summary=None,
+            ),
+        )
+
+        response = await authed_client.post(
+            "/api/v1/cabinet/entries",
+            json={**_VALID_BODY, "is_important": True},
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.json()["entry"]["is_important"] is True
+        call_kwargs = mock_add.call_args.kwargs
+        assert call_kwargs["is_important"] is True
+
+    @pytest.mark.asyncio
+    async def test_add_without_is_important_defaults_to_false(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mock_add = mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_service.add_entry",
+            new_callable=AsyncMock,
+            return_value=_fresh_result(),
+        )
+
+        response = await authed_client.post("/api/v1/cabinet/entries", json=_VALID_BODY)
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.json()["entry"]["is_important"] is False
+        call_kwargs = mock_add.call_args.kwargs
+        assert call_kwargs["is_important"] is False
 
 
 class TestAddEntryErrorMapping:
@@ -226,6 +269,8 @@ def _make_cabinet_entry_out(**overrides) -> CabinetEntryOut:
         expiry_date=date(2027, 6, 1),
         total_tablets=25,
         status="valid",
+        is_important=False,
+        below_minimum=False,
         active_ingredient="Paracetamolum",
         route_of_administration="doustna",
         leaflet_url="https://example.com/leaflet",
@@ -405,3 +450,184 @@ class TestListEntriesErrorMapping:
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.json()["detail"] == "bad request"
+
+
+class TestListEntriesImportanceFields:
+    @pytest.mark.asyncio
+    async def test_response_includes_is_important_and_below_minimum(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.list_entries",
+            new_callable=AsyncMock,
+            return_value=_make_page_out(
+                [_make_cabinet_entry_out(is_important=True, below_minimum=True)]
+            ),
+        )
+
+        response = await authed_client.get("/api/v1/cabinet/entries")
+
+        assert response.status_code == status.HTTP_200_OK
+        item = response.json()["items"][0]
+        assert item["is_important"] is True
+        assert item["below_minimum"] is True
+
+    @pytest.mark.asyncio
+    async def test_category_important_forwarded_to_facade(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mock_facade = mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.list_entries",
+            new_callable=AsyncMock,
+            return_value=_make_page_out([]),
+        )
+
+        response = await authed_client.get(
+            "/api/v1/cabinet/entries", params={"category": "important"}
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert mock_facade.call_args.kwargs["category"] == "important"
+
+    @pytest.mark.asyncio
+    async def test_invalid_category_returns_422(self, authed_client: AsyncClient):
+        response = await authed_client.get(
+            "/api/v1/cabinet/entries", params={"category": "used"}
+        )
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+    @pytest.mark.asyncio
+    async def test_below_minimum_true_forwarded_to_facade(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mock_facade = mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.list_entries",
+            new_callable=AsyncMock,
+            return_value=_make_page_out([]),
+        )
+
+        response = await authed_client.get(
+            "/api/v1/cabinet/entries", params={"below_minimum": "true"}
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert mock_facade.call_args.kwargs["below_minimum"] is True
+
+    @pytest.mark.asyncio
+    async def test_below_minimum_defaults_to_none(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mock_facade = mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.list_entries",
+            new_callable=AsyncMock,
+            return_value=_make_page_out([]),
+        )
+
+        response = await authed_client.get("/api/v1/cabinet/entries")
+
+        assert response.status_code == status.HTTP_200_OK
+        assert mock_facade.call_args.kwargs["below_minimum"] is None
+
+
+class TestSetEntryImportanceSuccess:
+    @pytest.mark.asyncio
+    async def test_toggle_on_returns_200_with_is_important_true(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.set_entry_importance",
+            new_callable=AsyncMock,
+            return_value=_make_cabinet_entry_out(
+                is_important=True, below_minimum=False
+            ),
+        )
+
+        response = await authed_client.patch(
+            f"/api/v1/cabinet/entries/{_ENTRY_ID}",
+            json={"is_important": True},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["is_important"] is True
+
+    @pytest.mark.asyncio
+    async def test_toggle_off_returns_200_with_is_important_false(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.set_entry_importance",
+            new_callable=AsyncMock,
+            return_value=_make_cabinet_entry_out(
+                is_important=False, below_minimum=False
+            ),
+        )
+
+        response = await authed_client.patch(
+            f"/api/v1/cabinet/entries/{_ENTRY_ID}",
+            json={"is_important": False},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["is_important"] is False
+
+
+class TestSetEntryImportanceErrorMapping:
+    @pytest.mark.asyncio
+    async def test_entry_not_found_returns_404(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.set_entry_importance",
+            new_callable=AsyncMock,
+            side_effect=EntryNotFoundError(),
+        )
+
+        response = await authed_client.patch(
+            f"/api/v1/cabinet/entries/{_ENTRY_ID}",
+            json={"is_important": True},
+        )
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    @pytest.mark.asyncio
+    async def test_database_error_returns_503(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.set_entry_importance",
+            new_callable=AsyncMock,
+            side_effect=CabinetDatabaseError(),
+        )
+
+        response = await authed_client.patch(
+            f"/api/v1/cabinet/entries/{_ENTRY_ID}",
+            json={"is_important": True},
+        )
+
+        assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+
+    @pytest.mark.asyncio
+    async def test_cabinet_error_returns_400(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.set_entry_importance",
+            new_callable=AsyncMock,
+            side_effect=CabinetError("bad request"),
+        )
+
+        response = await authed_client.patch(
+            f"/api/v1/cabinet/entries/{_ENTRY_ID}",
+            json={"is_important": True},
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.json()["detail"] == "bad request"
+
+    @pytest.mark.asyncio
+    async def test_missing_token_returns_401(self, client: AsyncClient):
+        response = await client.patch(
+            f"/api/v1/cabinet/entries/{_ENTRY_ID}",
+            json={"is_important": True},
+        )
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED

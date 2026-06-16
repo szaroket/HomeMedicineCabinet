@@ -3,6 +3,7 @@
 import uuid
 from datetime import date
 from decimal import Decimal
+from enum import StrEnum
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -10,14 +11,37 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.utilities.types import NonEmptyStr
 
 
+class CabinetCategory(StrEnum):
+    """Cabinet entry category filter values."""
+
+    important = "important"
+
+
+class CabinetStatus(StrEnum):
+    """Cabinet entry expiry status filter values."""
+
+    valid = "valid"
+    expiring = "expiring"
+    expired = "expired"
+
+
+class CabinetOrder(StrEnum):
+    """Sort direction for cabinet entry list."""
+
+    asc = "asc"
+    desc = "desc"
+
+
 class CabinetListParams(BaseModel):
     """Query parameters for GET /cabinet/entries."""
 
     model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
-    status: Literal["valid", "expiring", "expired"] | None = None
+    status: CabinetStatus | None = None
+    category: CabinetCategory | None = None
+    below_minimum: bool | None = None
     search: NonEmptyStr | None = None
-    order: Literal["asc", "desc"] = "asc"
+    order: CabinetOrder = CabinetOrder.asc
     page: int = Field(1, ge=1)
     page_size: Literal[20, 50, 100] = 20
 
@@ -47,6 +71,7 @@ class AddEntryRequest(BaseModel):
     package_count: int
     expiry_date: date
     partial_tablet_count: int | None = None
+    is_important: bool = False
 
     @field_validator("package_count")
     @classmethod
@@ -103,6 +128,7 @@ class AddEntryOut(BaseModel):
     partial_tablet_count: int | None
     expiry_date: date
     total_tablets: int | None
+    is_important: bool
 
 
 class CabinetEntryOut(BaseModel):
@@ -120,10 +146,18 @@ class CabinetEntryOut(BaseModel):
     expiry_date: date
     total_tablets: int | None
     status: str
+    is_important: bool
+    below_minimum: bool
     active_ingredient: str | None
     route_of_administration: str | None
     leaflet_url: str | None
     specification_url: str | None
+
+
+class SetImportantRequest(BaseModel):
+    """Request body for PATCH /cabinet/entries/{entry_id}."""
+
+    is_important: bool
 
 
 class CabinetPageOut(BaseModel):

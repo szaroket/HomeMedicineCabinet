@@ -13,6 +13,7 @@ export const addEntrySchema = z.object({
     .min(1, "Minimalna liczba tabletek to 1")
     .nullable()
     .optional(),
+  is_important: z.boolean().optional(),
 });
 
 export type AddEntryValues = z.infer<typeof addEntrySchema>;

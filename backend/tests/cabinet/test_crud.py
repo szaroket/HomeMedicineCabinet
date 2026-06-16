@@ -9,6 +9,7 @@ from sqlalchemy import Result
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.api.v1.cabinet.crud import (
+    _build_base_query,
     find_entry,
     get_registry_by_id,
     insert_entry,
@@ -149,6 +150,45 @@ class TestInsertEntry:
                 )
 
         assert exc_info.value is integrity_error
+
+
+class TestBuildBaseQueryBelowMinimum:
+    """Restrict to important entries under the minimum, no-op without a minimum.
+
+    The below_minimum filter must no-op when the user has no resolved minimum.
+    The discriminating clause is the ``package_count < :min`` comparison: it is
+    rendered only when the filter is active. (``is_important IS true`` is shared
+    with the category=important filter, so it is not a reliable discriminator.)
+    """
+
+    @pytest.mark.parametrize(
+        ("below_minimum", "min_package_count", "expect_clause"),
+        [
+            (True, 2, True),  # active filter: important AND package_count < 2
+            (True, None, False),  # None-guard no-op: user has no minimum resolved
+            (False, 2, False),  # filter explicitly off
+            (None, 2, False),  # filter unset
+        ],
+    )
+    def test_package_count_clause_present_only_when_active(
+        self,
+        below_minimum: bool | None,
+        min_package_count: int | None,
+        expect_clause: bool,
+    ):
+        stmt = _build_base_query(
+            user_id=_USER_ID,
+            today=_EXPIRY,
+            threshold=30,
+            status=None,
+            tsquery=None,
+            below_minimum=below_minimum,
+            min_package_count=min_package_count,
+        )
+
+        sql = str(stmt)
+
+        assert ("package_count <" in sql) is expect_clause
 
 
 class TestUpdateEntryCounts:

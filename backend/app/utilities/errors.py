@@ -264,6 +264,18 @@ class InvalidPartialTabletCountError(CabinetError):
         super().__init__(message)
 
 
+class EntryNotFoundError(CabinetError):
+    """Raised when a cabinet entry does not exist or does not belong to the user."""
+
+    def __init__(self, message: str = "Cabinet entry not found.") -> None:
+        """Initialise with a default message.
+
+        Args:
+            message: Description of what went wrong.
+        """
+        super().__init__(message)
+
+
 class CabinetInvariantError(CabinetError):
     """Raised when an internal data invariant is violated in the cabinet domain.
 

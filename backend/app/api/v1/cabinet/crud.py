@@ -89,6 +89,7 @@ async def insert_entry(
     package_count: int,
     partial_tablet_count: int | None,
     expiry_date: date,
+    is_important: bool = False,
 ) -> CabinetEntry:
     """Insert a new cabinet entry and flush to obtain its ID.
 
@@ -99,6 +100,7 @@ async def insert_entry(
         package_count: Number of packages.
         partial_tablet_count: Tablets in the last (partial) package, or None.
         expiry_date: Expiry date for the entry.
+        is_important: Whether the entry is marked important.
 
     Returns:
         The newly created CabinetEntry (committed).
@@ -115,6 +117,7 @@ async def insert_entry(
         package_count=package_count,
         partial_tablet_count=partial_tablet_count,
         expiry_date=expiry_date,
+        is_important=is_important,
     )
     try:
         async with persist(session, entry):
@@ -135,6 +138,9 @@ def _build_base_query(
     threshold: int,
     status: str | None,
     tsquery: str | None,
+    category: str | None = None,
+    below_minimum: bool | None = None,
+    min_package_count: int | None = None,
 ):
     """Build the filtered join query (no ORDER BY / LIMIT / OFFSET).
 
@@ -144,6 +150,9 @@ def _build_base_query(
         threshold: Expiry threshold in days.
         status: Optional status filter ("valid", "expiring", "expired").
         tsquery: Optional safe prefix tsquery string for full-text search.
+        category: Optional category filter ("important" filters to important entries).
+        below_minimum: When True, filter to important entries below the package minimum.
+        min_package_count: User's minimum package count; required when below_minimum is True.
 
     Returns:
         A SQLAlchemy select construct with all WHERE clauses applied.
@@ -173,6 +182,17 @@ def _build_base_query(
                 "medication_registry.search_vector @@ to_tsquery('simple', :tsquery)"
             ).bindparams(tsquery=tsquery)
         )
+    if category == "important":
+        stmt = stmt.where(col(CabinetEntry.is_important).is_(True))
+    if below_minimum and min_package_count is not None:
+        # Must stay in sync with cabinet.service.is_below_minimum, which encodes the
+        # same rule (important AND package_count < minimum) for the per-row badge.
+        # The set-based filter cannot call that per-row predicate, so the rule is
+        # duplicated here; change both together if the comparison ever changes.
+        stmt = stmt.where(
+            col(CabinetEntry.is_important).is_(True),
+            col(CabinetEntry.package_count) < min_package_count,
+        )
     return stmt
 
 
@@ -186,6 +206,9 @@ async def list_entries(
     order: str,
     limit: int,
     offset: int,
+    category: str | None = None,
+    below_minimum: bool | None = None,
+    min_package_count: int | None = None,
 ) -> tuple[list[tuple[CabinetEntry, MedicationRegistry]], int]:
     """Fetch a filtered, sorted, paginated page of cabinet entries plus total count.
 
@@ -199,6 +222,9 @@ async def list_entries(
         order: Sort direction for medication name ("asc" or "desc").
         limit: Page size.
         offset: Row offset for pagination.
+        category: Optional category filter ("important" filters to important entries).
+        below_minimum: When True, filter to important entries below the package minimum.
+        min_package_count: User's minimum package count; required when below_minimum is True.
 
     Returns:
         Tuple of (page rows, total count under the same filters).
@@ -206,7 +232,16 @@ async def list_entries(
     Raises:
         CabinetDatabaseError: If any database query fails.
     """
-    base = _build_base_query(user_id, today, threshold, status, tsquery)
+    base = _build_base_query(
+        user_id,
+        today,
+        threshold,
+        status,
+        tsquery,
+        category,
+        below_minimum,
+        min_package_count,
+    )
 
     name_col = func.lower(col(MedicationRegistry.name))
     order_clause = name_col.asc() if order == "asc" else name_col.desc()
@@ -218,7 +253,16 @@ async def list_entries(
     )
 
     count_q = select(func.count()).select_from(
-        _build_base_query(user_id, today, threshold, status, tsquery).subquery()
+        _build_base_query(
+            user_id,
+            today,
+            threshold,
+            status,
+            tsquery,
+            category,
+            below_minimum,
+            min_package_count,
+        ).subquery()
     )
 
     try:
@@ -248,11 +292,82 @@ async def list_entries(
     return rows, total
 
 
+async def find_entry_by_id(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    entry_id: uuid.UUID,
+) -> CabinetEntry | None:
+    """Look up a cabinet entry by its primary key, scoped to the user.
+
+    Args:
+        session: Active async database session.
+        user_id: UUID of the authenticated user.
+        entry_id: UUID of the cabinet entry.
+
+    Returns:
+        The CabinetEntry if found and owned by the user, otherwise None.
+
+    Raises:
+        CabinetDatabaseError: If the database query fails.
+    """
+    try:
+        result = await session.execute(
+            select(CabinetEntry).where(
+                col(CabinetEntry.id) == entry_id,
+                col(CabinetEntry.user_id) == user_id,
+            )
+        )
+    except SQLAlchemyError as exc:
+        logger.error(
+            "Failed to fetch cabinet entry %s for user %s: %s",
+            entry_id,
+            user_id,
+            exc,
+            exc_info=True,
+        )
+        raise CabinetDatabaseError() from exc
+    return result.scalar_one_or_none()
+
+
+async def update_entry_importance(
+    session: AsyncSession,
+    entry: CabinetEntry,
+    is_important: bool,
+) -> CabinetEntry:
+    """Set the importance flag on a cabinet entry and persist it.
+
+    Args:
+        session: Active async database session.
+        entry: The CabinetEntry to update.
+        is_important: New importance flag value.
+
+    Returns:
+        The updated CabinetEntry (committed).
+
+    Raises:
+        CabinetDatabaseError: If the flush or commit fails.
+    """
+    entry.is_important = is_important
+    try:
+        async with persist(session, entry):
+            session.add(entry)
+    except SQLAlchemyError as exc:
+        logger.error(
+            "Failed to update importance for cabinet entry %s: %s",
+            entry.id,
+            exc,
+            exc_info=True,
+        )
+        raise CabinetDatabaseError() from exc
+    return entry
+
+
 async def update_entry_counts(
     session: AsyncSession,
     entry: CabinetEntry,
     package_count: int,
     partial_tablet_count: int | None,
+    is_important: bool | None = None,
 ) -> CabinetEntry:
     """Update the package and partial-tablet counts of an existing entry.
 
@@ -261,6 +376,7 @@ async def update_entry_counts(
         entry: The CabinetEntry to update.
         package_count: New package count.
         partial_tablet_count: New partial tablet count, or None.
+        is_important: When provided, also update the importance flag.
 
     Returns:
         The updated CabinetEntry (committed).
@@ -270,6 +386,8 @@ async def update_entry_counts(
     """
     entry.package_count = package_count
     entry.partial_tablet_count = partial_tablet_count
+    if is_important is not None:
+        entry.is_important = is_important
     try:
         async with persist(session, entry):
             session.add(entry)

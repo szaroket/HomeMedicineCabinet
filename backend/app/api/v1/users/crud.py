@@ -2,6 +2,7 @@
 
 import logging
 import uuid
+from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
@@ -9,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col
 
 from app.api.v1.users.models import UserPreferences
+from app.db.connector import persist
 from app.utilities.errors import UserDatabaseError
 
 logger = logging.getLogger("app.users.crud")
@@ -40,3 +42,67 @@ async def get_user_preferences(
         )
         raise UserDatabaseError() from exc
     return result.scalar_one_or_none()
+
+
+async def update_min_package_count(
+    session: AsyncSession,
+    prefs: UserPreferences,
+    min_package_count: int,
+) -> UserPreferences:
+    """Update min_package_count on an existing preferences row.
+
+    Args:
+        session: Active async database session.
+        prefs: Existing UserPreferences instance to update.
+        min_package_count: New minimum package count to persist.
+
+    Returns:
+        The updated UserPreferences instance.
+
+    Raises:
+        UserDatabaseError: If the flush or commit fails.
+    """
+    prefs.min_package_count = min_package_count
+    prefs.updated_at = datetime.now(timezone.utc)
+    try:
+        async with persist(session, prefs):
+            session.add(prefs)
+    except SQLAlchemyError as exc:
+        logger.error(
+            "Failed to update preferences for user %s: %s",
+            prefs.user_id,
+            exc,
+            exc_info=True,
+        )
+        raise UserDatabaseError() from exc
+    return prefs
+
+
+async def insert_preferences(
+    session: AsyncSession,
+    prefs: UserPreferences,
+) -> UserPreferences:
+    """Persist a new UserPreferences row.
+
+    Args:
+        session: Active async database session.
+        prefs: New UserPreferences instance to insert.
+
+    Returns:
+        The inserted UserPreferences instance.
+
+    Raises:
+        UserDatabaseError: If the flush or commit fails.
+    """
+    try:
+        async with persist(session, prefs):
+            session.add(prefs)
+    except SQLAlchemyError as exc:
+        logger.error(
+            "Failed to insert preferences for user %s: %s",
+            prefs.user_id,
+            exc,
+            exc_info=True,
+        )
+        raise UserDatabaseError() from exc
+    return prefs

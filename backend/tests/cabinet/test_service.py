@@ -16,6 +16,7 @@ from app.api.v1.cabinet.service import (
     TabletPool,
     add_entry,
     classify_status,
+    is_below_minimum,
     list_entries,
     merge_non_tablet_entry,
     merge_tablet_entry,
@@ -272,15 +273,20 @@ def _make_variant(
     return v
 
 
-def _make_entry(package_count: int = 1, partial: int | None = None) -> MagicMock:
-    e = MagicMock(spec=CabinetEntry)
-    e.id = uuid4()
-    e.user_id = _USER_ID
-    e.medication_registry_id = _REGISTRY_ID
-    e.package_count = package_count
-    e.partial_tablet_count = partial
-    e.expiry_date = _EXPIRY
-    return e
+def _make_entry(
+    package_count: int = 1,
+    partial: int | None = None,
+    is_important: bool = False,
+) -> MagicMock:
+    entry = MagicMock(spec=CabinetEntry)
+    entry.id = uuid4()
+    entry.user_id = _USER_ID
+    entry.medication_registry_id = _REGISTRY_ID
+    entry.package_count = package_count
+    entry.partial_tablet_count = partial
+    entry.expiry_date = _EXPIRY
+    entry.is_important = is_important
+    return entry
 
 
 @pytest.fixture
@@ -336,6 +342,30 @@ class TestAddEntryFreshInsert:
         assert result.merged is False
         assert result.entry.total_tablets is None
 
+    async def test_fresh_insert_with_is_important_true(
+        self, mock_session: AsyncMock, mock_crud
+    ):
+        variant = _make_variant(is_tablet_based=False, capacity=None)
+        entry = _make_entry(package_count=1, is_important=True)
+        mock_crud.get_registry_by_id = AsyncMock(return_value=variant)
+        mock_crud.find_entry = AsyncMock(return_value=None)
+        mock_crud.insert_entry = AsyncMock(return_value=entry)
+
+        result = await add_entry(
+            session=mock_session,
+            user_id=_USER_ID,
+            medication_registry_id=_REGISTRY_ID,
+            package_count=1,
+            partial_tablet_count=None,
+            expiry_date=_EXPIRY,
+            is_important=True,
+        )
+
+        assert result.merged is False
+        assert result.entry.is_important is True
+        call_kwargs = mock_crud.insert_entry.call_args.kwargs
+        assert call_kwargs["is_important"] is True
+
 
 class TestAddEntryMerge:
     async def test_tablet_merge_returns_merged_true_with_summary(
@@ -385,6 +415,50 @@ class TestAddEntryMerge:
         assert result.merged is True
         assert result.entry.package_count == 5
         assert result.merge_summary.previous_package_count == 3
+
+    @pytest.mark.parametrize(
+        ("existing_important", "incoming_important", "expected_important"),
+        [
+            (False, True, True),  # non-important existing + important add → important
+            (
+                True,
+                False,
+                True,
+            ),  # important existing + non-important add → stays important
+            (True, True, True),  # both important → important
+            (False, False, False),  # neither important → not important
+        ],
+        ids=["false+true", "true+false", "true+true", "false+false"],
+    )
+    async def test_merge_or_semantics_for_is_important(
+        self,
+        mock_session: AsyncMock,
+        mock_crud,
+        existing_important: bool,
+        incoming_important: bool,
+        expected_important: bool,
+    ):
+        variant = _make_variant(is_tablet_based=False, capacity=None)
+        existing = _make_entry(package_count=1, is_important=existing_important)
+        updated = _make_entry(package_count=2, is_important=expected_important)
+        mock_crud.get_registry_by_id = AsyncMock(return_value=variant)
+        mock_crud.find_entry = AsyncMock(return_value=existing)
+        mock_crud.update_entry_counts = AsyncMock(return_value=updated)
+
+        result = await add_entry(
+            session=mock_session,
+            user_id=_USER_ID,
+            medication_registry_id=_REGISTRY_ID,
+            package_count=1,
+            partial_tablet_count=None,
+            expiry_date=_EXPIRY,
+            is_important=incoming_important,
+        )
+
+        assert result.merged is True
+        assert result.entry.is_important is expected_important
+        call_kwargs = mock_crud.update_entry_counts.call_args.kwargs
+        assert call_kwargs["is_important"] is expected_important
 
 
 class TestAddEntryRaceCondition:
@@ -506,6 +580,40 @@ class TestAddEntryValidation:
 
 
 # ---------------------------------------------------------------------------
+# is_below_minimum
+# ---------------------------------------------------------------------------
+
+
+class TestIsBelowMinimum:
+    @pytest.mark.parametrize(
+        ("is_important_flag", "package_count", "min_package_count", "expected"),
+        [
+            (True, 0, 1, True),  # important, strictly below minimum
+            (True, 1, 2, True),  # important, one below minimum of 2
+            (True, 1, 1, False),  # important, exactly at minimum (no signal)
+            (True, 2, 1, False),  # important, above minimum
+            (False, 0, 1, False),  # not important, no signal regardless of count
+            (False, 0, 5, False),  # not important, deeply below — still no signal
+        ],
+    )
+    def test_is_below_minimum(
+        self,
+        is_important_flag: bool,
+        package_count: int,
+        min_package_count: int,
+        expected: bool,
+    ):
+        assert (
+            is_below_minimum(
+                is_important=is_important_flag,
+                package_count=package_count,
+                min_package_count=min_package_count,
+            )
+            == expected
+        )
+
+
+# ---------------------------------------------------------------------------
 # list_entries
 # ---------------------------------------------------------------------------
 
@@ -562,6 +670,8 @@ class TestListEntries:
         assert result.items[0].active_ingredient == variant.active_ingredient
         assert result.items[0].leaflet_url == variant.leaflet_url
         assert result.items[0].specification_url == variant.specification_url
+        assert result.items[0].is_important is False
+        assert result.items[0].below_minimum is False
 
     async def test_expired_entry_returns_expired_status(
         self, mock_session: AsyncMock, mock_list_crud
@@ -694,3 +804,53 @@ class TestListEntries:
 
         assert result.items[0].total_tablets is None
         spy_logger.warning.assert_called_once()
+
+    async def test_important_entry_below_minimum_sets_below_minimum_true(
+        self, mock_session: AsyncMock, mock_list_crud
+    ):
+        entry = CabinetEntry(
+            id=_ENTRY_ID,
+            user_id=_USER_ID,
+            medication_registry_id=_REGISTRY_ID,
+            package_count=1,
+            partial_tablet_count=None,
+            expiry_date=date.today() + timedelta(days=60),
+            is_important=True,
+        )
+        variant = _make_variant(is_tablet_based=False)
+        mock_list_crud.list_entries = AsyncMock(return_value=([(entry, variant)], 1))
+
+        result = await list_entries(
+            session=mock_session,
+            user_id=_USER_ID,
+            expiry_threshold_days=30,
+            min_package_count=2,
+        )
+
+        assert result.items[0].is_important is True
+        assert result.items[0].below_minimum is True
+
+    async def test_important_entry_at_minimum_does_not_set_below_minimum(
+        self, mock_session: AsyncMock, mock_list_crud
+    ):
+        entry = CabinetEntry(
+            id=_ENTRY_ID,
+            user_id=_USER_ID,
+            medication_registry_id=_REGISTRY_ID,
+            package_count=2,
+            partial_tablet_count=None,
+            expiry_date=date.today() + timedelta(days=60),
+            is_important=True,
+        )
+        variant = _make_variant(is_tablet_based=False)
+        mock_list_crud.list_entries = AsyncMock(return_value=([(entry, variant)], 1))
+
+        result = await list_entries(
+            session=mock_session,
+            user_id=_USER_ID,
+            expiry_threshold_days=30,
+            min_package_count=2,
+        )
+
+        assert result.items[0].is_important is True
+        assert result.items[0].below_minimum is False

@@ -20,8 +20,10 @@ from app.api.v1.cabinet.schemas import (
 )
 from app.api.v1.medicines.models import MedicationRegistry
 from app.utilities.common import build_tsquery
+from app.utilities.const import DEFAULT_MIN_PACKAGE_COUNT
 from app.utilities.errors import (
     CabinetInvariantError,
+    EntryNotFoundError,
     InvalidPartialTabletCountError,
     MedicationNotFoundError,
 )
@@ -126,6 +128,24 @@ def merge_non_tablet_entry(
     return existing_packages + new_packages
 
 
+def is_below_minimum(
+    is_important: bool,
+    package_count: int,
+    min_package_count: int,
+) -> bool:
+    """Return True when an important entry has fewer packages than the global minimum.
+
+    Args:
+        is_important: Whether the entry is marked important.
+        package_count: Current package count for the entry.
+        min_package_count: User's global minimum package count.
+
+    Returns:
+        True only when is_important is True and package_count < min_package_count.
+    """
+    return is_important and package_count < min_package_count
+
+
 def classify_status(
     expiry_date: date,
     today: date,
@@ -172,6 +192,7 @@ def _map_row_to_entry_out(
     variant: MedicationRegistry,
     today: date,
     expiry_threshold_days: int,
+    min_package_count: int = DEFAULT_MIN_PACKAGE_COUNT,
 ) -> CabinetEntryOut:
     """Map a (CabinetEntry, MedicationRegistry) row to CabinetEntryOut.
 
@@ -180,6 +201,7 @@ def _map_row_to_entry_out(
         variant: The joined registry row.
         today: Reference date for status classification.
         expiry_threshold_days: Days ahead that triggers "expiring" status.
+        min_package_count: User's global minimum package count for below-minimum signal.
 
     Returns:
         Populated CabinetEntryOut.
@@ -211,6 +233,10 @@ def _map_row_to_entry_out(
         expiry_date=entry.expiry_date,
         total_tablets=_computed_total(entry, tpp),
         status=classify_status(entry.expiry_date, today, expiry_threshold_days),
+        is_important=entry.is_important,
+        below_minimum=is_below_minimum(
+            entry.is_important, entry.package_count, min_package_count
+        ),
         active_ingredient=variant.active_ingredient,
         route_of_administration=variant.route_of_administration,
         leaflet_url=variant.leaflet_url,
@@ -227,6 +253,9 @@ async def list_entries(
     order: str = "asc",
     page: int = 1,
     page_size: int = 20,
+    min_package_count: int = DEFAULT_MIN_PACKAGE_COUNT,
+    category: str | None = None,
+    below_minimum: bool | None = None,
 ) -> CabinetPageOut:
     """Return a paginated page of cabinet entries with computed expiry status.
 
@@ -239,6 +268,9 @@ async def list_entries(
         order: Sort direction for medication name ("asc" or "desc").
         page: 1-based page number.
         page_size: Number of items per page (20, 50, or 100).
+        min_package_count: User's global minimum package count for below-minimum signal.
+        category: Optional category filter ("important" filters to important entries).
+        below_minimum: When True, filter to important entries below the package minimum.
 
     Returns:
         CabinetPageOut with items, total, page, and page_size.
@@ -256,9 +288,18 @@ async def list_entries(
         order=order,
         limit=page_size,
         offset=offset,
+        category=category,
+        below_minimum=below_minimum,
+        min_package_count=min_package_count,
     )
     items = [
-        _map_row_to_entry_out(entry, variant, today, expiry_threshold_days)
+        _map_row_to_entry_out(
+            entry=entry,
+            variant=variant,
+            today=today,
+            expiry_threshold_days=expiry_threshold_days,
+            min_package_count=min_package_count,
+        )
         for entry, variant in rows
     ]
     return CabinetPageOut(items=items, total=total, page=page, page_size=page_size)
@@ -359,6 +400,7 @@ def _build_add_entry_out(
         partial_tablet_count=entry.partial_tablet_count,
         expiry_date=entry.expiry_date,
         total_tablets=_computed_total(entry, tpp),
+        is_important=entry.is_important,
     )
 
 
@@ -369,6 +411,7 @@ async def _insert_with_race_guard(
     package_count: int,
     partial_tablet_count: int | None,
     expiry_date: date,
+    is_important: bool = False,
 ) -> CabinetEntry | None:
     """Insert a new cabinet entry, returning None on a concurrent-insert race.
 
@@ -383,6 +426,7 @@ async def _insert_with_race_guard(
         package_count: Number of packages to insert.
         partial_tablet_count: Tablets in the last package, or None.
         expiry_date: Expiry date for the entry.
+        is_important: Whether the entry is marked important.
 
     Returns:
         The newly created CabinetEntry, or None if a race condition was detected.
@@ -395,6 +439,7 @@ async def _insert_with_race_guard(
             package_count,
             partial_tablet_count,
             expiry_date,
+            is_important=is_important,
         )
     except IntegrityError:
         return None
@@ -410,6 +455,7 @@ async def _dedup_or_insert(
     expiry_date: date,
     variant: MedicationRegistry,
     tpp: int | None,
+    is_important: bool = False,
 ) -> AddEntryResult:
     """Check for a duplicate entry and merge, or insert fresh (with race guard).
 
@@ -426,6 +472,7 @@ async def _dedup_or_insert(
         expiry_date: Expiry date for the entry.
         variant: Already-fetched MedicationRegistry row.
         tpp: Tablets per package, or None for non-tablet variants.
+        is_important: Whether the incoming add marks this entry as important.
 
     Returns:
         AddEntryResult with merged=False for a fresh insert, merged=True on merge.
@@ -439,6 +486,7 @@ async def _dedup_or_insert(
         new_partial=partial_tablet_count,
         variant=variant,
         tpp=tpp,
+        is_important=is_important,
     )
 
     existing = await crud.find_entry(
@@ -454,6 +502,7 @@ async def _dedup_or_insert(
         package_count,
         partial_tablet_count,
         expiry_date,
+        is_important=is_important,
     )
     if entry is None:
         existing = await crud.find_entry(
@@ -479,6 +528,7 @@ async def add_entry(
     package_count: int,
     partial_tablet_count: int | None,
     expiry_date: date,
+    is_important: bool = False,
 ) -> AddEntryResult:
     """Validate, dedup/merge, persist, and return the add result.
 
@@ -491,6 +541,10 @@ async def add_entry(
     the ``IntegrityError`` from the failed insert is caught, the transaction is
     rolled back, and the winning row is re-fetched so the same merge path runs.
 
+    On merge, importance is OR'd: an entry already marked important stays
+    important; a new add with is_important=True marks a previously unimportant
+    entry important (FR-010 addendum).
+
     Args:
         session: Active async database session.
         user_id: Authenticated user's UUID.
@@ -498,6 +552,7 @@ async def add_entry(
         package_count: Number of packages to add (>= 1).
         partial_tablet_count: Tablets in the last package, or None.
         expiry_date: Expiry date for the entry.
+        is_important: Whether the incoming add marks this entry as important.
 
     Returns:
         AddEntryResult with merged flag, the resulting entry, and an optional
@@ -519,6 +574,54 @@ async def add_entry(
         expiry_date=expiry_date,
         variant=variant,
         tpp=tpp,
+        is_important=is_important,
+    )
+
+
+async def set_entry_importance(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    entry_id: uuid.UUID,
+    is_important: bool,
+    expiry_threshold_days: int,
+    min_package_count: int = DEFAULT_MIN_PACKAGE_COUNT,
+) -> CabinetEntryOut:
+    """Toggle the importance flag on a cabinet entry owned by the user.
+
+    Args:
+        session: Active async database session.
+        user_id: Authenticated user's UUID.
+        entry_id: UUID of the cabinet entry to update.
+        is_important: New importance flag value.
+        expiry_threshold_days: Days ahead that triggers "expiring" status.
+        min_package_count: User's global minimum package count for below-minimum signal.
+
+    Returns:
+        The updated CabinetEntryOut with recomputed status and below_minimum.
+
+    Raises:
+        EntryNotFoundError: When the entry does not exist or does not belong to the user.
+        MedicationNotFoundError: When the entry's registry variant no longer exists.
+        CabinetDatabaseError: When a database operation fails.
+    """
+    entry = await crud.find_entry_by_id(
+        session=session, user_id=user_id, entry_id=entry_id
+    )
+    if entry is None:
+        raise EntryNotFoundError()
+    updated_entry = await crud.update_entry_importance(
+        session=session, entry=entry, is_important=is_important
+    )
+    variant = await _get_variant_or_raise(
+        session=session, medication_registry_id=entry.medication_registry_id
+    )
+    today = datetime.now(timezone.utc).date()
+    return _map_row_to_entry_out(
+        entry=updated_entry,
+        variant=variant,
+        today=today,
+        expiry_threshold_days=expiry_threshold_days,
+        min_package_count=min_package_count,
     )
 
 
@@ -530,6 +633,7 @@ async def _merge_and_commit(
     new_partial: int | None,
     variant: MedicationRegistry,
     tpp: int | None,
+    is_important: bool = False,
 ) -> AddEntryResult:
     """Apply FR-010 merge math, persist the update, and return AddEntryResult.
 
@@ -540,12 +644,14 @@ async def _merge_and_commit(
         new_partial: Partial tablet count of the incoming add, or None.
         variant: The MedicationRegistry row for display fields.
         tpp: Tablets per package (int) for tablet-based variants, None otherwise.
+        is_important: Importance of the incoming add; OR'd with existing flag.
 
     Returns:
         AddEntryResult with merged=True and populated merge_summary.
     """
     prev_pkg = existing.package_count
     prev_partial = existing.partial_tablet_count
+    merged_important = existing.is_important or is_important
 
     if tpp is not None:
         prev_total = total_tablets(prev_pkg, prev_partial, tpp)
@@ -574,7 +680,7 @@ async def _merge_and_commit(
         )
 
     updated = await crud.update_entry_counts(
-        session, existing, new_pkg, new_partial_result
+        session, existing, new_pkg, new_partial_result, is_important=merged_important
     )
 
     return AddEntryResult(
