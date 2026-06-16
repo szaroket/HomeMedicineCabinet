@@ -79,6 +79,7 @@ export function AddMedicationForm() {
         partial_tablet_count: selectedVariant.is_tablet_based
           ? (values.partial_tablet_count ?? null)
           : null,
+        is_important: values.is_important ?? false,
       },
       {
         onSuccess: (data) => setResult(data),
@@ -188,6 +189,21 @@ export function AddMedicationForm() {
           {errors.expiry_date && (
             <p className="text-xs text-red-400">{errors.expiry_date.message}</p>
           )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <input
+            id="is_important"
+            type="checkbox"
+            className="h-4 w-4 rounded border-slate-600 bg-slate-700 accent-blue-500"
+            {...register("is_important")}
+          />
+          <label
+            htmlFor="is_important"
+            className="text-sm font-medium text-blue-400 cursor-pointer"
+          >
+            Oznacz jako ważny
+          </label>
         </div>
 
         {serverError && <p className="text-sm text-red-400">{serverError}</p>}

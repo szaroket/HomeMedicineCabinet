@@ -1,22 +1,31 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { CabinetList } from "@/features/cabinet/components/cabinet-list";
-import { LogoutButton } from "@/features/auth/components/logout-button";
-import { AppHeader } from "@/app/components/app-header";
-import { AppFooter } from "@/app/components/app-footer";
+import { AppLayout } from "@/app/components/app-layout";
 import { useCabinetEntries } from "@/features/cabinet/api/cabinet-queries";
 import { useDebounce } from "@/hooks/use-debounce";
 import type { CabinetListParams } from "@/features/cabinet/api/cabinet-api";
 
 type StatusFilter = "valid" | "expiring" | "expired";
+type CategoryFilter = "important";
 type OrderDir = "asc" | "desc";
 type PageSize = 20 | 50 | 100;
 
 const STATUS_OPTIONS: { value: StatusFilter | ""; label: string }[] = [
   { value: "", label: "Wszystkie" },
-  { value: "valid", label: "Ważny" },
+  { value: "valid", label: "Aktualny" },
   { value: "expiring", label: "Bliski termin" },
   { value: "expired", label: "Przeterminowany" },
+];
+
+const CATEGORY_OPTIONS: { value: CategoryFilter | ""; label: string }[] = [
+  { value: "", label: "Wszystkie" },
+  { value: "important", label: "Ważne" },
+];
+
+const STOCK_OPTIONS: { value: "low" | ""; label: string }[] = [
+  { value: "", label: "Wszystkie" },
+  { value: "low", label: "Brak w apteczce" },
 ];
 
 const PAGE_SIZE_OPTIONS: PageSize[] = [20, 50, 100];
@@ -45,11 +54,18 @@ function parseStatus(raw: string | null): StatusFilter | undefined {
   return undefined;
 }
 
+function parseCategory(raw: string | null): CategoryFilter | undefined {
+  if (raw === "important") return raw;
+  return undefined;
+}
+
 export function CabinetPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const rawSearch = searchParams.get("search") ?? "";
   const status = parseStatus(searchParams.get("status"));
+  const category = parseCategory(searchParams.get("category"));
+  const belowMinimum = searchParams.get("below_minimum") === "true";
   const order = parseOrder(searchParams.get("order"));
   const page = parsePage(searchParams.get("page"));
   const pageSize = parsePageSize(searchParams.get("page_size"));
@@ -92,13 +108,16 @@ export function CabinetPage() {
     );
   }, [effectiveSearch, rawSearch, setSearchParams]);
 
-  const hasFilters = !!status || effectiveSearch !== "";
+  const hasFilters =
+    !!status || !!category || belowMinimum || effectiveSearch !== "";
 
   const params: CabinetListParams = {
     order,
     page,
     page_size: pageSize,
     ...(status ? { status } : {}),
+    ...(category ? { category } : {}),
+    ...(belowMinimum ? { below_minimum: true } : {}),
     ...(effectiveSearch !== "" ? { search: effectiveSearch } : {}),
   };
 
@@ -125,6 +144,8 @@ export function CabinetPage() {
       (prev) => {
         const next = new URLSearchParams(prev);
         next.delete("status");
+        next.delete("category");
+        next.delete("below_minimum");
         next.delete("search");
         next.delete("page");
         return next;
@@ -157,16 +178,10 @@ export function CabinetPage() {
   }, [pageData, page, totalPages, setSearchParams]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-900">
-      <header className="border-b border-slate-700 bg-slate-800 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <AppHeader />
-          <LogoutButton />
-        </div>
-      </header>
-
-      <main className="grow px-6 py-8">
-        <div className="mb-6 flex items-center justify-between">
+    <AppLayout>
+      <div className="flex h-full flex-col min-h-0">
+        {/* Title + add button */}
+        <div className="mb-4 flex flex-shrink-0 items-center justify-between">
           <h2 className="text-xl font-semibold text-white">Lista leków</h2>
           <Link
             to="/cabinet/add"
@@ -177,34 +192,77 @@ export function CabinetPage() {
         </div>
 
         {/* Controls */}
-        <div className="mb-4 flex flex-wrap gap-3">
-          {/* Search */}
-          <input
-            type="search"
-            placeholder="Szukaj po nazwie lub składniku…"
-            value={searchInput}
-            onChange={(ev) => {
-              setSearchInput(ev.target.value);
-            }}
-            className="rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[220px] flex-1"
-          />
+        <div className="mb-4 flex flex-shrink-0 flex-wrap gap-3 items-end">
+          <div className="flex flex-col gap-1 min-w-[220px] flex-1">
+            <label className="text-xs text-slate-400">Szukaj</label>
+            <input
+              type="search"
+              placeholder="Szukaj po nazwie lub składniku…"
+              value={searchInput}
+              onChange={(ev) => {
+                setSearchInput(ev.target.value);
+              }}
+              className="rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
 
-          {/* Status filter */}
-          <select
-            value={status ?? ""}
-            onChange={(ev) => {
-              setParam("status", ev.target.value || null, true);
-            }}
-            className="rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {STATUS_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-slate-400">
+              Kategoria ważności (status)
+            </label>
+            <select
+              value={status ?? ""}
+              onChange={(ev) => {
+                setParam("status", ev.target.value || null, true);
+              }}
+              className="rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {STATUS_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
-          {/* Sort order toggle */}
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-slate-400">Kategoria</label>
+            <select
+              value={category ?? ""}
+              onChange={(ev) => {
+                setParam("category", ev.target.value || null, true);
+              }}
+              className="rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {CATEGORY_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-slate-400">Zapasy</label>
+            <select
+              value={belowMinimum ? "low" : ""}
+              onChange={(ev) => {
+                setParam(
+                  "below_minimum",
+                  ev.target.value === "low" ? "true" : null,
+                  true,
+                );
+              }}
+              className="rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {STOCK_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <button
             type="button"
             onClick={() =>
@@ -225,17 +283,20 @@ export function CabinetPage() {
           </button>
         </div>
 
-        <CabinetList
-          pageData={pageData}
-          isLoading={isLoading}
-          isError={isError}
-          hasFilters={hasFilters}
-          onClearFilters={clearFilters}
-        />
+        {/* Scrollable table */}
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <CabinetList
+            pageData={pageData}
+            isLoading={isLoading}
+            isError={isError}
+            hasFilters={hasFilters}
+            onClearFilters={clearFilters}
+          />
+        </div>
 
         {/* Pagination */}
         {pageData && pageData.total > 0 && (
-          <div className="mt-4 flex items-center justify-between text-sm text-slate-400">
+          <div className="mt-4 flex flex-shrink-0 items-center justify-between text-sm text-slate-400">
             <span>
               Strona {pageData.page} z {totalPages} (łącznie {pageData.total})
             </span>
@@ -272,8 +333,7 @@ export function CabinetPage() {
             </div>
           </div>
         )}
-      </main>
-      <AppFooter />
-    </div>
+      </div>
+    </AppLayout>
   );
 }

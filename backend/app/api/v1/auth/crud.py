@@ -22,9 +22,9 @@ async def provision_user(session: AsyncSession, user_id: UUID, email: str) -> No
     """Idempotently provision a local user identity and default preferences.
 
     Args:
-        session: Active async database session.
-        user_id: Supabase auth user UUID (equals the JWT `sub` claim).
-        email: User's email address.
+        session (AsyncSession): Active async database session.
+        user_id (UUID): Supabase auth user UUID (equals the JWT `sub` claim).
+        email (str): User's email address.
 
     Raises:
         ProvisioningError: If the database write fails; the session is rolled

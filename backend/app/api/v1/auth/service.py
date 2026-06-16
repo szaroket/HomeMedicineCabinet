@@ -24,11 +24,11 @@ async def register(
     """Register a new user via Supabase Auth and provision local rows.
 
     Args:
-        session: Active async database session.
-        data: Registration payload (email + password).
+        session (AsyncSession): Active async database session.
+        data (RegisterRequest): Registration payload (email + password).
 
     Returns:
-        Tuple of (AuthResponse, refresh_token).
+        tuple[AuthResponse, str]: Tuple of (AuthResponse, refresh_token).
 
     Raises:
         DuplicateEmailError: If the email is already registered.
@@ -65,11 +65,11 @@ async def login(session: AsyncSession, data: LoginRequest) -> tuple[AuthResponse
     """Authenticate an existing user via Supabase Auth.
 
     Args:
-        session: Active async database session.
-        data: Login payload (email + password).
+        session (AsyncSession): Active async database session.
+        data (LoginRequest): Login payload (email + password).
 
     Returns:
-        Tuple of (AuthResponse, refresh_token).
+        tuple[AuthResponse, str]: Tuple of (AuthResponse, refresh_token).
 
     Raises:
         InvalidCredentialsError: If the email/password combination is incorrect.
@@ -98,10 +98,10 @@ def refresh(refresh_token: str) -> tuple[AuthResponse, str]:
     """Exchange a refresh token for a new access token.
 
     Args:
-        refresh_token: The httpOnly cookie refresh token.
+        refresh_token (str): The httpOnly cookie refresh token.
 
     Returns:
-        Tuple of (AuthResponse, new_refresh_token).
+        tuple[AuthResponse, str]: Tuple of (AuthResponse, new_refresh_token).
 
     Raises:
         SessionExpiredError: If the refresh token is invalid or expired.

@@ -7,14 +7,14 @@ class Settings(BaseSettings):
     """Pydantic-settings singleton for all environment-backed configuration.
 
     Attributes:
-        database_url: Async Postgres connection string (asyncpg).
-        supabase_url: Base URL of the Supabase project (e.g. https://xxx.supabase.co).
-        supabase_anon_key: Supabase anon/public API key.
-        jwt_audience: Expected `aud` claim in Supabase JWTs.
-        jwt_algorithms: Allowed signing algorithms for JWT verification.
-        auth_cookie_name: Name of the refresh-token cookie.
-        auth_cookie_path: Path scope for the refresh-token cookie.
-        auth_cookie_secure: Whether the refresh cookie carries the `Secure`
+        database_url (str): Async Postgres connection string (asyncpg).
+        supabase_url (str): Base URL of the Supabase project (e.g. https://xxx.supabase.co).
+        supabase_anon_key (str): Supabase anon/public API key.
+        jwt_audience (str): Expected `aud` claim in Supabase JWTs.
+        jwt_algorithms (list[str]): Allowed signing algorithms for JWT verification.
+        auth_cookie_name (str): Name of the refresh-token cookie.
+        auth_cookie_path (str): Path scope for the refresh-token cookie.
+        auth_cookie_secure (bool): Whether the refresh cookie carries the `Secure`
             flag. Defaults to True (HTTPS-only); set False for localhost HTTP dev.
     """
 

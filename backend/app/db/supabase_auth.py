@@ -28,7 +28,7 @@ def get_supabase() -> "Client":
     """Return the module-level Supabase client, initialising it on first call.
 
     Returns:
-        The shared, lazily created ``supabase-py`` client instance.
+        Client: The shared, lazily created ``supabase-py`` client instance.
     """
     global _client
     if _client is None:
@@ -44,11 +44,11 @@ def sign_up(email: str, password: str) -> "AuthResponse":
     """Register a new user via Supabase Auth, mapping failures to domain errors.
 
     Args:
-        email: New user's email address.
-        password: New user's plaintext password.
+        email (str): New user's email address.
+        password (str): New user's plaintext password.
 
     Returns:
-        The Supabase ``AuthResponse`` carrying the created ``user`` and ``session``.
+        AuthResponse: The Supabase ``AuthResponse`` carrying the created ``user`` and ``session``.
 
     Raises:
         RateLimitError: If Supabase rate-limits the request.
@@ -81,11 +81,11 @@ def sign_in_with_password(email: str, password: str) -> "AuthResponse":
     """Authenticate an existing user via Supabase Auth, mapping failures to domain errors.
 
     Args:
-        email: User's email address.
-        password: User's plaintext password.
+        email (str): User's email address.
+        password (str): User's plaintext password.
 
     Returns:
-        The Supabase ``AuthResponse`` carrying the ``user`` and ``session``.
+        AuthResponse: The Supabase ``AuthResponse`` carrying the ``user`` and ``session``.
 
     Raises:
         RateLimitError: If Supabase rate-limits the request.
@@ -111,10 +111,10 @@ def refresh_session(refresh_token: str) -> "AuthResponse":
     """Exchange a refresh token for a new session via Supabase Auth, mapping failures to domain errors.
 
     Args:
-        refresh_token: The refresh token to redeem.
+        refresh_token (str): The refresh token to redeem.
 
     Returns:
-        The Supabase ``AuthResponse`` carrying the rotated ``user`` and ``session``.
+        AuthResponse: The Supabase ``AuthResponse`` carrying the rotated ``user`` and ``session``.
 
     Raises:
         RateLimitError: If Supabase rate-limits the request.

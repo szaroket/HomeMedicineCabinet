@@ -25,13 +25,13 @@ async def search_products(
     for building a safe, parameter-bound ``tsquery`` string.
 
     Args:
-        session: Active async database session.
-        tsquery: A pre-built ``to_tsquery('simple', ...)`` expression (e.g.
+        session (AsyncSession): Active async database session.
+        tsquery (str): A pre-built ``to_tsquery('simple', ...)`` expression (e.g.
             ``apap:* & forte:*``); never raw user input.
-        limit: Maximum number of distinct products to return.
+        limit (int): Maximum number of distinct products to return.
 
     Returns:
-        One representative row of (name, strength, pharmaceutical_form,
+        Sequence[Row]: One representative row of (name, strength, pharmaceutical_form,
         active_ingredient) per case-folded (name, strength, form) group,
         ordered case-insensitively by name.
 
@@ -63,13 +63,13 @@ async def list_variants(
     registry.
 
     Args:
-        session: Active async database session.
-        name: Product name (case-insensitive match).
-        strength: Dosage strength, or None to match rows where strength is NULL.
-        pharmaceutical_form: Pharmaceutical form, or None to match NULL rows.
+        session (AsyncSession): Active async database session.
+        name (str): Product name (case-insensitive match).
+        strength (str | None): Dosage strength, or None to match rows where strength is NULL.
+        pharmaceutical_form (str | None): Pharmaceutical form, or None to match NULL rows.
 
     Returns:
-        Rows of (id, name, strength, pharmaceutical_form, capacity, capacity_unit,
+        Sequence[Row]: Rows of (id, name, strength, pharmaceutical_form, capacity, capacity_unit,
         is_tablet_based, active_ingredient, route_of_administration) ordered by
         ``capacity`` ascending (NULLs last).
 

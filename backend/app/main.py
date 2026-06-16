@@ -27,7 +27,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="Home Medicine Cabinet API", version="0.2.0", lifespan=lifespan)
+    app = FastAPI(title="Home Medicine Cabinet API", version="0.3.0", lifespan=lifespan)
 
     _frontend_url = os.getenv("FRONTEND_URL")
     _allowed_origins = (
@@ -40,7 +40,7 @@ def create_app() -> FastAPI:
         CORSMiddleware,
         allow_origins=_allowed_origins,
         allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT", "DELETE"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["*"],
     )
 
