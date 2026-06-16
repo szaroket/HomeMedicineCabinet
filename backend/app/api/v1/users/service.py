@@ -42,6 +42,9 @@ async def get_effective_preferences(
 
     Returns:
         UserPreferencesOut with stored or default values.
+
+    Raises:
+        UserDatabaseError: If the underlying preferences read fails.
     """
     prefs = await crud.get_user_preferences(session, user_id)
     if prefs is None:

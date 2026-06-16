@@ -9,12 +9,6 @@ from app.utilities.errors import UserDatabaseError
 
 PREFERENCES_URL = "/api/v1/users/preferences"
 
-_DEFAULT_PREFS = UserPreferencesOut(
-    expiry_threshold_days=30,
-    close_to_finish_threshold_days=7,
-    min_package_count=1,
-)
-
 _STORED_PREFS = UserPreferencesOut(
     expiry_threshold_days=14,
     close_to_finish_threshold_days=3,
@@ -30,24 +24,7 @@ class TestGetPreferencesEndpoint:
             status.HTTP_403_FORBIDDEN,
         )
 
-    async def test_returns_defaults_when_no_row_exists(
-        self, authed_client: AsyncClient, mocker: MockerFixture
-    ):
-        mocker.patch(
-            "app.api.v1.users.router.users_service.get_effective_preferences",
-            autospec=True,
-            return_value=_DEFAULT_PREFS,
-        )
-
-        response = await authed_client.get(PREFERENCES_URL)
-
-        assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert data["expiry_threshold_days"] == 30
-        assert data["close_to_finish_threshold_days"] == 7
-        assert data["min_package_count"] == 1
-
-    async def test_returns_stored_values_when_row_exists(
+    async def test_serializes_service_result(
         self, authed_client: AsyncClient, mocker: MockerFixture
     ):
         mocker.patch(

@@ -529,13 +529,13 @@ None — `is_important` and `min_package_count` columns already exist in the ini
 
 #### Automated
 
-- [x] 1.1 Backend tests pass: `uv run pytest`
-- [x] 1.2 Lint + format pass: `uv run ruff check . && uv run ruff format --check .`
-- [x] 1.3 GET returns defaults when no row, stored values when present
+- [x] 1.1 Backend tests pass: `uv run pytest` — 8c84893
+- [x] 1.2 Lint + format pass: `uv run ruff check . && uv run ruff format --check .` — 8c84893
+- [x] 1.3 GET returns defaults when no row, stored values when present — 8c84893
 
 #### Manual
 
-- [x] 1.4 GET /api/v1/users/preferences returns expected JSON for a logged-in user
+- [x] 1.4 GET /api/v1/users/preferences returns expected JSON for a logged-in user — 8c84893
 
 ### Phase 2: PATCH /users/preferences
 
