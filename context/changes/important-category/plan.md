@@ -471,6 +471,8 @@ Wire the cabinet list and add form to the Phase 3–5 endpoints: inline star tog
 
 **Contract**: `addEntrySchema` gains `is_important: z.boolean().optional()` (default false); the form renders a "Oznacz jako ważny" checkbox; the submit payload includes `is_important`.
 
+> **Addendum (impl review, 2026-06-16)**: shipped an extra **below-minimum stock filter** beyond the planned frontend-only scope. A new `below_minimum` query param threads through the backend stack — `schemas.py:42` (filter field) → `router.py:61` → `facade.py:56` → `service.py:258` → `crud.py:142,187` (new SQL `WHERE is_important IS TRUE AND package_count < min_package_count` branch, no-op when `min_package_count` is None) — and a third frontend "Zapasy" stock dropdown (`cabinet-page.tsx` `STOCK_OPTIONS`) wired to it. This is real backend feature work inside a frontend-only phase; documented here retroactively (mirroring the Phase 2/3/5/6 addenda). The code is useful and correct; server-side filtering is required because client-side filtering would hide below-minimum entries on later paginated pages. See follow-up [F2] for the missing test coverage on this branch and [F3] for the rule duplicated against `service.is_below_minimum`. Also renamed the `valid` expiry status label from "Ważny" → "Aktualny" (`cabinet-list.tsx`, `cabinet-page.tsx`) to avoid colliding with the new "Ważne" importance category — benign UI copy change.
+
 ### Success Criteria:
 
 #### Automated Verification:

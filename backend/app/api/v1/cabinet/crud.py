@@ -185,6 +185,10 @@ def _build_base_query(
     if category == "important":
         stmt = stmt.where(col(CabinetEntry.is_important).is_(True))
     if below_minimum and min_package_count is not None:
+        # Must stay in sync with cabinet.service.is_below_minimum, which encodes the
+        # same rule (important AND package_count < minimum) for the per-row badge.
+        # The set-based filter cannot call that per-row predicate, so the rule is
+        # duplicated here; change both together if the comparison ever changes.
         stmt = stmt.where(
             col(CabinetEntry.is_important).is_(True),
             col(CabinetEntry.package_count) < min_package_count,

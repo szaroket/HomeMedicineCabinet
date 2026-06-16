@@ -496,6 +496,38 @@ class TestListEntriesImportanceFields:
         )
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
+    @pytest.mark.asyncio
+    async def test_below_minimum_true_forwarded_to_facade(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mock_facade = mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.list_entries",
+            new_callable=AsyncMock,
+            return_value=_make_page_out([]),
+        )
+
+        response = await authed_client.get(
+            "/api/v1/cabinet/entries", params={"below_minimum": "true"}
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert mock_facade.call_args.kwargs["below_minimum"] is True
+
+    @pytest.mark.asyncio
+    async def test_below_minimum_defaults_to_none(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mock_facade = mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.list_entries",
+            new_callable=AsyncMock,
+            return_value=_make_page_out([]),
+        )
+
+        response = await authed_client.get("/api/v1/cabinet/entries")
+
+        assert response.status_code == status.HTTP_200_OK
+        assert mock_facade.call_args.kwargs["below_minimum"] is None
+
 
 class TestSetEntryImportanceSuccess:
     @pytest.mark.asyncio

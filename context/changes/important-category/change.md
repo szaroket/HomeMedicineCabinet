@@ -1,7 +1,7 @@
 ---
 change_id: important-category
 title: Important category
-status: implemented
+status: impl_reviewed
 created: 2026-06-16
 updated: 2026-06-16
 reviewed_at: 2026-06-16
