@@ -106,7 +106,7 @@ async def add_entry(
         ) from e
     except (InvalidPackageCountError, InvalidPartialTabletCountError) as e:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=e.message
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=e.message
         ) from e
     except CabinetInvariantError as e:
         raise HTTPException(

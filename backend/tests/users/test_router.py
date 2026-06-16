@@ -107,7 +107,7 @@ class TestPatchPreferencesEndpoint:
             PREFERENCES_URL, json={"min_package_count": invalid_value}
         )
 
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     async def test_missing_token_returns_401_or_403(self, client: AsyncClient):
         response = await client.patch(PREFERENCES_URL, json={"min_package_count": 3})
