@@ -360,6 +360,25 @@ and delete its local definition (behaviour identical; existing
 Keep the existing error→HTTP mapping (`CabinetDatabaseError`/`UserDatabaseError`
 → 503, `CabinetError` → 400, catch-all → 500).
 
+**Addendum (2026-06-15, impl review F2)**: The tsquery builder was not promoted
+in `medicines/service.py` and routed through the facade (plan items 1 & 5).
+Instead it moved to a domain-neutral `app/utilities/common.py` as
+`build_tsquery(...)` and is called from the cabinet **service**; the facade
+forwards the raw `search` string. This supersedes items 1 & 5: a shared utility
+sidesteps the cross-domain hop while still honoring the facade rule (no domain
+calls into another domain). Accepted as an improvement aligned with the phase
+intent.
+
+**Addendum (2026-06-15, impl review F3)**: The query parameters (item 7) were
+consolidated into a single `CabinetListParams` Pydantic model instead of inline
+`Annotated[..., Query()]` params (L-003 satisfied via field-level `NonEmptyStr`).
+The model (a) renames `q` → `search` (per L-005) and (b) omits `sort` entirely,
+since only name sort exists. Consequence: with `extra="forbid"`, the old
+documented URL contract (`?q=apap&sort=name&order=desc`, Overview line 60) now
+422s; the new contract is `?search=apap&order=desc`. The Phase 4 frontend already
+emits the new shape, so there is no live break. `sort` was intentionally not
+re-added — revisit only if a second sort key is introduced.
+
 ### Success Criteria:
 
 #### Automated Verification:
@@ -644,13 +663,13 @@ schema change.
 
 #### Automated
 
-- [x] 5.1 Backend lint + format pass
-- [x] 5.2 Backend tests pass (`uv run pytest`)
-- [x] 5.3 `list_entries` service test asserts `active_ingredient` field
-- [x] 5.4 Frontend build passes (`npm run build`)
-- [x] 5.5 Frontend lint passes (`npm run lint`)
-- [x] 5.6 Frontend format passes (`prettier --check src/`)
+- [x] 5.1 Backend lint + format pass — ed2261a
+- [x] 5.2 Backend tests pass (`uv run pytest`) — ed2261a
+- [x] 5.3 `list_entries` service test asserts `active_ingredient` field — ed2261a
+- [x] 5.4 Frontend build passes (`npm run build`) — ed2261a
+- [x] 5.5 Frontend lint passes (`npm run lint`) — ed2261a
+- [x] 5.6 Frontend format passes (`prettier --check src/`) — ed2261a
 
 #### Manual
 
-- [ ] 5.7 Expanding a row shows the active ingredient or "—" when absent
+- [x] 5.7 Expanding a row shows the active ingredient or "—" when absent — ed2261a
