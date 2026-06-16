@@ -15,9 +15,11 @@ from app.api.v1.cabinet.schemas import (
     AddEntryOut,
     AddEntryResult,
     CabinetEntryOut,
+    CabinetPageOut,
     MergeSummary,
 )
 from app.api.v1.medicines.models import MedicationRegistry
+from app.utilities.common import build_tsquery
 from app.utilities.errors import (
     CabinetInvariantError,
     InvalidPartialTabletCountError,
@@ -165,60 +167,101 @@ def _tablet_capacity_invalid(variant: MedicationRegistry) -> bool:
     )
 
 
+def _map_row_to_entry_out(
+    entry: CabinetEntry,
+    variant: MedicationRegistry,
+    today: date,
+    expiry_threshold_days: int,
+) -> CabinetEntryOut:
+    """Map a (CabinetEntry, MedicationRegistry) row to CabinetEntryOut.
+
+    Args:
+        entry: The cabinet entry row.
+        variant: The joined registry row.
+        today: Reference date for status classification.
+        expiry_threshold_days: Days ahead that triggers "expiring" status.
+
+    Returns:
+        Populated CabinetEntryOut.
+    """
+    capacity_invalid = _tablet_capacity_invalid(variant)
+    if capacity_invalid:
+        logger.warning(
+            "Tablet-based registry row %s has invalid capacity %r; "
+            "total_tablets left None for cabinet entry %s",
+            variant.id,
+            variant.capacity,
+            entry.id,
+        )
+    tpp = (
+        int(variant.capacity)
+        if variant.is_tablet_based and not capacity_invalid
+        else None
+    )
+    return CabinetEntryOut(
+        id=entry.id,
+        name=variant.name,
+        strength=variant.strength,
+        pharmaceutical_form=variant.pharmaceutical_form,
+        capacity=variant.capacity,
+        capacity_unit=variant.capacity_unit,
+        is_tablet_based=variant.is_tablet_based,
+        package_count=entry.package_count,
+        partial_tablet_count=entry.partial_tablet_count,
+        expiry_date=entry.expiry_date,
+        total_tablets=_computed_total(entry, tpp),
+        status=classify_status(entry.expiry_date, today, expiry_threshold_days),
+        active_ingredient=variant.active_ingredient,
+        route_of_administration=variant.route_of_administration,
+        leaflet_url=variant.leaflet_url,
+        specification_url=variant.specification_url,
+    )
+
+
 async def list_entries(
     session: AsyncSession,
     user_id: uuid.UUID,
     expiry_threshold_days: int,
-) -> list[CabinetEntryOut]:
-    """Return all cabinet entries for a user with computed expiry status.
+    status: str | None = None,
+    search: str | None = None,
+    order: str = "asc",
+    page: int = 1,
+    page_size: int = 20,
+) -> CabinetPageOut:
+    """Return a paginated page of cabinet entries with computed expiry status.
 
     Args:
         session: Active async database session.
         user_id: Authenticated user's UUID.
         expiry_threshold_days: Days ahead that triggers "expiring" status.
+        status: Optional status filter ("valid", "expiring", "expired").
+        search: Optional raw search string (name or active ingredient).
+        order: Sort direction for medication name ("asc" or "desc").
+        page: 1-based page number.
+        page_size: Number of items per page (20, 50, or 100).
 
     Returns:
-        List of CabinetEntryOut items ordered by medication name.
+        CabinetPageOut with items, total, page, and page_size.
     """
     today = datetime.now(timezone.utc).date()
+    offset = (page - 1) * page_size
 
-    rows = await crud.list_entries(session, user_id)
-    result: list[CabinetEntryOut] = []
-    for entry, variant in rows:
-        if _tablet_capacity_invalid(variant):
-            # Data invariant: tablet-based registry rows always carry a positive
-            # integer capacity. The write path raises CabinetInvariantError on
-            # violation; the read path keeps serving the list (one bad row must
-            # not fail the whole response) but logs loudly so the breach surfaces.
-            logger.warning(
-                "Tablet-based registry row %s has invalid capacity %r; "
-                "total_tablets left None for cabinet entry %s",
-                variant.id,
-                variant.capacity,
-                entry.id,
-            )
-        tpp = (
-            int(variant.capacity)
-            if variant.is_tablet_based and not _tablet_capacity_invalid(variant)
-            else None
-        )
-        result.append(
-            CabinetEntryOut(
-                id=entry.id,
-                name=variant.name,
-                strength=variant.strength,
-                pharmaceutical_form=variant.pharmaceutical_form,
-                capacity=variant.capacity,
-                capacity_unit=variant.capacity_unit,
-                is_tablet_based=variant.is_tablet_based,
-                package_count=entry.package_count,
-                partial_tablet_count=entry.partial_tablet_count,
-                expiry_date=entry.expiry_date,
-                total_tablets=_computed_total(entry, tpp),
-                status=classify_status(entry.expiry_date, today, expiry_threshold_days),
-            )
-        )
-    return result
+    rows, total = await crud.list_entries(
+        session=session,
+        user_id=user_id,
+        today=today,
+        threshold=expiry_threshold_days,
+        status=status,
+        tsquery=build_tsquery(search) if search is not None else None,
+        order=order,
+        limit=page_size,
+        offset=offset,
+    )
+    items = [
+        _map_row_to_entry_out(entry, variant, today, expiry_threshold_days)
+        for entry, variant in rows
+    ]
+    return CabinetPageOut(items=items, total=total, page=page, page_size=page_size)
 
 
 async def _get_variant_or_raise(

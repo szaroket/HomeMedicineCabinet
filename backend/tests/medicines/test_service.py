@@ -9,7 +9,8 @@ import pytest
 from pytest_mock import MockerFixture
 
 from app.api.v1.medicines.schemas import ProductOut, VariantOut
-from app.api.v1.medicines.service import _build_tsquery, list_variants, search_products
+from app.api.v1.medicines.service import list_variants, search_products
+from app.utilities.common import build_tsquery
 
 
 def _registry_row(
@@ -74,7 +75,7 @@ class TestBuildTsquery:
         ],
     )
     def test_builds_prefix_tsquery(self, query, expected):
-        assert _build_tsquery(query) == expected
+        assert build_tsquery(query) == expected
 
     @pytest.mark.parametrize(
         "query",
@@ -87,7 +88,7 @@ class TestBuildTsquery:
         ],
     )
     def test_returns_none_below_threshold(self, query):
-        assert _build_tsquery(query) is None
+        assert build_tsquery(query) is None
 
     @pytest.mark.parametrize(
         ("query", "expected"),
@@ -99,7 +100,7 @@ class TestBuildTsquery:
         ],
     )
     def test_strips_tsquery_operators(self, query, expected):
-        assert _build_tsquery(query) == expected
+        assert build_tsquery(query) == expected
 
 
 # ---------------------------------------------------------------------------

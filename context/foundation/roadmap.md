@@ -3,7 +3,7 @@ project: "Home Medicine Cabinet"
 version: 1
 status: draft
 created: 2026-06-03
-updated: 2026-06-05
+updated: 2026-06-15
 prd_version: 1
 main_goal: low-complexity
 top_blocker: skills
@@ -27,12 +27,13 @@ A single adult can't reliably track their home medication inventory — what the
 
 | ID   | Change ID                    | Outcome (user can …)                                                                                                                                 | Prerequisites    | PRD refs                          | Status   |
 |------|------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|------------------|-----------------------------------|----------|
-| F-01 | auth-scaffold                | (foundation) auth entry screen in place; register/login/logout UI wired to Supabase Auth, plus FastAPI route protection                              | Supabase project created | FR-001, FR-002, Access Control | implemented    |
-| F-02 | data-layer-scaffold          | (foundation) SQLModel models, Supabase PostgreSQL connection, and Alembic migration tooling ready                                                    | Supabase project created | FR-003, FR-010, NFR data-isolation | implemented |
-| F-03 | registry-import              | (foundation) Polish medicines XML dataset loaded into PostgreSQL and queryable for autocomplete                                                       | F-02             | FR-003, FR-011, FR-012            | implemented |
+| F-01 | auth-scaffold                | (foundation) auth entry screen in place; register/login/logout UI wired to Supabase Auth, plus FastAPI route protection                              | Supabase project created | FR-001, FR-002, Access Control | done    |
+| F-02 | data-layer-scaffold          | (foundation) SQLModel models, Supabase PostgreSQL connection, and Alembic migration tooling ready                                                    | Supabase project created | FR-003, FR-010, NFR data-isolation | done |
+| F-03 | registry-import              | (foundation) Polish medicines XML dataset loaded into PostgreSQL and queryable for autocomplete                                                       | F-02             | FR-003, FR-011, FR-012            | done |
 | F-04 | ci-cd-wiring                 | (foundation) GitHub Actions auto-deploys backend and frontend to Render on merge to main                                                             | —                | NFR persist-across-sessions       | ready    |
-| S-01 | add-medication-from-registry | add a medication by searching the Polish registry autocomplete, choosing tablet count, entering package count and expiry date; entry appears in cabinet with correct status; duplicate entries merge per dedup rule | F-01, F-02, F-03 | US-01, FR-003, FR-010, FR-022 | proposed |
-| S-02 | cabinet-view-and-search      | view cabinet as a filterable, sortable, paginated list; search by name or active ingredient; see producer, route of administration, and leaflet/specification links on each entry | S-01 | US-03, FR-004, FR-006, FR-011, FR-012 | proposed |
+| S-01 | add-medication-from-registry | add a medication by searching the Polish registry autocomplete, choosing tablet count, entering package count and expiry date; entry appears in cabinet with correct status; duplicate entries merge per dedup rule | F-01, F-02, F-03 | US-01, FR-003, FR-010, FR-022 | done |
+| S-08 | mobile-responsive-cabinet    | view and use the cabinet add flow and list on a mobile-width screen without layout breakage; desktop experience is preserved unchanged                                                                              | S-01             | NFR (responsive design)       | proposed |
+| S-02 | cabinet-view-and-search      | view cabinet as a filterable, sortable, paginated list; search by name or active ingredient; see route of administration and leaflet/specification links on each entry | S-01 | US-03, FR-004, FR-006, FR-011, FR-012 | proposed |
 | S-04 | important-category           | mark a medication as "important", set the global minimum package count, and see an attention badge when stock falls below minimum or medication is expiring/expired | S-02 | FR-013, FR-014, FR-020 (partial) | proposed |
 | S-05 | dosage-tracking              | assign a tablet-based medication to the "used" category with a dosage schedule and optional end date; see the estimated finish date or sufficiency indicator; non-tablet medications marked used for date tracking only | S-02 | US-04, FR-015, FR-016, FR-017, FR-018 | proposed |
 | S-03 | manage-cabinet-entry         | increment or decrement package count, update partial tablet count, and delete an entry with confirmation; important/used entries stay at zero so the user can restock | S-02, S-04 | FR-005 | proposed |
@@ -47,6 +48,7 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 | Stream | Theme                | Chain                                          | Note                                                                          |
 |--------|----------------------|------------------------------------------------|-------------------------------------------------------------------------------|
 | A      | Core trunk           | `F-01` → `F-02` → `F-03` → `S-01` → `S-02`   | Main dependency spine; north star (S-01) sits as early as Prerequisites allow |
+| A′     | Mobile polish        | `S-01` → `S-08`                                | Branches from S-01 in parallel with S-02; scoped to responsive layout only    |
 | B      | CI/CD                | `F-04`                                         | Standalone; run in parallel with Stream A from day one                        |
 | C      | Cabinet management   | `S-04` → `S-03`                                | Branches from S-02; S-03 needs category-aware zero behaviour from S-04        |
 | D      | Dosage tracking      | `S-05`                                         | Branches from S-02 in parallel with Stream C                                  |
@@ -77,7 +79,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Sequenced first because every downstream slice requires a verified user; auth bugs discovered late are expensive to retrofit across all routes. The thin auth UI (the app's entry screen) is included here so the flow is verifiable end-to-end — keeping it minimal avoids this foundation drifting into a full account-management slice.
-- **Status:** implemented
+- **Status:** done
 
 ### F-02: Data layer scaffold
 
@@ -90,7 +92,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Schema design decisions here ripple through all slices — modelling the deduplication key (drug + tablet count + expiry date, FR-010) correctly up front avoids a disruptive migration mid-build. A full-text index on medication name and active ingredient should be included here to satisfy the < 500ms p95 autocomplete NFR before S-01 is built.
-- **Status:** implemented
+- **Status:** done
 
 ### F-03: Registry import
 
@@ -105,7 +107,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
   - Does the XML dataset include all fields the PRD requires (tablet count per package, producer, route of administration, leaflet URL, specification URL)? — Owner: user. Block: no (developer has seen the dataset; field mapping is an implementation task, not an open question).
   - Dataset URL (public, no licence or registration required): `https://rejestry.ezdrowie.gov.pl/api/rpl/medicinal-products/public-pl-report/6.0.0/overall.xml` — large file, download only during the import script run.
 - **Risk:** XML field normalisation may be non-trivial (e.g. tablet count stored as a string, multiple route-of-administration values per entry). Resolving this during F-03 keeps S-01 clean and avoids patching the import after the add flow is built.
-- **Status:** implemented
+- **Status:** done
 
 ### F-04: CI/CD wiring
 
@@ -132,11 +134,23 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** The deduplication and tablet-pool normalisation logic (FR-010) is the most complex business rule in this slice; validate it with unit tests before wiring the UI to avoid subtle merge bugs appearing only in edge cases.
+- **Status:** done
+
+### S-08: Mobile-responsive cabinet
+
+- **Outcome:** user can view and use the cabinet add flow and medicine list on a mobile-width screen without layout breakage; the desktop experience is preserved unchanged; the medication table adapts to narrow screens (card layout or horizontal scroll).
+- **Change ID:** mobile-responsive-cabinet
+- **PRD refs:** NFR (responsive design)
+- **Prerequisites:** S-01
+- **Parallel with:** S-02
+- **Blockers:** —
+- **Unknowns:** —
+- **Risk:** The cabinet table is the primary breakage point — wide column sets collapse poorly at mobile widths. Scoping this slice to the add flow and list only (not the full rich list from S-02) keeps it small and shippable after S-01.
 - **Status:** proposed
 
 ### S-02: Cabinet view and search
 
-- **Outcome:** user can view their cabinet as a filterable (by status and category), sortable (by name), and paginated list; search by medication name or active ingredient; each entry shows producer, route of administration, and links to the drug leaflet and specification sourced from the registry.
+- **Outcome:** user can view their cabinet as a filterable (by status and category), sortable (by name), and paginated list; search by medication name or active ingredient; each entry shows route of administration and links to the drug leaflet and specification sourced from the registry.
 - **Change ID:** cabinet-view-and-search
 - **PRD refs:** US-03, FR-004, FR-006, FR-011, FR-012
 - **Prerequisites:** S-01
@@ -215,6 +229,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | F-03       | registry-import              | Registry import: Polish medicines XML → PostgreSQL                            | no                    | Depends on F-02                   |
 | F-04       | ci-cd-wiring                 | CI/CD: GitHub Actions → Render deploy hooks                                   | yes                   | Run `/10x-plan ci-cd-wiring`      |
 | S-01       | add-medication-from-registry | Feature: add medication from Polish registry (autocomplete + add flow + dedup)| no                    | Depends on F-01, F-02, F-03       |
+| S-08       | mobile-responsive-cabinet    | Feature: mobile-responsive cabinet add flow and list                          | yes                   | Depends on S-01; parallel with S-02; run `/10x-plan mobile-responsive-cabinet` |
 | S-02       | cabinet-view-and-search      | Feature: cabinet list with filter, sort, search, and entry details            | no                    | Depends on S-01                   |
 | S-04       | important-category           | Feature: important category + global minimum + attention badge                | no                    | Depends on S-02; parallel with S-05 |
 | S-05       | dosage-tracking              | Feature: used category + dosage schedule + finish-date calculation            | no                    | Depends on S-02; parallel with S-04 |
@@ -241,4 +256,8 @@ _(none — all questions resolved before roadmap finalisation)_
 
 ## Done
 
-(Empty on first generation. `/10x-archive` appends an entry here — and flips that item's `Status` to `done` — when a change whose `Change ID` matches the item is archived.)
+- **F-03: (foundation) Polish medicines XML dataset loaded into PostgreSQL and queryable for autocomplete** — Archived 2026-06-15 → `context/archive/2026-06-04-registry-import/`. Lesson: —.
+
+- **F-01: (foundation) Supabase Auth integrated end-to-end. The unauthenticated entry screen presents register and login forms plus a logout control, all wired to Supabase Auth; users can register, log in, and log out; a FastAPI dependency guard rejects unauthenticated requests on all protected routes. Scope is the minimal auth UI needed to exercise the flow — not account settings or profile management.** — Archived 2026-06-15 → `context/archive/2026-06-05-auth-scaffold/`. Lesson: —.
+- **F-02: (foundation) SQLModel installed; cabinet, medication-registry, and user-preference models defined; Alembic migration tooling wired; FastAPI connects to Supabase PostgreSQL via `DATABASE_URL`.** — Archived 2026-06-15 → `context/archive/2026-06-04-data-layer-scaffold/`. Lesson: —.
+- **S-01: user can type a medication name, select from the autocomplete dropdown sourced from the Polish registry, choose tablet count, enter package count (≥ 1), and set an expiry date; the entry appears in their cabinet with the correct status classification (valid / expiring soon / expired); adding the same drug + tablet count + expiry date a second time merges the entries per the deduplication and normalisation rule.** — Archived 2026-06-15 → `context/archive/2026-06-09-add-medication-from-registry/`. Lesson: —.

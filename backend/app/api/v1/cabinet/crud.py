@@ -2,9 +2,9 @@
 
 import logging
 import uuid
-from datetime import date
+from datetime import date, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlmodel import col
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -129,32 +129,100 @@ async def insert_entry(
     return entry
 
 
+def _build_base_query(
+    user_id: uuid.UUID,
+    today: date,
+    threshold: int,
+    status: str | None,
+    tsquery: str | None,
+):
+    """Build the filtered join query (no ORDER BY / LIMIT / OFFSET).
+
+    Args:
+        user_id: UUID of the authenticated user.
+        today: Reference date for status computation.
+        threshold: Expiry threshold in days.
+        status: Optional status filter ("valid", "expiring", "expired").
+        tsquery: Optional safe prefix tsquery string for full-text search.
+
+    Returns:
+        A SQLAlchemy select construct with all WHERE clauses applied.
+    """
+    stmt = (
+        select(CabinetEntry, MedicationRegistry)
+        .join(
+            MedicationRegistry,
+            col(CabinetEntry.medication_registry_id) == col(MedicationRegistry.id),
+        )
+        .where(col(CabinetEntry.user_id) == user_id)
+    )
+    if status == "expired":
+        stmt = stmt.where(col(CabinetEntry.expiry_date) < today)
+    elif status == "expiring":
+        stmt = stmt.where(
+            col(CabinetEntry.expiry_date) >= today,
+            col(CabinetEntry.expiry_date) <= today + timedelta(days=threshold),
+        )
+    elif status == "valid":
+        stmt = stmt.where(
+            col(CabinetEntry.expiry_date) > today + timedelta(days=threshold)
+        )
+    if tsquery is not None:
+        stmt = stmt.where(
+            text(
+                "medication_registry.search_vector @@ to_tsquery('simple', :tsquery)"
+            ).bindparams(tsquery=tsquery)
+        )
+    return stmt
+
+
 async def list_entries(
     session: AsyncSession,
     user_id: uuid.UUID,
-) -> list[tuple[CabinetEntry, MedicationRegistry]]:
-    """Fetch all cabinet entries for a user, joined to their registry rows.
+    today: date,
+    threshold: int,
+    status: str | None,
+    tsquery: str | None,
+    order: str,
+    limit: int,
+    offset: int,
+) -> tuple[list[tuple[CabinetEntry, MedicationRegistry]], int]:
+    """Fetch a filtered, sorted, paginated page of cabinet entries plus total count.
 
     Args:
         session: Active async database session.
         user_id: UUID of the authenticated user.
+        today: Reference date for status SQL predicates.
+        threshold: Expiry threshold days for status SQL predicates.
+        status: Optional status filter ("valid", "expiring", "expired").
+        tsquery: Optional safe prefix tsquery string for full-text search.
+        order: Sort direction for medication name ("asc" or "desc").
+        limit: Page size.
+        offset: Row offset for pagination.
 
     Returns:
-        List of (CabinetEntry, MedicationRegistry) tuples ordered by registry name.
+        Tuple of (page rows, total count under the same filters).
 
     Raises:
-        CabinetDatabaseError: If the database query fails.
+        CabinetDatabaseError: If any database query fails.
     """
+    base = _build_base_query(user_id, today, threshold, status, tsquery)
+
+    name_col = func.lower(col(MedicationRegistry.name))
+    order_clause = name_col.asc() if order == "asc" else name_col.desc()
+
+    page_q = (
+        base.order_by(order_clause, col(CabinetEntry.id).asc())
+        .limit(limit)
+        .offset(offset)
+    )
+
+    count_q = select(func.count()).select_from(
+        _build_base_query(user_id, today, threshold, status, tsquery).subquery()
+    )
+
     try:
-        result = await session.execute(
-            select(CabinetEntry, MedicationRegistry)
-            .join(
-                MedicationRegistry,
-                col(CabinetEntry.medication_registry_id) == col(MedicationRegistry.id),
-            )
-            .where(col(CabinetEntry.user_id) == user_id)
-            .order_by(col(MedicationRegistry.name))
-        )
+        page_result = await session.execute(page_q)
     except SQLAlchemyError as exc:
         logger.error(
             "Failed to list cabinet entries for user %s: %s",
@@ -163,7 +231,21 @@ async def list_entries(
             exc_info=True,
         )
         raise CabinetDatabaseError() from exc
-    return list(result.tuples().all())
+
+    try:
+        count_result = await session.execute(count_q)
+    except SQLAlchemyError as exc:
+        logger.error(
+            "Failed to count cabinet entries for user %s: %s",
+            user_id,
+            exc,
+            exc_info=True,
+        )
+        raise CabinetDatabaseError() from exc
+
+    rows = list(page_result.tuples().all())
+    total = count_result.scalar_one()
+    return rows, total
 
 
 async def update_entry_counts(
