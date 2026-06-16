@@ -39,6 +39,8 @@ class TestFacadeListEntries:
 
         call_kwargs = mock_cabinet_service.list_entries.call_args.kwargs
         assert call_kwargs["search"] == "apap"
+        assert "category" in call_kwargs
+        assert "min_package_count" in call_kwargs
 
     async def test_no_q_forwards_none(
         self,
@@ -50,6 +52,7 @@ class TestFacadeListEntries:
 
         call_kwargs = mock_cabinet_service.list_entries.call_args.kwargs
         assert call_kwargs["search"] is None
+        assert call_kwargs["category"] is None
 
     async def test_status_and_order_forwarded(
         self,
@@ -64,6 +67,7 @@ class TestFacadeListEntries:
             order="desc",
             page=2,
             page_size=50,
+            category="important",
         )
 
         call_kwargs = mock_cabinet_service.list_entries.call_args.kwargs
@@ -71,3 +75,15 @@ class TestFacadeListEntries:
         assert call_kwargs["order"] == "desc"
         assert call_kwargs["page"] == 2
         assert call_kwargs["page_size"] == 50
+        assert call_kwargs["category"] == "important"
+
+    async def test_category_none_forwarded_by_default(
+        self,
+        mock_session: AsyncMock,
+        mock_users_service,
+        mock_cabinet_service,
+    ):
+        await list_entries(session=mock_session, user_id=_USER_ID)
+
+        call_kwargs = mock_cabinet_service.list_entries.call_args.kwargs
+        assert call_kwargs["category"] is None

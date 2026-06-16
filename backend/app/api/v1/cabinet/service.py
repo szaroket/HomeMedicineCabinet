@@ -126,6 +126,24 @@ def merge_non_tablet_entry(
     return existing_packages + new_packages
 
 
+def is_below_minimum(
+    is_important: bool,
+    package_count: int,
+    min_package_count: int,
+) -> bool:
+    """Return True when an important entry has fewer packages than the global minimum.
+
+    Args:
+        is_important: Whether the entry is marked important.
+        package_count: Current package count for the entry.
+        min_package_count: User's global minimum package count.
+
+    Returns:
+        True only when is_important is True and package_count < min_package_count.
+    """
+    return is_important and package_count < min_package_count
+
+
 def classify_status(
     expiry_date: date,
     today: date,
@@ -172,6 +190,7 @@ def _map_row_to_entry_out(
     variant: MedicationRegistry,
     today: date,
     expiry_threshold_days: int,
+    min_package_count: int = 1,
 ) -> CabinetEntryOut:
     """Map a (CabinetEntry, MedicationRegistry) row to CabinetEntryOut.
 
@@ -180,6 +199,7 @@ def _map_row_to_entry_out(
         variant: The joined registry row.
         today: Reference date for status classification.
         expiry_threshold_days: Days ahead that triggers "expiring" status.
+        min_package_count: User's global minimum package count for below-minimum signal.
 
     Returns:
         Populated CabinetEntryOut.
@@ -211,6 +231,10 @@ def _map_row_to_entry_out(
         expiry_date=entry.expiry_date,
         total_tablets=_computed_total(entry, tpp),
         status=classify_status(entry.expiry_date, today, expiry_threshold_days),
+        is_important=entry.is_important,
+        below_minimum=is_below_minimum(
+            entry.is_important, entry.package_count, min_package_count
+        ),
         active_ingredient=variant.active_ingredient,
         route_of_administration=variant.route_of_administration,
         leaflet_url=variant.leaflet_url,
@@ -227,6 +251,8 @@ async def list_entries(
     order: str = "asc",
     page: int = 1,
     page_size: int = 20,
+    min_package_count: int = 1,
+    category: str | None = None,
 ) -> CabinetPageOut:
     """Return a paginated page of cabinet entries with computed expiry status.
 
@@ -239,6 +265,8 @@ async def list_entries(
         order: Sort direction for medication name ("asc" or "desc").
         page: 1-based page number.
         page_size: Number of items per page (20, 50, or 100).
+        min_package_count: User's global minimum package count for below-minimum signal.
+        category: Optional category filter ("important" filters to important entries).
 
     Returns:
         CabinetPageOut with items, total, page, and page_size.
@@ -256,9 +284,16 @@ async def list_entries(
         order=order,
         limit=page_size,
         offset=offset,
+        category=category,
     )
     items = [
-        _map_row_to_entry_out(entry, variant, today, expiry_threshold_days)
+        _map_row_to_entry_out(
+            entry=entry,
+            variant=variant,
+            today=today,
+            expiry_threshold_days=expiry_threshold_days,
+            min_package_count=min_package_count,
+        )
         for entry, variant in rows
     ]
     return CabinetPageOut(items=items, total=total, page=page, page_size=page_size)

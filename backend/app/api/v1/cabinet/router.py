@@ -53,6 +53,7 @@ async def list_entries(
             order=params.order,
             page=params.page,
             page_size=params.page_size,
+            category=params.category,
         )
     except (CabinetDatabaseError, UserDatabaseError) as exc:
         raise HTTPException(

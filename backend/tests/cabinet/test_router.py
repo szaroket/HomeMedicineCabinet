@@ -226,6 +226,8 @@ def _make_cabinet_entry_out(**overrides) -> CabinetEntryOut:
         expiry_date=date(2027, 6, 1),
         total_tablets=25,
         status="valid",
+        is_important=False,
+        below_minimum=False,
         active_ingredient="Paracetamolum",
         route_of_administration="doustna",
         leaflet_url="https://example.com/leaflet",
@@ -405,3 +407,48 @@ class TestListEntriesErrorMapping:
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.json()["detail"] == "bad request"
+
+
+class TestListEntriesImportanceFields:
+    @pytest.mark.asyncio
+    async def test_response_includes_is_important_and_below_minimum(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.list_entries",
+            new_callable=AsyncMock,
+            return_value=_make_page_out(
+                [_make_cabinet_entry_out(is_important=True, below_minimum=True)]
+            ),
+        )
+
+        response = await authed_client.get("/api/v1/cabinet/entries")
+
+        assert response.status_code == status.HTTP_200_OK
+        item = response.json()["items"][0]
+        assert item["is_important"] is True
+        assert item["below_minimum"] is True
+
+    @pytest.mark.asyncio
+    async def test_category_important_forwarded_to_facade(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mock_facade = mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.list_entries",
+            new_callable=AsyncMock,
+            return_value=_make_page_out([]),
+        )
+
+        response = await authed_client.get(
+            "/api/v1/cabinet/entries", params={"category": "important"}
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert mock_facade.call_args.kwargs["category"] == "important"
+
+    @pytest.mark.asyncio
+    async def test_invalid_category_returns_422(self, authed_client: AsyncClient):
+        response = await authed_client.get(
+            "/api/v1/cabinet/entries", params={"category": "used"}
+        )
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT

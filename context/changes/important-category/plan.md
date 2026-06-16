@@ -555,10 +555,10 @@ None — `is_important` and `min_package_count` columns already exist in the ini
 
 #### Automated
 
-- [ ] 3.1 Backend tests pass: `uv run pytest`
-- [ ] 3.2 Lint + format pass: `uv run ruff check . && uv run ruff format --check .`
-- [ ] 3.3 Parametrized unit tests for `is_below_minimum`
-- [ ] 3.4 Endpoint tests: new fields present; `?category=important` filters; invalid category → 422
+- [x] 3.1 Backend tests pass: `uv run pytest`
+- [x] 3.2 Lint + format pass: `uv run ruff check . && uv run ruff format --check .`
+- [x] 3.3 Parametrized unit tests for `is_below_minimum`
+- [x] 3.4 Endpoint tests: new fields present; `?category=important` filters; invalid category → 422
 
 #### Manual
 

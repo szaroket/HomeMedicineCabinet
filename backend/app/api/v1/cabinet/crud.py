@@ -135,6 +135,7 @@ def _build_base_query(
     threshold: int,
     status: str | None,
     tsquery: str | None,
+    category: str | None = None,
 ):
     """Build the filtered join query (no ORDER BY / LIMIT / OFFSET).
 
@@ -144,6 +145,7 @@ def _build_base_query(
         threshold: Expiry threshold in days.
         status: Optional status filter ("valid", "expiring", "expired").
         tsquery: Optional safe prefix tsquery string for full-text search.
+        category: Optional category filter ("important" filters to important entries).
 
     Returns:
         A SQLAlchemy select construct with all WHERE clauses applied.
@@ -173,6 +175,8 @@ def _build_base_query(
                 "medication_registry.search_vector @@ to_tsquery('simple', :tsquery)"
             ).bindparams(tsquery=tsquery)
         )
+    if category == "important":
+        stmt = stmt.where(col(CabinetEntry.is_important).is_(True))
     return stmt
 
 
@@ -186,6 +190,7 @@ async def list_entries(
     order: str,
     limit: int,
     offset: int,
+    category: str | None = None,
 ) -> tuple[list[tuple[CabinetEntry, MedicationRegistry]], int]:
     """Fetch a filtered, sorted, paginated page of cabinet entries plus total count.
 
@@ -199,6 +204,7 @@ async def list_entries(
         order: Sort direction for medication name ("asc" or "desc").
         limit: Page size.
         offset: Row offset for pagination.
+        category: Optional category filter ("important" filters to important entries).
 
     Returns:
         Tuple of (page rows, total count under the same filters).
@@ -206,7 +212,7 @@ async def list_entries(
     Raises:
         CabinetDatabaseError: If any database query fails.
     """
-    base = _build_base_query(user_id, today, threshold, status, tsquery)
+    base = _build_base_query(user_id, today, threshold, status, tsquery, category)
 
     name_col = func.lower(col(MedicationRegistry.name))
     order_clause = name_col.asc() if order == "asc" else name_col.desc()
@@ -218,7 +224,9 @@ async def list_entries(
     )
 
     count_q = select(func.count()).select_from(
-        _build_base_query(user_id, today, threshold, status, tsquery).subquery()
+        _build_base_query(
+            user_id, today, threshold, status, tsquery, category
+        ).subquery()
     )
 
     try:

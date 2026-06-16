@@ -16,6 +16,7 @@ from app.api.v1.cabinet.service import (
     TabletPool,
     add_entry,
     classify_status,
+    is_below_minimum,
     list_entries,
     merge_non_tablet_entry,
     merge_tablet_entry,
@@ -506,6 +507,40 @@ class TestAddEntryValidation:
 
 
 # ---------------------------------------------------------------------------
+# is_below_minimum
+# ---------------------------------------------------------------------------
+
+
+class TestIsBelowMinimum:
+    @pytest.mark.parametrize(
+        ("is_important_flag", "package_count", "min_package_count", "expected"),
+        [
+            (True, 0, 1, True),  # important, strictly below minimum
+            (True, 1, 2, True),  # important, one below minimum of 2
+            (True, 1, 1, False),  # important, exactly at minimum (no signal)
+            (True, 2, 1, False),  # important, above minimum
+            (False, 0, 1, False),  # not important, no signal regardless of count
+            (False, 0, 5, False),  # not important, deeply below — still no signal
+        ],
+    )
+    def test_is_below_minimum(
+        self,
+        is_important_flag: bool,
+        package_count: int,
+        min_package_count: int,
+        expected: bool,
+    ):
+        assert (
+            is_below_minimum(
+                is_important=is_important_flag,
+                package_count=package_count,
+                min_package_count=min_package_count,
+            )
+            == expected
+        )
+
+
+# ---------------------------------------------------------------------------
 # list_entries
 # ---------------------------------------------------------------------------
 
@@ -562,6 +597,8 @@ class TestListEntries:
         assert result.items[0].active_ingredient == variant.active_ingredient
         assert result.items[0].leaflet_url == variant.leaflet_url
         assert result.items[0].specification_url == variant.specification_url
+        assert result.items[0].is_important is False
+        assert result.items[0].below_minimum is False
 
     async def test_expired_entry_returns_expired_status(
         self, mock_session: AsyncMock, mock_list_crud
@@ -694,3 +731,53 @@ class TestListEntries:
 
         assert result.items[0].total_tablets is None
         spy_logger.warning.assert_called_once()
+
+    async def test_important_entry_below_minimum_sets_below_minimum_true(
+        self, mock_session: AsyncMock, mock_list_crud
+    ):
+        entry = CabinetEntry(
+            id=_ENTRY_ID,
+            user_id=_USER_ID,
+            medication_registry_id=_REGISTRY_ID,
+            package_count=1,
+            partial_tablet_count=None,
+            expiry_date=date.today() + timedelta(days=60),
+            is_important=True,
+        )
+        variant = _make_variant(is_tablet_based=False)
+        mock_list_crud.list_entries = AsyncMock(return_value=([(entry, variant)], 1))
+
+        result = await list_entries(
+            session=mock_session,
+            user_id=_USER_ID,
+            expiry_threshold_days=30,
+            min_package_count=2,
+        )
+
+        assert result.items[0].is_important is True
+        assert result.items[0].below_minimum is True
+
+    async def test_important_entry_at_minimum_does_not_set_below_minimum(
+        self, mock_session: AsyncMock, mock_list_crud
+    ):
+        entry = CabinetEntry(
+            id=_ENTRY_ID,
+            user_id=_USER_ID,
+            medication_registry_id=_REGISTRY_ID,
+            package_count=2,
+            partial_tablet_count=None,
+            expiry_date=date.today() + timedelta(days=60),
+            is_important=True,
+        )
+        variant = _make_variant(is_tablet_based=False)
+        mock_list_crud.list_entries = AsyncMock(return_value=([(entry, variant)], 1))
+
+        result = await list_entries(
+            session=mock_session,
+            user_id=_USER_ID,
+            expiry_threshold_days=30,
+            min_package_count=2,
+        )
+
+        assert result.items[0].is_important is True
+        assert result.items[0].below_minimum is False

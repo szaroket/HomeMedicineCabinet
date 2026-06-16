@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.cabinet import service as cabinet_service
 from app.api.v1.cabinet.schemas import CabinetPageOut
 from app.api.v1.users import service as users_service
-from app.utilities.const import DEFAULT_EXPIRY_THRESHOLD_DAYS
+from app.utilities.const import DEFAULT_EXPIRY_THRESHOLD_DAYS, DEFAULT_MIN_PACKAGE_COUNT
 
 
 async def list_entries(
@@ -23,6 +23,7 @@ async def list_entries(
     order: str = "asc",
     page: int = 1,
     page_size: int = 20,
+    category: str | None = None,
 ) -> CabinetPageOut:
     """Return the current user's cabinet entries with computed status, filtered and paginated.
 
@@ -36,6 +37,7 @@ async def list_entries(
         order: Sort direction for medication name ("asc" or "desc").
         page: 1-based page number.
         page_size: Number of items per page.
+        category: Optional category filter ("important" filters to important entries).
 
     Returns:
         CabinetPageOut with items, total, page, and page_size.
@@ -46,6 +48,9 @@ async def list_entries(
         if prefs is not None
         else DEFAULT_EXPIRY_THRESHOLD_DAYS
     )
+    min_package_count = (
+        prefs.min_package_count if prefs is not None else DEFAULT_MIN_PACKAGE_COUNT
+    )
     return await cabinet_service.list_entries(
         session=session,
         user_id=user_id,
@@ -55,4 +60,6 @@ async def list_entries(
         order=order,
         page=page,
         page_size=page_size,
+        min_package_count=min_package_count,
+        category=category,
     )
