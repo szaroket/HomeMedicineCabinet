@@ -25,11 +25,11 @@ async def _resolve_prefs(session: AsyncSession, user_id: uuid.UUID) -> _Resolved
     """Fetch user preferences and fall back to defaults when no row exists.
 
     Args:
-        session: Active async database session.
-        user_id: Authenticated user's UUID.
+        session (AsyncSession): Active async database session.
+        user_id (uuid.UUID): Authenticated user's UUID.
 
     Returns:
-        _ResolvedPrefs with expiry_threshold_days and min_package_count.
+        _ResolvedPrefs: with expiry_threshold_days and min_package_count.
     """
     prefs = await users_service.get_user_preferences(session, user_id)
     return _ResolvedPrefs(
@@ -60,18 +60,18 @@ async def list_entries(
     Fetches user preferences from the users domain, then delegates to the cabinet service.
 
     Args:
-        session: Active async database session.
-        user_id: Authenticated user's UUID.
-        status: Optional status filter ("valid", "expiring", "expired").
-        search: Optional raw search string (name or active ingredient).
-        order: Sort direction for medication name ("asc" or "desc").
-        page: 1-based page number.
-        page_size: Number of items per page.
-        category: Optional category filter ("important" filters to important entries).
-        below_minimum: When True, filter to important entries below the package minimum.
+        session (AsyncSession): Active async database session.
+        user_id (uuid.UUID): Authenticated user's UUID.
+        status (str | None): Optional status filter ("valid", "expiring", "expired").
+        search (str | None): Optional raw search string (name or active ingredient).
+        order (str): Sort direction for medication name ("asc" or "desc").
+        page (int): 1-based page number.
+        page_size (int): Number of items per page.
+        category (str | None): Optional category filter ("important" filters to important entries).
+        below_minimum (bool | None): When True, filter to important entries below the package minimum.
 
     Returns:
-        CabinetPageOut with items, total, page, and page_size.
+        CabinetPageOut: with items, total, page, and page_size.
     """
     resolved = await _resolve_prefs(session, user_id)
     return await cabinet_service.list_entries(
@@ -100,13 +100,13 @@ async def set_entry_importance(
     Fetches user preferences to resolve thresholds, then delegates to the cabinet service.
 
     Args:
-        session: Active async database session.
-        user_id: Authenticated user's UUID.
-        entry_id: UUID of the cabinet entry to update.
-        is_important: New importance flag value.
+        session (AsyncSession): Active async database session.
+        user_id (uuid.UUID): Authenticated user's UUID.
+        entry_id (uuid.UUID): UUID of the cabinet entry to update.
+        is_important (bool): New importance flag value.
 
     Returns:
-        The updated CabinetEntryOut.
+        CabinetEntryOut: The updated CabinetEntryOut.
     """
     resolved = await _resolve_prefs(session, user_id)
     return await cabinet_service.set_entry_importance(

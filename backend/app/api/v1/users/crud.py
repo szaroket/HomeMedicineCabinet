@@ -23,11 +23,11 @@ async def get_user_preferences(
     """Fetch the UserPreferences row for a given user.
 
     Args:
-        session: Active async database session.
-        user_id: UUID of the user.
+        session (AsyncSession): Active async database session.
+        user_id (uuid.UUID): UUID of the user.
 
     Returns:
-        The UserPreferences instance, or None if not found.
+        UserPreferences | None: The UserPreferences instance, or None if not found.
 
     Raises:
         UserDatabaseError: If the database query fails.
@@ -52,12 +52,12 @@ async def update_min_package_count(
     """Update min_package_count on an existing preferences row.
 
     Args:
-        session: Active async database session.
-        prefs: Existing UserPreferences instance to update.
-        min_package_count: New minimum package count to persist.
+        session (AsyncSession): Active async database session.
+        prefs (UserPreferences): Existing UserPreferences instance to update.
+        min_package_count (int): New minimum package count to persist.
 
     Returns:
-        The updated UserPreferences instance.
+        UserPreferences: The updated UserPreferences instance.
 
     Raises:
         UserDatabaseError: If the flush or commit fails.
@@ -85,11 +85,11 @@ async def insert_preferences(
     """Persist a new UserPreferences row.
 
     Args:
-        session: Active async database session.
-        prefs: New UserPreferences instance to insert.
+        session (AsyncSession): Active async database session.
+        prefs (UserPreferences): New UserPreferences instance to insert.
 
     Returns:
-        The inserted UserPreferences instance.
+        UserPreferences: The inserted UserPreferences instance.
 
     Raises:
         UserDatabaseError: If the flush or commit fails.

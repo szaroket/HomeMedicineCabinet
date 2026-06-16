@@ -54,12 +54,12 @@ def total_tablets(
     """Compute total tablet count for a tablet-based entry.
 
     Args:
-        package_count: Number of full (or last partial) packages.
-        partial_tablet_count: Tablets remaining in the last package, or None for full.
-        tablets_per_package: Number of tablets in a full package.
+        package_count (int): Number of full (or last partial) packages.
+        partial_tablet_count (int | None): Tablets remaining in the last package, or None for full.
+        tablets_per_package (int): Number of tablets in a full package.
 
     Returns:
-        Total number of tablets across all packages.
+        int: Total number of tablets across all packages.
     """
     if partial_tablet_count is not None:
         return (package_count - 1) * tablets_per_package + partial_tablet_count
@@ -73,11 +73,11 @@ def normalize_tablet_pool(
     """Convert a raw tablet count back to a normalized TabletPool.
 
     Args:
-        total: Total number of tablets.
-        tablets_per_package: Number of tablets in a full package.
+        total (int): Total number of tablets.
+        tablets_per_package (int): Number of tablets in a full package.
 
     Returns:
-        TabletPool with partial_tablet_count=None when total divides evenly.
+        TabletPool: with partial_tablet_count=None when total divides evenly.
     """
     if total % tablets_per_package == 0:
         return TabletPool(total // tablets_per_package, None)
@@ -94,14 +94,14 @@ def merge_tablet_entry(
     """Merge two tablet-based cabinet entries into a normalized TabletPool.
 
     Args:
-        existing_package_count: Package count of the existing entry.
-        existing_partial_tablet_count: Partial tablet count of the existing entry.
-        new_package_count: Package count being added.
-        new_partial_tablet_count: Partial tablet count being added.
-        tablets_per_package: Tablets per full package.
+        existing_package_count (int): Package count of the existing entry.
+        existing_partial_tablet_count (int | None): Partial tablet count of the existing entry.
+        new_package_count (int): Package count being added.
+        new_partial_tablet_count (int | None): Partial tablet count being added.
+        tablets_per_package (int): Tablets per full package.
 
     Returns:
-        Normalized TabletPool after merging.
+        TabletPool: Normalized TabletPool after merging.
     """
     total_existing = total_tablets(
         existing_package_count, existing_partial_tablet_count, tablets_per_package
@@ -119,11 +119,11 @@ def merge_non_tablet_entry(
     """Merge two non-tablet cabinet entries by summing package counts.
 
     Args:
-        existing_packages: Package count of the existing entry.
-        new_packages: Package count being added.
+        existing_packages (int): Package count of the existing entry.
+        new_packages (int): Package count being added.
 
     Returns:
-        Combined package count.
+        int: Combined package count.
     """
     return existing_packages + new_packages
 
@@ -136,12 +136,12 @@ def is_below_minimum(
     """Return True when an important entry has fewer packages than the global minimum.
 
     Args:
-        is_important: Whether the entry is marked important.
-        package_count: Current package count for the entry.
-        min_package_count: User's global minimum package count.
+        is_important (bool): Whether the entry is marked important.
+        package_count (int): Current package count for the entry.
+        min_package_count (int): User's global minimum package count.
 
     Returns:
-        True only when is_important is True and package_count < min_package_count.
+        bool: True only when is_important is True and package_count < min_package_count.
     """
     return is_important and package_count < min_package_count
 
@@ -154,12 +154,12 @@ def classify_status(
     """Classify the expiry status of a cabinet entry.
 
     Args:
-        expiry_date: The entry's expiry date (calendar date, UTC-relative).
-        today: The reference date (UTC today).
-        expiry_threshold_days: Days ahead that triggers "expiring" status.
+        expiry_date (date): The entry's expiry date (calendar date, UTC-relative).
+        today (date): The reference date (UTC today).
+        expiry_threshold_days (int): Days ahead that triggers "expiring" status.
 
     Returns:
-        One of Status.EXPIRED, Status.EXPIRING, or Status.VALID.
+        str: One of Status.EXPIRED, Status.EXPIRING, or Status.VALID.
     """
     if expiry_date < today:
         return Status.EXPIRED
@@ -177,10 +177,10 @@ def _tablet_capacity_invalid(variant: MedicationRegistry) -> bool:
     -by-zero. Centralized so the read and write paths classify the breach identically.
 
     Args:
-        variant: The MedicationRegistry row for the selected variant.
+        variant (MedicationRegistry): The MedicationRegistry row for the selected variant.
 
     Returns:
-        True if the variant is tablet-based but its capacity is None or <= 0.
+        bool: True if the variant is tablet-based but its capacity is None or <= 0.
     """
     return variant.is_tablet_based and (
         variant.capacity is None or variant.capacity <= 0
@@ -197,14 +197,14 @@ def _map_row_to_entry_out(
     """Map a (CabinetEntry, MedicationRegistry) row to CabinetEntryOut.
 
     Args:
-        entry: The cabinet entry row.
-        variant: The joined registry row.
-        today: Reference date for status classification.
-        expiry_threshold_days: Days ahead that triggers "expiring" status.
-        min_package_count: User's global minimum package count for below-minimum signal.
+        entry (CabinetEntry): The cabinet entry row.
+        variant (MedicationRegistry): The joined registry row.
+        today (date): Reference date for status classification.
+        expiry_threshold_days (int): Days ahead that triggers "expiring" status.
+        min_package_count (int): User's global minimum package count for below-minimum signal.
 
     Returns:
-        Populated CabinetEntryOut.
+        CabinetEntryOut: Populated CabinetEntryOut.
     """
     capacity_invalid = _tablet_capacity_invalid(variant)
     if capacity_invalid:
@@ -260,20 +260,20 @@ async def list_entries(
     """Return a paginated page of cabinet entries with computed expiry status.
 
     Args:
-        session: Active async database session.
-        user_id: Authenticated user's UUID.
-        expiry_threshold_days: Days ahead that triggers "expiring" status.
-        status: Optional status filter ("valid", "expiring", "expired").
-        search: Optional raw search string (name or active ingredient).
-        order: Sort direction for medication name ("asc" or "desc").
-        page: 1-based page number.
-        page_size: Number of items per page (20, 50, or 100).
-        min_package_count: User's global minimum package count for below-minimum signal.
-        category: Optional category filter ("important" filters to important entries).
-        below_minimum: When True, filter to important entries below the package minimum.
+        session (AsyncSession): Active async database session.
+        user_id (uuid.UUID): Authenticated user's UUID.
+        expiry_threshold_days (int): Days ahead that triggers "expiring" status.
+        status (str | None): Optional status filter ("valid", "expiring", "expired").
+        search (str | None): Optional raw search string (name or active ingredient).
+        order (str): Sort direction for medication name ("asc" or "desc").
+        page (int): 1-based page number.
+        page_size (int): Number of items per page (20, 50, or 100).
+        min_package_count (int): User's global minimum package count for below-minimum signal.
+        category (str | None): Optional category filter ("important" filters to important entries).
+        below_minimum (bool | None): When True, filter to important entries below the package minimum.
 
     Returns:
-        CabinetPageOut with items, total, page, and page_size.
+        CabinetPageOut: with items, total, page, and page_size.
     """
     today = datetime.now(timezone.utc).date()
     offset = (page - 1) * page_size
@@ -312,11 +312,11 @@ async def _get_variant_or_raise(
     """Fetch a registry variant by ID or raise MedicationNotFoundError.
 
     Args:
-        session: Active async database session.
-        medication_registry_id: UUID of the registry row to look up.
+        session (AsyncSession): Active async database session.
+        medication_registry_id (uuid.UUID): UUID of the registry row to look up.
 
     Returns:
-        The MedicationRegistry row.
+        MedicationRegistry: The MedicationRegistry row.
 
     Raises:
         MedicationNotFoundError: When no row exists for the given ID.
@@ -334,11 +334,11 @@ def _validate_and_get_tpp(
     """Validate partial_tablet_count against the variant and return tablets-per-package.
 
     Args:
-        variant: The MedicationRegistry row for the selected variant.
-        partial_tablet_count: Tablets in the last package supplied by the caller.
+        variant (MedicationRegistry): The MedicationRegistry row for the selected variant.
+        partial_tablet_count (int | None): Tablets in the last package supplied by the caller.
 
     Returns:
-        Tablets per package (int) for tablet-based variants, None otherwise.
+        int | None: Tablets per package for tablet-based variants, None otherwise.
 
     Raises:
         CabinetInvariantError: When a tablet-based variant has a missing or
@@ -381,12 +381,12 @@ def _build_add_entry_out(
     """Assemble an AddEntryOut (no status) from a persisted entry and its variant.
 
     Args:
-        entry: The CabinetEntry row (flushed or committed).
-        variant: The MedicationRegistry row for display fields.
-        tpp: Tablets per package, or None for non-tablet variants.
+        entry (CabinetEntry): The CabinetEntry row (flushed or committed).
+        variant (MedicationRegistry): The MedicationRegistry row for display fields.
+        tpp (int | None): Tablets per package, or None for non-tablet variants.
 
     Returns:
-        Populated AddEntryOut without status.
+        AddEntryOut: Populated AddEntryOut without status.
     """
     return AddEntryOut(
         id=entry.id,
@@ -420,16 +420,16 @@ async def _insert_with_race_guard(
     to the merge path.
 
     Args:
-        session: Active async database session.
-        user_id: Authenticated user's UUID.
-        medication_registry_id: UUID of the selected registry variant.
-        package_count: Number of packages to insert.
-        partial_tablet_count: Tablets in the last package, or None.
-        expiry_date: Expiry date for the entry.
-        is_important: Whether the entry is marked important.
+        session (AsyncSession): Active async database session.
+        user_id (uuid.UUID): Authenticated user's UUID.
+        medication_registry_id (uuid.UUID): UUID of the selected registry variant.
+        package_count (int): Number of packages to insert.
+        partial_tablet_count (int | None): Tablets in the last package, or None.
+        expiry_date (date): Expiry date for the entry.
+        is_important (bool): Whether the entry is marked important.
 
     Returns:
-        The newly created CabinetEntry, or None if a race condition was detected.
+        CabinetEntry | None: The newly created CabinetEntry, or None if a race condition was detected.
     """
     try:
         return await crud.insert_entry(
@@ -464,18 +464,18 @@ async def _dedup_or_insert(
     ``IntegrityError``, rolls back and falls through to the merge path.
 
     Args:
-        session: Active async database session.
-        user_id: Authenticated user's UUID.
-        medication_registry_id: UUID of the selected registry variant.
-        package_count: Number of packages to add.
-        partial_tablet_count: Tablets in the last package, or None.
-        expiry_date: Expiry date for the entry.
-        variant: Already-fetched MedicationRegistry row.
-        tpp: Tablets per package, or None for non-tablet variants.
-        is_important: Whether the incoming add marks this entry as important.
+        session (AsyncSession): Active async database session.
+        user_id (uuid.UUID): Authenticated user's UUID.
+        medication_registry_id (uuid.UUID): UUID of the selected registry variant.
+        package_count (int): Number of packages to add.
+        partial_tablet_count (int | None): Tablets in the last package, or None.
+        expiry_date (date): Expiry date for the entry.
+        variant (MedicationRegistry): Already-fetched MedicationRegistry row.
+        tpp (int | None): Tablets per package, or None for non-tablet variants.
+        is_important (bool): Whether the incoming add marks this entry as important.
 
     Returns:
-        AddEntryResult with merged=False for a fresh insert, merged=True on merge.
+        AddEntryResult: with merged=False for a fresh insert, merged=True on merge.
 
     Raises:
         CabinetInvariantError: If an IntegrityError occurs but the row is missing.
@@ -546,16 +546,16 @@ async def add_entry(
     entry important (FR-010 addendum).
 
     Args:
-        session: Active async database session.
-        user_id: Authenticated user's UUID.
-        medication_registry_id: UUID of the selected registry variant.
-        package_count: Number of packages to add (>= 1).
-        partial_tablet_count: Tablets in the last package, or None.
-        expiry_date: Expiry date for the entry.
-        is_important: Whether the incoming add marks this entry as important.
+        session (AsyncSession): Active async database session.
+        user_id (uuid.UUID): Authenticated user's UUID.
+        medication_registry_id (uuid.UUID): UUID of the selected registry variant.
+        package_count (int): Number of packages to add (>= 1).
+        partial_tablet_count (int | None): Tablets in the last package, or None.
+        expiry_date (date): Expiry date for the entry.
+        is_important (bool): Whether the incoming add marks this entry as important.
 
     Returns:
-        AddEntryResult with merged flag, the resulting entry, and an optional
+        AddEntryResult: with merged flag, the resulting entry, and an optional
         MergeSummary.
 
     Raises:
@@ -589,15 +589,15 @@ async def set_entry_importance(
     """Toggle the importance flag on a cabinet entry owned by the user.
 
     Args:
-        session: Active async database session.
-        user_id: Authenticated user's UUID.
-        entry_id: UUID of the cabinet entry to update.
-        is_important: New importance flag value.
-        expiry_threshold_days: Days ahead that triggers "expiring" status.
-        min_package_count: User's global minimum package count for below-minimum signal.
+        session (AsyncSession): Active async database session.
+        user_id (uuid.UUID): Authenticated user's UUID.
+        entry_id (uuid.UUID): UUID of the cabinet entry to update.
+        is_important (bool): New importance flag value.
+        expiry_threshold_days (int): Days ahead that triggers "expiring" status.
+        min_package_count (int): User's global minimum package count for below-minimum signal.
 
     Returns:
-        The updated CabinetEntryOut with recomputed status and below_minimum.
+        CabinetEntryOut: The updated CabinetEntryOut with recomputed status and below_minimum.
 
     Raises:
         EntryNotFoundError: When the entry does not exist or does not belong to the user.
@@ -638,16 +638,16 @@ async def _merge_and_commit(
     """Apply FR-010 merge math, persist the update, and return AddEntryResult.
 
     Args:
-        session: Active async database session.
-        existing: The existing CabinetEntry to merge into.
-        new_package_count: Package count of the incoming add.
-        new_partial: Partial tablet count of the incoming add, or None.
-        variant: The MedicationRegistry row for display fields.
-        tpp: Tablets per package (int) for tablet-based variants, None otherwise.
-        is_important: Importance of the incoming add; OR'd with existing flag.
+        session (AsyncSession): Active async database session.
+        existing (CabinetEntry): The existing CabinetEntry to merge into.
+        new_package_count (int): Package count of the incoming add.
+        new_partial (int | None): Partial tablet count of the incoming add, or None.
+        variant (MedicationRegistry): The MedicationRegistry row for display fields.
+        tpp (int | None): Tablets per package for tablet-based variants, None otherwise.
+        is_important (bool): Importance of the incoming add; OR'd with existing flag.
 
     Returns:
-        AddEntryResult with merged=True and populated merge_summary.
+        AddEntryResult: with merged=True and populated merge_summary.
     """
     prev_pkg = existing.package_count
     prev_partial = existing.partial_tablet_count

@@ -18,10 +18,10 @@ def _get_signing_key(token: str) -> object:
     """Resolve the RSA/EC signing key for the given JWT from the JWKS endpoint.
 
     Args:
-        token: The raw JWT string.
+        token (str): The raw JWT string.
 
     Returns:
-        The public signing key object.
+        object: The public signing key object.
 
     Raises:
         HTTPException: 503 if the JWKS endpoint is unreachable; 401 if the key
@@ -45,11 +45,11 @@ def _decode_jwt(token: str, key: object) -> dict:
     """Decode and validate a JWT against the project's issuer/audience settings.
 
     Args:
-        token: The raw JWT string.
-        key: The signing key returned by `_get_signing_key`.
+        token (str): The raw JWT string.
+        key (object): The signing key returned by `_get_signing_key`.
 
     Returns:
-        The verified claims payload as a dictionary.
+        dict: The verified claims payload as a dictionary.
 
     Raises:
         HTTPException: 401 with a specific message for each validation failure.
@@ -100,10 +100,10 @@ def get_token_claims(
     """FastAPI dependency that extracts and validates the Bearer JWT from the request.
 
     Args:
-        credentials: Bearer credentials extracted by `HTTPBearer`.
+        credentials (HTTPAuthorizationCredentials): Bearer credentials extracted by `HTTPBearer`.
 
     Returns:
-        The verified JWT claims payload.
+        dict: The verified JWT claims payload.
 
     Raises:
         HTTPException: 401 if the token is invalid or cannot be verified.
@@ -117,9 +117,9 @@ def get_current_user(claims: dict = Depends(get_token_claims)) -> CurrentUser:
     """FastAPI dependency that maps verified JWT claims to a CurrentUser.
 
     Args:
-        claims: Verified JWT payload provided by `get_token_claims`.
+        claims (dict): Verified JWT payload provided by `get_token_claims`.
 
     Returns:
-        A `CurrentUser` with `id` (Supabase sub) and `email`.
+        CurrentUser: A `CurrentUser` with `id` (Supabase sub) and `email`.
     """
     return CurrentUser(id=UUID(claims["sub"]), email=claims.get("email", ""))

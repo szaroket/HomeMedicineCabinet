@@ -15,10 +15,10 @@ class _CorrelationIdFilter(logging.Filter):
         """Add correlation_id attribute to the record.
 
         Args:
-            record: The log record being emitted.
+            record (logging.LogRecord): The log record being emitted.
 
         Returns:
-            Always True — this filter never suppresses records.
+            bool: Always True — this filter never suppresses records.
         """
         record.correlation_id = correlation_id_var.get()
         return True
@@ -82,6 +82,6 @@ def generate_correlation_id() -> str:
     """Return a new short correlation ID (8 hex chars).
 
     Returns:
-        A random 8-character hexadecimal string.
+        str: A random 8-character hexadecimal string.
     """
     return uuid.uuid4().hex[:8]

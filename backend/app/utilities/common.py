@@ -18,10 +18,10 @@ def build_tsquery(query: str) -> str | None:
     user input cannot inject tsquery syntax.
 
     Args:
-        query: Raw user search string.
+        query (str): Raw user search string.
 
     Returns:
-        A tsquery string (e.g. ``apap:* & forte:*``), or None when the query
+        str | None: A tsquery string (e.g. ``apap:* & forte:*``), or None when the query
         has fewer than two effective characters.
     """
     tokens = _TOKEN_RE.findall(query)

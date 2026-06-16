@@ -48,8 +48,8 @@ async def persist(
     can translate it into a domain error.
 
     Args:
-        session: Active async database session.
-        *instances: ORM model instances to refresh after the flush.
+        session (AsyncSession): Active async database session.
+        *instances (object): ORM model instances to refresh after the flush.
 
     Yields:
         None — the caller performs ``session.add(...)`` inside the block.

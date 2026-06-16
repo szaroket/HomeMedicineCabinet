@@ -8,14 +8,14 @@ class AuthError(Exception):
     """Base class for authentication/authorisation domain errors.
 
     Attributes:
-        message: Human-readable description of the error (English).
+        message (str): Human-readable description of the error (English).
     """
 
     def __init__(self, message: str) -> None:
         """Initialise the error with a message.
 
         Args:
-            message: Description of what went wrong.
+            message (str): Description of what went wrong.
         """
         super().__init__(message)
         self.message = message
@@ -28,7 +28,7 @@ class InvalidCredentialsError(AuthError):
         """Initialise with a default message.
 
         Args:
-            message: Description of what went wrong.
+            message (str): Description of what went wrong.
         """
         super().__init__(message)
 
@@ -42,7 +42,7 @@ class DuplicateEmailError(AuthError):
         """Initialise with a default message.
 
         Args:
-            message: Description of what went wrong.
+            message (str): Description of what went wrong.
         """
         super().__init__(message)
 
@@ -56,7 +56,7 @@ class SessionExpiredError(AuthError):
         """Initialise with a default message.
 
         Args:
-            message: Description of what went wrong.
+            message (str): Description of what went wrong.
         """
         super().__init__(message)
 
@@ -68,7 +68,7 @@ class RegistrationError(AuthError):
         """Initialise with a default message.
 
         Args:
-            message: Description of what went wrong.
+            message (str): Description of what went wrong.
         """
         super().__init__(message)
 
@@ -82,7 +82,7 @@ class WeakPasswordError(AuthError):
         """Initialise with a default message.
 
         Args:
-            message: Description of what went wrong.
+            message (str): Description of what went wrong.
         """
         super().__init__(message)
 
@@ -96,7 +96,7 @@ class InvalidEmailError(AuthError):
         """Initialise with a default message.
 
         Args:
-            message: Description of what went wrong.
+            message (str): Description of what went wrong.
         """
         super().__init__(message)
 
@@ -108,7 +108,7 @@ class ProvisioningError(AuthError):
         """Initialise with a default message.
 
         Args:
-            message: Description of what went wrong.
+            message (str): Description of what went wrong.
         """
         super().__init__(message)
 
@@ -122,7 +122,7 @@ class RateLimitError(AuthError):
         """Initialise with a default message.
 
         Args:
-            message: Description of what went wrong.
+            message (str): Description of what went wrong.
         """
         super().__init__(message)
 
@@ -131,14 +131,14 @@ class UserError(Exception):
     """Base class for users domain errors.
 
     Attributes:
-        message: Human-readable description of the error (English).
+        message (str): Human-readable description of the error (English).
     """
 
     def __init__(self, message: str) -> None:
         """Initialise the error with a message.
 
         Args:
-            message: Description of what went wrong.
+            message (str): Description of what went wrong.
         """
         super().__init__(message)
         self.message = message
@@ -158,7 +158,7 @@ class UserDatabaseError(UserError):
         """Initialise with a default message.
 
         Args:
-            message: Description of what went wrong.
+            message (str): Description of what went wrong.
         """
         super().__init__(message)
 
@@ -170,14 +170,14 @@ class MedicinesError(Exception):
     bleed into each other.
 
     Attributes:
-        message: Human-readable description of the error (English).
+        message (str): Human-readable description of the error (English).
     """
 
     def __init__(self, message: str) -> None:
         """Initialise the error with a message.
 
         Args:
-            message: Description of what went wrong.
+            message (str): Description of what went wrong.
         """
         super().__init__(message)
         self.message = message
@@ -196,7 +196,7 @@ class MedicineSearchError(MedicinesError):
         """Initialise with a default message.
 
         Args:
-            message: Description of what went wrong.
+            message (str): Description of what went wrong.
         """
         super().__init__(message)
 
@@ -208,14 +208,14 @@ class CabinetError(Exception):
     remains independent.
 
     Attributes:
-        message: Human-readable description of the error (English).
+        message (str): Human-readable description of the error (English).
     """
 
     def __init__(self, message: str) -> None:
         """Initialise the error with a message.
 
         Args:
-            message: Description of what went wrong.
+            message (str): Description of what went wrong.
         """
         super().__init__(message)
         self.message = message
@@ -228,7 +228,7 @@ class MedicationNotFoundError(CabinetError):
         """Initialise with a default message.
 
         Args:
-            message: Description of what went wrong.
+            message (str): Description of what went wrong.
         """
         super().__init__(message)
 
@@ -240,7 +240,7 @@ class InvalidPackageCountError(CabinetError):
         """Initialise with a default message.
 
         Args:
-            message: Description of what went wrong.
+            message (str): Description of what went wrong.
         """
         super().__init__(message)
 
@@ -259,7 +259,7 @@ class InvalidPartialTabletCountError(CabinetError):
         """Initialise with a default message.
 
         Args:
-            message: Description of what went wrong.
+            message (str): Description of what went wrong.
         """
         super().__init__(message)
 
@@ -271,7 +271,7 @@ class EntryNotFoundError(CabinetError):
         """Initialise with a default message.
 
         Args:
-            message: Description of what went wrong.
+            message (str): Description of what went wrong.
         """
         super().__init__(message)
 
@@ -290,7 +290,7 @@ class CabinetInvariantError(CabinetError):
         """Initialise with a default message.
 
         Args:
-            message: Description of what went wrong.
+            message (str): Description of what went wrong.
         """
         super().__init__(message)
 
@@ -309,6 +309,6 @@ class CabinetDatabaseError(CabinetError):
         """Initialise with a default message.
 
         Args:
-            message: Description of what went wrong.
+            message (str): Description of what went wrong.
         """
         super().__init__(message)

@@ -21,11 +21,11 @@ async def get_user_preferences(
     """Return the preferences for a user, or None if not yet provisioned.
 
     Args:
-        session: Active async database session.
-        user_id: UUID of the user.
+        session (AsyncSession): Active async database session.
+        user_id (uuid.UUID): UUID of the user.
 
     Returns:
-        The UserPreferences instance, or None if not found.
+        UserPreferences | None: The UserPreferences instance, or None if not found.
     """
     return await crud.get_user_preferences(session, user_id)
 
@@ -38,12 +38,12 @@ async def update_preferences(
     """Upsert min_package_count and return the effective preferences.
 
     Args:
-        session: Active async database session.
-        user_id: UUID of the user.
-        min_package_count: New minimum package count (1-10).
+        session (AsyncSession): Active async database session.
+        user_id (uuid.UUID): UUID of the user.
+        min_package_count (int): New minimum package count (1-10).
 
     Returns:
-        UserPreferencesOut with the updated values.
+        UserPreferencesOut: with the updated values.
 
     Raises:
         UserDatabaseError: If the database operation fails.
@@ -77,11 +77,11 @@ async def get_effective_preferences(
     """Return the user's effective preferences, falling back to defaults when no row exists.
 
     Args:
-        session: Active async database session.
-        user_id: UUID of the user.
+        session (AsyncSession): Active async database session.
+        user_id (uuid.UUID): UUID of the user.
 
     Returns:
-        UserPreferencesOut with stored or default values.
+        UserPreferencesOut: with stored or default values.
 
     Raises:
         UserDatabaseError: If the underlying preferences read fails.

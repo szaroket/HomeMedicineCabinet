@@ -24,11 +24,11 @@ async def get_registry_by_id(
     """Fetch a single MedicationRegistry row by primary key.
 
     Args:
-        session: Active async database session.
-        registry_id: UUID of the registry row.
+        session (AsyncSession): Active async database session.
+        registry_id (uuid.UUID): UUID of the registry row.
 
     Returns:
-        The MedicationRegistry instance, or None if not found.
+        MedicationRegistry | None: The MedicationRegistry instance, or None if not found.
 
     Raises:
         CabinetDatabaseError: If the database query fails.
@@ -57,13 +57,13 @@ async def find_entry(
     also the unique constraint on the table.
 
     Args:
-        session: Active async database session.
-        user_id: UUID of the authenticated user.
-        registry_id: UUID of the medication registry row.
-        expiry_date: Expiry date of the entry.
+        session (AsyncSession): Active async database session.
+        user_id (uuid.UUID): UUID of the authenticated user.
+        registry_id (uuid.UUID): UUID of the medication registry row.
+        expiry_date (date): Expiry date of the entry.
 
     Returns:
-        The CabinetEntry if found, otherwise None.
+        CabinetEntry | None: The CabinetEntry if found, otherwise None.
 
     Raises:
         CabinetDatabaseError: If the database query fails.
@@ -94,16 +94,16 @@ async def insert_entry(
     """Insert a new cabinet entry and flush to obtain its ID.
 
     Args:
-        session: Active async database session.
-        user_id: UUID of the authenticated user.
-        registry_id: UUID of the medication registry row.
-        package_count: Number of packages.
-        partial_tablet_count: Tablets in the last (partial) package, or None.
-        expiry_date: Expiry date for the entry.
-        is_important: Whether the entry is marked important.
+        session (AsyncSession): Active async database session.
+        user_id (uuid.UUID): UUID of the authenticated user.
+        registry_id (uuid.UUID): UUID of the medication registry row.
+        package_count (int): Number of packages.
+        partial_tablet_count (int | None): Tablets in the last (partial) package, or None.
+        expiry_date (date): Expiry date for the entry.
+        is_important (bool): Whether the entry is marked important.
 
     Returns:
-        The newly created CabinetEntry (committed).
+        CabinetEntry: The newly created CabinetEntry (committed).
 
     Raises:
         IntegrityError: On a duplicate-key violation (concurrent add); propagated
@@ -145,17 +145,17 @@ def _build_base_query(
     """Build the filtered join query (no ORDER BY / LIMIT / OFFSET).
 
     Args:
-        user_id: UUID of the authenticated user.
-        today: Reference date for status computation.
-        threshold: Expiry threshold in days.
-        status: Optional status filter ("valid", "expiring", "expired").
-        tsquery: Optional safe prefix tsquery string for full-text search.
-        category: Optional category filter ("important" filters to important entries).
-        below_minimum: When True, filter to important entries below the package minimum.
-        min_package_count: User's minimum package count; required when below_minimum is True.
+        user_id (uuid.UUID): UUID of the authenticated user.
+        today (date): Reference date for status computation.
+        threshold (int): Expiry threshold in days.
+        status (str | None): Optional status filter ("valid", "expiring", "expired").
+        tsquery (str | None): Optional safe prefix tsquery string for full-text search.
+        category (str | None): Optional category filter ("important" filters to important entries).
+        below_minimum (bool | None): When True, filter to important entries below the package minimum.
+        min_package_count (int | None): User's minimum package count; required when below_minimum is True.
 
     Returns:
-        A SQLAlchemy select construct with all WHERE clauses applied.
+        Select: A SQLAlchemy select construct with all WHERE clauses applied.
     """
     stmt = (
         select(CabinetEntry, MedicationRegistry)
@@ -213,21 +213,21 @@ async def list_entries(
     """Fetch a filtered, sorted, paginated page of cabinet entries plus total count.
 
     Args:
-        session: Active async database session.
-        user_id: UUID of the authenticated user.
-        today: Reference date for status SQL predicates.
-        threshold: Expiry threshold days for status SQL predicates.
-        status: Optional status filter ("valid", "expiring", "expired").
-        tsquery: Optional safe prefix tsquery string for full-text search.
-        order: Sort direction for medication name ("asc" or "desc").
-        limit: Page size.
-        offset: Row offset for pagination.
-        category: Optional category filter ("important" filters to important entries).
-        below_minimum: When True, filter to important entries below the package minimum.
-        min_package_count: User's minimum package count; required when below_minimum is True.
+        session (AsyncSession): Active async database session.
+        user_id (uuid.UUID): UUID of the authenticated user.
+        today (date): Reference date for status SQL predicates.
+        threshold (int): Expiry threshold days for status SQL predicates.
+        status (str | None): Optional status filter ("valid", "expiring", "expired").
+        tsquery (str | None): Optional safe prefix tsquery string for full-text search.
+        order (str): Sort direction for medication name ("asc" or "desc").
+        limit (int): Page size.
+        offset (int): Row offset for pagination.
+        category (str | None): Optional category filter ("important" filters to important entries).
+        below_minimum (bool | None): When True, filter to important entries below the package minimum.
+        min_package_count (int | None): User's minimum package count; required when below_minimum is True.
 
     Returns:
-        Tuple of (page rows, total count under the same filters).
+        tuple[list[tuple[CabinetEntry, MedicationRegistry]], int]: Tuple of (page rows, total count under the same filters).
 
     Raises:
         CabinetDatabaseError: If any database query fails.
@@ -300,12 +300,12 @@ async def find_entry_by_id(
     """Look up a cabinet entry by its primary key, scoped to the user.
 
     Args:
-        session: Active async database session.
-        user_id: UUID of the authenticated user.
-        entry_id: UUID of the cabinet entry.
+        session (AsyncSession): Active async database session.
+        user_id (uuid.UUID): UUID of the authenticated user.
+        entry_id (uuid.UUID): UUID of the cabinet entry.
 
     Returns:
-        The CabinetEntry if found and owned by the user, otherwise None.
+        CabinetEntry | None: The CabinetEntry if found and owned by the user, otherwise None.
 
     Raises:
         CabinetDatabaseError: If the database query fails.
@@ -337,12 +337,12 @@ async def update_entry_importance(
     """Set the importance flag on a cabinet entry and persist it.
 
     Args:
-        session: Active async database session.
-        entry: The CabinetEntry to update.
-        is_important: New importance flag value.
+        session (AsyncSession): Active async database session.
+        entry (CabinetEntry): The CabinetEntry to update.
+        is_important (bool): New importance flag value.
 
     Returns:
-        The updated CabinetEntry (committed).
+        CabinetEntry: The updated CabinetEntry (committed).
 
     Raises:
         CabinetDatabaseError: If the flush or commit fails.
@@ -372,14 +372,14 @@ async def update_entry_counts(
     """Update the package and partial-tablet counts of an existing entry.
 
     Args:
-        session: Active async database session.
-        entry: The CabinetEntry to update.
-        package_count: New package count.
-        partial_tablet_count: New partial tablet count, or None.
-        is_important: When provided, also update the importance flag.
+        session (AsyncSession): Active async database session.
+        entry (CabinetEntry): The CabinetEntry to update.
+        package_count (int): New package count.
+        partial_tablet_count (int | None): New partial tablet count, or None.
+        is_important (bool | None): When provided, also update the importance flag.
 
     Returns:
-        The updated CabinetEntry (committed).
+        CabinetEntry: The updated CabinetEntry (committed).
 
     Raises:
         CabinetDatabaseError: If the flush or commit fails.
