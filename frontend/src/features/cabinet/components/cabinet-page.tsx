@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { CabinetList } from "@/features/cabinet/components/cabinet-list";
 import { LogoutButton } from "@/features/auth/components/logout-button";
@@ -28,8 +28,8 @@ function parsePageSize(raw: string | null): PageSize {
 }
 
 function parsePage(raw: string | null): number {
-  const num = Number(raw);
-  return num >= 1 ? num : 1;
+  const num = Math.floor(Number(raw));
+  return Number.isFinite(num) && num >= 1 ? num : 1;
 }
 
 function parseOrder(raw: string | null): OrderDir {
@@ -52,6 +52,35 @@ export function CabinetPage() {
 
   const [searchInput, setSearchInput] = useState(rawSearch);
   const debouncedSearch = useDebounce(searchInput, 400);
+
+  // When the URL's search changes externally (Back/Forward, cleared filters),
+  // reflect it into the input. Adjusting state during render is React's
+  // recommended pattern over calling setState inside an effect.
+  const [prevRawSearch, setPrevRawSearch] = useState(rawSearch);
+  if (rawSearch !== prevRawSearch) {
+    setPrevRawSearch(rawSearch);
+    setSearchInput(rawSearch);
+  }
+
+  // Reflect the debounced search into the URL. Uses replace so a single typed
+  // word doesn't push one history entry per keystroke, and resets pagination
+  // whenever the query changes.
+  useEffect(() => {
+    if (debouncedSearch === rawSearch) return;
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (debouncedSearch === "") {
+          next.delete("search");
+        } else {
+          next.set("search", debouncedSearch);
+        }
+        next.delete("page");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [debouncedSearch, rawSearch, setSearchParams]);
 
   const hasFilters = !!status || debouncedSearch.length >= 2;
 
@@ -116,7 +145,6 @@ export function CabinetPage() {
             value={searchInput}
             onChange={(ev) => {
               setSearchInput(ev.target.value);
-              setParam("search", ev.target.value, true);
             }}
             className="rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[220px] flex-1"
           />

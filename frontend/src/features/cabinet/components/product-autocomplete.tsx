@@ -9,11 +9,11 @@ interface Props {
   selected: ProductOut | null;
 }
 
-function productLabel(p: ProductOut): string {
+function productLabel(product: ProductOut): string {
   return [
-    p.name,
-    p.strength,
-    p.pharmaceutical_form ? `· ${p.pharmaceutical_form}` : null,
+    product.name,
+    product.strength,
+    product.pharmaceutical_form ? `· ${product.pharmaceutical_form}` : null,
   ]
     .filter(Boolean)
     .join(" ");
@@ -25,14 +25,14 @@ export function ProductAutocomplete({ onSelect, onClear, selected }: Props) {
   const debouncedQ = useDebounce(query, 250);
   const { data: products } = useProductSearch(debouncedQ);
 
-  function handleSelect(p: ProductOut) {
-    setQuery(productLabel(p));
+  function handleSelect(product: ProductOut) {
+    setQuery(productLabel(product));
     setOpen(false);
-    onSelect(p);
+    onSelect(product);
   }
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const value = e.target.value;
+  function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const value = event.target.value;
     setQuery(value);
     setOpen(true);
     // Editing the text invalidates the current selection so the form can't
@@ -59,13 +59,13 @@ export function ProductAutocomplete({ onSelect, onClear, selected }: Props) {
           className="absolute top-full z-10 mt-1 w-full overflow-y-auto rounded border border-slate-600 bg-slate-800 shadow-lg"
           style={{ maxHeight: "16rem" }}
         >
-          {products.map((p) => (
+          {products.map((product) => (
             <li
-              key={`${p.name}|${p.strength}|${p.pharmaceutical_form}`}
-              onMouseDown={() => handleSelect(p)}
+              key={`${product.name}|${product.strength}|${product.pharmaceutical_form}`}
+              onMouseDown={() => handleSelect(product)}
               className="cursor-pointer px-3 py-2 text-sm text-white hover:bg-slate-700"
             >
-              {productLabel(p)}
+              {productLabel(product)}
             </li>
           ))}
         </ul>

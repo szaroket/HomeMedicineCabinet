@@ -444,6 +444,15 @@ termin / Przeterminowany), a page-size selector (20/50/100), and prev/next
 pagination showing current page and total page count derived from `total`.
 Changing any filter/search/sort/page-size resets `page` to 1.
 
+**Addendum (2026-06-16, impl review F2)**: The Phase 4 commit also carried two
+out-of-scope add-flow UX fixes, accepted and documented here rather than split
+out. (a) `add-medication-form.tsx` gained a `formKey` reset mechanism (remount to
+clear fields after a successful add) and `defaultValue={1}` on `package_count`.
+(b) `product-autocomplete.tsx` gained a `productLabel()` helper and a scrollable
+dropdown (`maxHeight`) so long result lists don't overflow. These do not touch the
+cabinet list and are unverified by any Phase 4 success criterion; they are
+add-medication polish that landed alongside the list controls.
+
 #### 3. List rendering + empty states
 
 **File**: `frontend/src/features/cabinet/components/cabinet-list.tsx`
