@@ -610,13 +610,13 @@ None — `is_important` and `min_package_count` columns already exist in the ini
 
 #### Automated
 
-- [x] 7.1 Production build passes: `npm run build`
-- [x] 7.2 Lint passes: `npm run lint`
+- [x] 7.1 Production build passes: `npm run build` — afc6834
+- [x] 7.2 Lint passes: `npm run lint` — afc6834
 - [x] 7.3 ~~Format check passes: `npx prettier --check src/`~~ — dropped (impl review 2026-06-16: prettier is not used in this project; eslint via 7.2 is the real gate)
 
 #### Manual
 
-- [x] 7.4 Star marks/unmarks importance; survives reload
-- [x] 7.5 Below-minimum important entry shows colored row + "Brak w apteczce"; clears when restocked to/above minimum
-- [x] 7.6 "Ważne" filter shows only important entries
-- [x] 7.7 Add-form important checkbox produces an important entry
+- [x] 7.4 Star marks/unmarks importance; survives reload — afc6834
+- [x] 7.5 Below-minimum important entry shows colored row + "Brak w apteczce"; clears when restocked to/above minimum — afc6834
+- [x] 7.6 "Ważne" filter shows only important entries — afc6834
+- [x] 7.7 Add-form important checkbox produces an important entry — afc6834
