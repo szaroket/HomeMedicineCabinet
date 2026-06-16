@@ -39,6 +39,7 @@ class CabinetListParams(BaseModel):
 
     status: CabinetStatus | None = None
     category: CabinetCategory | None = None
+    below_minimum: bool | None = None
     search: NonEmptyStr | None = None
     order: CabinetOrder = CabinetOrder.asc
     page: int = Field(1, ge=1)

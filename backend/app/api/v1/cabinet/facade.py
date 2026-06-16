@@ -53,6 +53,7 @@ async def list_entries(
     page: int = 1,
     page_size: int = 20,
     category: str | None = None,
+    below_minimum: bool | None = None,
 ) -> CabinetPageOut:
     """Return the current user's cabinet entries with computed status, filtered and paginated.
 
@@ -67,6 +68,7 @@ async def list_entries(
         page: 1-based page number.
         page_size: Number of items per page.
         category: Optional category filter ("important" filters to important entries).
+        below_minimum: When True, filter to important entries below the package minimum.
 
     Returns:
         CabinetPageOut with items, total, page, and page_size.
@@ -83,6 +85,7 @@ async def list_entries(
         page_size=page_size,
         min_package_count=resolved.min_package_count,
         category=category,
+        below_minimum=below_minimum,
     )
 
 

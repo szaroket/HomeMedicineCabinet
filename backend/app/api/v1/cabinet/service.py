@@ -255,6 +255,7 @@ async def list_entries(
     page_size: int = 20,
     min_package_count: int = DEFAULT_MIN_PACKAGE_COUNT,
     category: str | None = None,
+    below_minimum: bool | None = None,
 ) -> CabinetPageOut:
     """Return a paginated page of cabinet entries with computed expiry status.
 
@@ -269,6 +270,7 @@ async def list_entries(
         page_size: Number of items per page (20, 50, or 100).
         min_package_count: User's global minimum package count for below-minimum signal.
         category: Optional category filter ("important" filters to important entries).
+        below_minimum: When True, filter to important entries below the package minimum.
 
     Returns:
         CabinetPageOut with items, total, page, and page_size.
@@ -287,6 +289,8 @@ async def list_entries(
         limit=page_size,
         offset=offset,
         category=category,
+        below_minimum=below_minimum,
+        min_package_count=min_package_count,
     )
     items = [
         _map_row_to_entry_out(

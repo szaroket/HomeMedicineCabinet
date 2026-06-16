@@ -64,6 +64,8 @@ export interface CabinetEntryOut {
   route_of_administration: string | null;
   leaflet_url: string | null;
   specification_url: string | null;
+  is_important: boolean;
+  below_minimum: boolean;
 }
 
 export function searchProducts(search: string): Promise<ProductOut[]> {
@@ -88,6 +90,7 @@ export interface AddEntryPayload {
   package_count: number;
   expiry_date: string;
   partial_tablet_count?: number | null;
+  is_important?: boolean;
 }
 
 export function addEntry(payload: AddEntryPayload): Promise<AddEntryResult> {
@@ -104,6 +107,8 @@ export interface CabinetListParams {
   order?: "asc" | "desc";
   page?: number;
   page_size?: 20 | 50 | 100;
+  category?: "important";
+  below_minimum?: boolean;
 }
 
 export interface CabinetPageOut {
@@ -123,6 +128,19 @@ export function listEntries(
   if (params?.page != null) searchParams.set("page", String(params.page));
   if (params?.page_size != null)
     searchParams.set("page_size", String(params.page_size));
+  if (params?.category) searchParams.set("category", params.category);
+  if (params?.below_minimum) searchParams.set("below_minimum", "true");
   const qs = searchParams.toString();
   return apiJson<CabinetPageOut>(`/cabinet/entries${qs ? `?${qs}` : ""}`);
+}
+
+export function toggleImportant(
+  id: string,
+  is_important: boolean,
+): Promise<CabinetEntryOut> {
+  return apiJson<CabinetEntryOut>(`/cabinet/entries/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ is_important }),
+  });
 }

@@ -139,6 +139,8 @@ def _build_base_query(
     status: str | None,
     tsquery: str | None,
     category: str | None = None,
+    below_minimum: bool | None = None,
+    min_package_count: int | None = None,
 ):
     """Build the filtered join query (no ORDER BY / LIMIT / OFFSET).
 
@@ -149,6 +151,8 @@ def _build_base_query(
         status: Optional status filter ("valid", "expiring", "expired").
         tsquery: Optional safe prefix tsquery string for full-text search.
         category: Optional category filter ("important" filters to important entries).
+        below_minimum: When True, filter to important entries below the package minimum.
+        min_package_count: User's minimum package count; required when below_minimum is True.
 
     Returns:
         A SQLAlchemy select construct with all WHERE clauses applied.
@@ -180,6 +184,11 @@ def _build_base_query(
         )
     if category == "important":
         stmt = stmt.where(col(CabinetEntry.is_important).is_(True))
+    if below_minimum and min_package_count is not None:
+        stmt = stmt.where(
+            col(CabinetEntry.is_important).is_(True),
+            col(CabinetEntry.package_count) < min_package_count,
+        )
     return stmt
 
 
@@ -194,6 +203,8 @@ async def list_entries(
     limit: int,
     offset: int,
     category: str | None = None,
+    below_minimum: bool | None = None,
+    min_package_count: int | None = None,
 ) -> tuple[list[tuple[CabinetEntry, MedicationRegistry]], int]:
     """Fetch a filtered, sorted, paginated page of cabinet entries plus total count.
 
@@ -208,6 +219,8 @@ async def list_entries(
         limit: Page size.
         offset: Row offset for pagination.
         category: Optional category filter ("important" filters to important entries).
+        below_minimum: When True, filter to important entries below the package minimum.
+        min_package_count: User's minimum package count; required when below_minimum is True.
 
     Returns:
         Tuple of (page rows, total count under the same filters).
@@ -215,7 +228,16 @@ async def list_entries(
     Raises:
         CabinetDatabaseError: If any database query fails.
     """
-    base = _build_base_query(user_id, today, threshold, status, tsquery, category)
+    base = _build_base_query(
+        user_id,
+        today,
+        threshold,
+        status,
+        tsquery,
+        category,
+        below_minimum,
+        min_package_count,
+    )
 
     name_col = func.lower(col(MedicationRegistry.name))
     order_clause = name_col.asc() if order == "asc" else name_col.desc()
@@ -228,7 +250,14 @@ async def list_entries(
 
     count_q = select(func.count()).select_from(
         _build_base_query(
-            user_id, today, threshold, status, tsquery, category
+            user_id,
+            today,
+            threshold,
+            status,
+            tsquery,
+            category,
+            below_minimum,
+            min_package_count,
         ).subquery()
     )
 
