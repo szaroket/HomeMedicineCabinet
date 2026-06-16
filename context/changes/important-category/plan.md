@@ -404,13 +404,16 @@ Create a `settings` feature with a `/settings` route and a form to view/edit the
 
 **Contract**: New child route `{ path: "/settings", element: <SettingsPage /> }` under `ProtectedLayout`; a "Ustawienia" link in the shared header.
 
+> **Addendum (impl review, 2026-06-16)**: navigation shipped as a full responsive sidebar instead of the planned header link. New `app/components/app-sidebar.tsx` (mobile hamburger drawer) + `app/components/app-layout.tsx` (shared chrome wrapper) plus two icon assets; `cabinet-page.tsx` and `add-medication-page.tsx` were migrated onto `AppLayout`. The page migrations are layout-only (no behavioral regression — build + lint pass). Materially larger than the "Ustawienia link in the shared header" phrasing but kept for the better nav UX. Note: the dashboard page was **not** migrated to `AppLayout` (see F5 — confirm asymmetry is intentional).
+
+> **Addendum (impl review, 2026-06-16)**: `backend/app/main.py:43` CORS `allow_methods` was broadened to add `PATCH` (explicit allowlist, not `*`). Required for the browser preflight to reach `PATCH /users/preferences` (Phase 2) and `PATCH /cabinet/entries/{entry_id}` (Phase 4) — those endpoints were not browser-reachable until this landed. Documented here retroactively; the code change is correct and minimal.
+
 ### Success Criteria:
 
 #### Automated Verification:
 
 - Production build passes: `npm run build`
-- Lint passes: `npm run lint`
-- Format check passes: `npx prettier --check src/`
+- Lint passes: `npm run lint` (the project's only style/format gate — eslint; there is no prettier config, dependency, or script)
 
 #### Manual Verification:
 
@@ -473,8 +476,7 @@ Wire the cabinet list and add form to the Phase 3–5 endpoints: inline star tog
 #### Automated Verification:
 
 - Production build passes: `npm run build`
-- Lint passes: `npm run lint`
-- Format check passes: `npx prettier --check src/`
+- Lint passes: `npm run lint` (the project's only style/format gate — eslint; there is no prettier config, dependency, or script)
 
 #### Manual Verification:
 
@@ -596,13 +598,13 @@ None — `is_important` and `min_package_count` columns already exist in the ini
 
 #### Automated
 
-- [x] 6.1 Production build passes: `npm run build`
-- [x] 6.2 Lint passes: `npm run lint`
-- [x] 6.3 Format check passes: `npx prettier --check src/`
+- [x] 6.1 Production build passes: `npm run build` — af71b43
+- [x] 6.2 Lint passes: `npm run lint` — af71b43
+- [x] 6.3 ~~Format check passes: `npx prettier --check src/`~~ — dropped (impl review 2026-06-16: prettier is not used in this project; eslint via 6.2 is the real gate)
 
 #### Manual
 
-- [x] 6.4 `/settings` loads, edits (1–10), rejects out-of-range, and persists across reload
+- [x] 6.4 `/settings` loads, edits (1–10), rejects out-of-range, and persists across reload — af71b43
 
 ### Phase 7: Frontend — cabinet importance UI
 
@@ -610,7 +612,7 @@ None — `is_important` and `min_package_count` columns already exist in the ini
 
 - [ ] 7.1 Production build passes: `npm run build`
 - [ ] 7.2 Lint passes: `npm run lint`
-- [ ] 7.3 Format check passes: `npx prettier --check src/`
+- [x] 7.3 ~~Format check passes: `npx prettier --check src/`~~ — dropped (impl review 2026-06-16: prettier is not used in this project; eslint via 7.2 is the real gate)
 
 #### Manual
 

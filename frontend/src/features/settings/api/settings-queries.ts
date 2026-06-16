@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getPreferences,
   updatePreferences,
+  type UpdatePreferencesPayload,
 } from "@/features/settings/api/settings-api";
 
 export const settingsKeys = {
@@ -18,7 +19,7 @@ export function usePreferences() {
 export function useUpdatePreferences() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: { min_package_count: number }) =>
+    mutationFn: (payload: UpdatePreferencesPayload) =>
       updatePreferences(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: settingsKeys.preferences() });

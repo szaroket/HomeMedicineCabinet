@@ -10,9 +10,13 @@ export function getPreferences(): Promise<UserPreferences> {
   return apiJson<UserPreferences>("/users/preferences");
 }
 
-export function updatePreferences(payload: {
+export interface UpdatePreferencesPayload {
   min_package_count: number;
-}): Promise<UserPreferences> {
+}
+
+export function updatePreferences(
+  payload: UpdatePreferencesPayload,
+): Promise<UserPreferences> {
   return apiJson<UserPreferences>("/users/preferences", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
