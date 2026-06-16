@@ -21,6 +21,7 @@ from app.utilities.errors import (
     CabinetDatabaseError,
     CabinetError,
     CabinetInvariantError,
+    EntryNotFoundError,
     InvalidPartialTabletCountError,
     MedicationNotFoundError,
     UserDatabaseError,
@@ -452,3 +453,89 @@ class TestListEntriesImportanceFields:
             "/api/v1/cabinet/entries", params={"category": "used"}
         )
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+
+class TestSetEntryImportanceSuccess:
+    @pytest.mark.asyncio
+    async def test_toggle_on_returns_200_with_is_important_true(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.set_entry_importance",
+            new_callable=AsyncMock,
+            return_value=_make_cabinet_entry_out(
+                is_important=True, below_minimum=False
+            ),
+        )
+
+        response = await authed_client.patch(
+            f"/api/v1/cabinet/entries/{_ENTRY_ID}",
+            json={"is_important": True},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["is_important"] is True
+
+    @pytest.mark.asyncio
+    async def test_toggle_off_returns_200_with_is_important_false(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.set_entry_importance",
+            new_callable=AsyncMock,
+            return_value=_make_cabinet_entry_out(
+                is_important=False, below_minimum=False
+            ),
+        )
+
+        response = await authed_client.patch(
+            f"/api/v1/cabinet/entries/{_ENTRY_ID}",
+            json={"is_important": False},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["is_important"] is False
+
+
+class TestSetEntryImportanceErrorMapping:
+    @pytest.mark.asyncio
+    async def test_entry_not_found_returns_404(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.set_entry_importance",
+            new_callable=AsyncMock,
+            side_effect=EntryNotFoundError(),
+        )
+
+        response = await authed_client.patch(
+            f"/api/v1/cabinet/entries/{_ENTRY_ID}",
+            json={"is_important": True},
+        )
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    @pytest.mark.asyncio
+    async def test_database_error_returns_503(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.set_entry_importance",
+            new_callable=AsyncMock,
+            side_effect=CabinetDatabaseError(),
+        )
+
+        response = await authed_client.patch(
+            f"/api/v1/cabinet/entries/{_ENTRY_ID}",
+            json={"is_important": True},
+        )
+
+        assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+
+    @pytest.mark.asyncio
+    async def test_missing_token_returns_401(self, client: AsyncClient):
+        response = await client.patch(
+            f"/api/v1/cabinet/entries/{_ENTRY_ID}",
+            json={"is_important": True},
+        )
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED

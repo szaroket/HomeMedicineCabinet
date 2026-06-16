@@ -151,6 +151,12 @@ class CabinetEntryOut(BaseModel):
     specification_url: str | None
 
 
+class SetImportantRequest(BaseModel):
+    """Request body for PATCH /cabinet/entries/{entry_id}."""
+
+    is_important: bool
+
+
 class CabinetPageOut(BaseModel):
     """Paginated response envelope for GET /cabinet/entries."""
 

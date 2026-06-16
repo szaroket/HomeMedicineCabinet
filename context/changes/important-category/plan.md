@@ -570,9 +570,9 @@ None — `is_important` and `min_package_count` columns already exist in the ini
 
 #### Automated
 
-- [ ] 4.1 Backend tests pass: `uv run pytest`
-- [ ] 4.2 Lint + format pass: `uv run ruff check . && uv run ruff format --check .`
-- [ ] 4.3 Endpoint tests: toggle on/off; 404 for missing/other-user entry
+- [x] 4.1 Backend tests pass: `uv run pytest`
+- [x] 4.2 Lint + format pass: `uv run ruff check . && uv run ruff format --check .`
+- [x] 4.3 Endpoint tests: toggle on/off; 404 for missing/other-user entry
 
 #### Manual
 

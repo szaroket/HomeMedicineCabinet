@@ -256,6 +256,76 @@ async def list_entries(
     return rows, total
 
 
+async def find_entry_by_id(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    entry_id: uuid.UUID,
+) -> CabinetEntry | None:
+    """Look up a cabinet entry by its primary key, scoped to the user.
+
+    Args:
+        session: Active async database session.
+        user_id: UUID of the authenticated user.
+        entry_id: UUID of the cabinet entry.
+
+    Returns:
+        The CabinetEntry if found and owned by the user, otherwise None.
+
+    Raises:
+        CabinetDatabaseError: If the database query fails.
+    """
+    try:
+        result = await session.execute(
+            select(CabinetEntry).where(
+                col(CabinetEntry.id) == entry_id,
+                col(CabinetEntry.user_id) == user_id,
+            )
+        )
+    except SQLAlchemyError as exc:
+        logger.error(
+            "Failed to fetch cabinet entry %s for user %s: %s",
+            entry_id,
+            user_id,
+            exc,
+            exc_info=True,
+        )
+        raise CabinetDatabaseError() from exc
+    return result.scalar_one_or_none()
+
+
+async def update_entry_importance(
+    session: AsyncSession,
+    entry: CabinetEntry,
+    is_important: bool,
+) -> CabinetEntry:
+    """Set the importance flag on a cabinet entry and persist it.
+
+    Args:
+        session: Active async database session.
+        entry: The CabinetEntry to update.
+        is_important: New importance flag value.
+
+    Returns:
+        The updated CabinetEntry (committed).
+
+    Raises:
+        CabinetDatabaseError: If the flush or commit fails.
+    """
+    entry.is_important = is_important
+    try:
+        async with persist(session, entry):
+            session.add(entry)
+    except SQLAlchemyError as exc:
+        logger.error(
+            "Failed to update importance for cabinet entry %s: %s",
+            entry.id,
+            exc,
+            exc_info=True,
+        )
+        raise CabinetDatabaseError() from exc
+    return entry
+
+
 async def update_entry_counts(
     session: AsyncSession,
     entry: CabinetEntry,

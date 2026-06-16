@@ -23,6 +23,7 @@ from app.utilities.common import build_tsquery
 from app.utilities.const import DEFAULT_MIN_PACKAGE_COUNT
 from app.utilities.errors import (
     CabinetInvariantError,
+    EntryNotFoundError,
     InvalidPartialTabletCountError,
     MedicationNotFoundError,
 )
@@ -555,6 +556,52 @@ async def add_entry(
         expiry_date=expiry_date,
         variant=variant,
         tpp=tpp,
+    )
+
+
+async def set_entry_importance(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    entry_id: uuid.UUID,
+    is_important: bool,
+    expiry_threshold_days: int,
+    min_package_count: int = DEFAULT_MIN_PACKAGE_COUNT,
+) -> CabinetEntryOut:
+    """Toggle the importance flag on a cabinet entry owned by the user.
+
+    Args:
+        session: Active async database session.
+        user_id: Authenticated user's UUID.
+        entry_id: UUID of the cabinet entry to update.
+        is_important: New importance flag value.
+        expiry_threshold_days: Days ahead that triggers "expiring" status.
+        min_package_count: User's global minimum package count for below-minimum signal.
+
+    Returns:
+        The updated CabinetEntryOut with recomputed status and below_minimum.
+
+    Raises:
+        EntryNotFoundError: When the entry does not exist or does not belong to the user.
+        CabinetDatabaseError: When a database operation fails.
+    """
+    entry = await crud.find_entry_by_id(
+        session=session, user_id=user_id, entry_id=entry_id
+    )
+    if entry is None:
+        raise EntryNotFoundError()
+    updated_entry = await crud.update_entry_importance(
+        session=session, entry=entry, is_important=is_important
+    )
+    variant = await crud.get_registry_by_id(
+        session=session, registry_id=entry.medication_registry_id
+    )
+    today = datetime.now(timezone.utc).date()
+    return _map_row_to_entry_out(
+        entry=updated_entry,
+        variant=variant,
+        today=today,
+        expiry_threshold_days=expiry_threshold_days,
+        min_package_count=min_package_count,
     )
 
 
