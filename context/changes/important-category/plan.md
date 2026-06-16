@@ -596,13 +596,13 @@ None — `is_important` and `min_package_count` columns already exist in the ini
 
 #### Automated
 
-- [ ] 6.1 Production build passes: `npm run build`
-- [ ] 6.2 Lint passes: `npm run lint`
-- [ ] 6.3 Format check passes: `npx prettier --check src/`
+- [x] 6.1 Production build passes: `npm run build`
+- [x] 6.2 Lint passes: `npm run lint`
+- [x] 6.3 Format check passes: `npx prettier --check src/`
 
 #### Manual
 
-- [ ] 6.4 `/settings` loads, edits (1–10), rejects out-of-range, and persists across reload
+- [x] 6.4 `/settings` loads, edits (1–10), rejects out-of-range, and persists across reload
 
 ### Phase 7: Frontend — cabinet importance UI
 

@@ -6,6 +6,7 @@ import { RegisterPage } from "@/features/auth/components/register-page";
 import { DashboardPage } from "@/features/dashboard/components/dashboard-page";
 import { CabinetPage } from "@/features/cabinet/components/cabinet-page";
 import { AddMedicationPage } from "@/features/cabinet/components/add-medication-page";
+import { SettingsPage } from "@/features/settings/components/settings-page";
 
 export const router = createBrowserRouter([
   {
@@ -21,6 +22,7 @@ export const router = createBrowserRouter([
       { path: "/", element: <DashboardPage /> },
       { path: "/cabinet", element: <CabinetPage /> },
       { path: "/cabinet/add", element: <AddMedicationPage /> },
+      { path: "/settings", element: <SettingsPage /> },
     ],
   },
 ]);

@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { CabinetList } from "@/features/cabinet/components/cabinet-list";
-import { LogoutButton } from "@/features/auth/components/logout-button";
-import { AppHeader } from "@/app/components/app-header";
-import { AppFooter } from "@/app/components/app-footer";
+import { AppLayout } from "@/app/components/app-layout";
 import { useCabinetEntries } from "@/features/cabinet/api/cabinet-queries";
 import { useDebounce } from "@/hooks/use-debounce";
 import type { CabinetListParams } from "@/features/cabinet/api/cabinet-api";
@@ -157,16 +155,10 @@ export function CabinetPage() {
   }, [pageData, page, totalPages, setSearchParams]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-900">
-      <header className="border-b border-slate-700 bg-slate-800 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <AppHeader />
-          <LogoutButton />
-        </div>
-      </header>
-
-      <main className="grow px-6 py-8">
-        <div className="mb-6 flex items-center justify-between">
+    <AppLayout>
+      <div className="flex h-full flex-col min-h-0">
+        {/* Title + add button */}
+        <div className="mb-4 flex flex-shrink-0 items-center justify-between">
           <h2 className="text-xl font-semibold text-white">Lista leków</h2>
           <Link
             to="/cabinet/add"
@@ -177,8 +169,7 @@ export function CabinetPage() {
         </div>
 
         {/* Controls */}
-        <div className="mb-4 flex flex-wrap gap-3">
-          {/* Search */}
+        <div className="mb-4 flex flex-shrink-0 flex-wrap gap-3">
           <input
             type="search"
             placeholder="Szukaj po nazwie lub składniku…"
@@ -189,7 +180,6 @@ export function CabinetPage() {
             className="rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[220px] flex-1"
           />
 
-          {/* Status filter */}
           <select
             value={status ?? ""}
             onChange={(ev) => {
@@ -204,7 +194,6 @@ export function CabinetPage() {
             ))}
           </select>
 
-          {/* Sort order toggle */}
           <button
             type="button"
             onClick={() =>
@@ -225,17 +214,20 @@ export function CabinetPage() {
           </button>
         </div>
 
-        <CabinetList
-          pageData={pageData}
-          isLoading={isLoading}
-          isError={isError}
-          hasFilters={hasFilters}
-          onClearFilters={clearFilters}
-        />
+        {/* Scrollable table */}
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <CabinetList
+            pageData={pageData}
+            isLoading={isLoading}
+            isError={isError}
+            hasFilters={hasFilters}
+            onClearFilters={clearFilters}
+          />
+        </div>
 
         {/* Pagination */}
         {pageData && pageData.total > 0 && (
-          <div className="mt-4 flex items-center justify-between text-sm text-slate-400">
+          <div className="mt-4 flex flex-shrink-0 items-center justify-between text-sm text-slate-400">
             <span>
               Strona {pageData.page} z {totalPages} (łącznie {pageData.total})
             </span>
@@ -272,8 +264,7 @@ export function CabinetPage() {
             </div>
           </div>
         )}
-      </main>
-      <AppFooter />
-    </div>
+      </div>
+    </AppLayout>
   );
 }
