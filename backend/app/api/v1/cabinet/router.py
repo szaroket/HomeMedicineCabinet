@@ -97,6 +97,7 @@ async def add_entry(
             package_count=data.package_count,
             partial_tablet_count=data.partial_tablet_count,
             expiry_date=data.expiry_date,
+            is_important=data.is_important,
         )
     except MedicationNotFoundError as e:
         raise HTTPException(

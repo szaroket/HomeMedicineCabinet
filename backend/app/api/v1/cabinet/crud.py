@@ -89,6 +89,7 @@ async def insert_entry(
     package_count: int,
     partial_tablet_count: int | None,
     expiry_date: date,
+    is_important: bool = False,
 ) -> CabinetEntry:
     """Insert a new cabinet entry and flush to obtain its ID.
 
@@ -99,6 +100,7 @@ async def insert_entry(
         package_count: Number of packages.
         partial_tablet_count: Tablets in the last (partial) package, or None.
         expiry_date: Expiry date for the entry.
+        is_important: Whether the entry is marked important.
 
     Returns:
         The newly created CabinetEntry (committed).
@@ -115,6 +117,7 @@ async def insert_entry(
         package_count=package_count,
         partial_tablet_count=partial_tablet_count,
         expiry_date=expiry_date,
+        is_important=is_important,
     )
     try:
         async with persist(session, entry):
@@ -331,6 +334,7 @@ async def update_entry_counts(
     entry: CabinetEntry,
     package_count: int,
     partial_tablet_count: int | None,
+    is_important: bool | None = None,
 ) -> CabinetEntry:
     """Update the package and partial-tablet counts of an existing entry.
 
@@ -339,6 +343,7 @@ async def update_entry_counts(
         entry: The CabinetEntry to update.
         package_count: New package count.
         partial_tablet_count: New partial tablet count, or None.
+        is_important: When provided, also update the importance flag.
 
     Returns:
         The updated CabinetEntry (committed).
@@ -348,6 +353,8 @@ async def update_entry_counts(
     """
     entry.package_count = package_count
     entry.partial_tablet_count = partial_tablet_count
+    if is_important is not None:
+        entry.is_important = is_important
     try:
         async with persist(session, entry):
             session.add(entry)

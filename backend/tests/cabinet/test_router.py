@@ -52,6 +52,7 @@ def _make_add_entry_out(**overrides) -> AddEntryOut:
         partial_tablet_count=5,
         expiry_date=date(2027, 6, 1),
         total_tablets=25,
+        is_important=False,
     )
     return AddEntryOut(**(defaults | overrides))
 
@@ -121,6 +122,47 @@ class TestAddEntrySuccess:
         assert data["merged"] is True
         assert data["merge_summary"]["previous_total_tablets"] == 20
         assert data["merge_summary"]["new_total_tablets"] == 45
+
+    @pytest.mark.asyncio
+    async def test_add_with_is_important_true_returns_important_entry(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mock_add = mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_service.add_entry",
+            new_callable=AsyncMock,
+            return_value=AddEntryResult(
+                merged=False,
+                entry=_make_add_entry_out(is_important=True),
+                merge_summary=None,
+            ),
+        )
+
+        response = await authed_client.post(
+            "/api/v1/cabinet/entries",
+            json={**_VALID_BODY, "is_important": True},
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.json()["entry"]["is_important"] is True
+        call_kwargs = mock_add.call_args.kwargs
+        assert call_kwargs["is_important"] is True
+
+    @pytest.mark.asyncio
+    async def test_add_without_is_important_defaults_to_false(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mock_add = mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_service.add_entry",
+            new_callable=AsyncMock,
+            return_value=_fresh_result(),
+        )
+
+        response = await authed_client.post("/api/v1/cabinet/entries", json=_VALID_BODY)
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.json()["entry"]["is_important"] is False
+        call_kwargs = mock_add.call_args.kwargs
+        assert call_kwargs["is_important"] is False
 
 
 class TestAddEntryErrorMapping:

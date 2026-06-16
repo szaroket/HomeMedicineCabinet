@@ -396,6 +396,7 @@ def _build_add_entry_out(
         partial_tablet_count=entry.partial_tablet_count,
         expiry_date=entry.expiry_date,
         total_tablets=_computed_total(entry, tpp),
+        is_important=entry.is_important,
     )
 
 
@@ -406,6 +407,7 @@ async def _insert_with_race_guard(
     package_count: int,
     partial_tablet_count: int | None,
     expiry_date: date,
+    is_important: bool = False,
 ) -> CabinetEntry | None:
     """Insert a new cabinet entry, returning None on a concurrent-insert race.
 
@@ -420,6 +422,7 @@ async def _insert_with_race_guard(
         package_count: Number of packages to insert.
         partial_tablet_count: Tablets in the last package, or None.
         expiry_date: Expiry date for the entry.
+        is_important: Whether the entry is marked important.
 
     Returns:
         The newly created CabinetEntry, or None if a race condition was detected.
@@ -432,6 +435,7 @@ async def _insert_with_race_guard(
             package_count,
             partial_tablet_count,
             expiry_date,
+            is_important=is_important,
         )
     except IntegrityError:
         return None
@@ -447,6 +451,7 @@ async def _dedup_or_insert(
     expiry_date: date,
     variant: MedicationRegistry,
     tpp: int | None,
+    is_important: bool = False,
 ) -> AddEntryResult:
     """Check for a duplicate entry and merge, or insert fresh (with race guard).
 
@@ -463,6 +468,7 @@ async def _dedup_or_insert(
         expiry_date: Expiry date for the entry.
         variant: Already-fetched MedicationRegistry row.
         tpp: Tablets per package, or None for non-tablet variants.
+        is_important: Whether the incoming add marks this entry as important.
 
     Returns:
         AddEntryResult with merged=False for a fresh insert, merged=True on merge.
@@ -476,6 +482,7 @@ async def _dedup_or_insert(
         new_partial=partial_tablet_count,
         variant=variant,
         tpp=tpp,
+        is_important=is_important,
     )
 
     existing = await crud.find_entry(
@@ -491,6 +498,7 @@ async def _dedup_or_insert(
         package_count,
         partial_tablet_count,
         expiry_date,
+        is_important=is_important,
     )
     if entry is None:
         existing = await crud.find_entry(
@@ -516,6 +524,7 @@ async def add_entry(
     package_count: int,
     partial_tablet_count: int | None,
     expiry_date: date,
+    is_important: bool = False,
 ) -> AddEntryResult:
     """Validate, dedup/merge, persist, and return the add result.
 
@@ -528,6 +537,10 @@ async def add_entry(
     the ``IntegrityError`` from the failed insert is caught, the transaction is
     rolled back, and the winning row is re-fetched so the same merge path runs.
 
+    On merge, importance is OR'd: an entry already marked important stays
+    important; a new add with is_important=True marks a previously unimportant
+    entry important (FR-010 addendum).
+
     Args:
         session: Active async database session.
         user_id: Authenticated user's UUID.
@@ -535,6 +548,7 @@ async def add_entry(
         package_count: Number of packages to add (>= 1).
         partial_tablet_count: Tablets in the last package, or None.
         expiry_date: Expiry date for the entry.
+        is_important: Whether the incoming add marks this entry as important.
 
     Returns:
         AddEntryResult with merged flag, the resulting entry, and an optional
@@ -556,6 +570,7 @@ async def add_entry(
         expiry_date=expiry_date,
         variant=variant,
         tpp=tpp,
+        is_important=is_important,
     )
 
 
@@ -614,6 +629,7 @@ async def _merge_and_commit(
     new_partial: int | None,
     variant: MedicationRegistry,
     tpp: int | None,
+    is_important: bool = False,
 ) -> AddEntryResult:
     """Apply FR-010 merge math, persist the update, and return AddEntryResult.
 
@@ -624,12 +640,14 @@ async def _merge_and_commit(
         new_partial: Partial tablet count of the incoming add, or None.
         variant: The MedicationRegistry row for display fields.
         tpp: Tablets per package (int) for tablet-based variants, None otherwise.
+        is_important: Importance of the incoming add; OR'd with existing flag.
 
     Returns:
         AddEntryResult with merged=True and populated merge_summary.
     """
     prev_pkg = existing.package_count
     prev_partial = existing.partial_tablet_count
+    merged_important = existing.is_important or is_important
 
     if tpp is not None:
         prev_total = total_tablets(prev_pkg, prev_partial, tpp)
@@ -658,7 +676,7 @@ async def _merge_and_commit(
         )
 
     updated = await crud.update_entry_counts(
-        session, existing, new_pkg, new_partial_result
+        session, existing, new_pkg, new_partial_result, is_important=merged_important
     )
 
     return AddEntryResult(

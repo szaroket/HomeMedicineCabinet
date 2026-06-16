@@ -584,13 +584,13 @@ None — `is_important` and `min_package_count` columns already exist in the ini
 
 #### Automated
 
-- [ ] 5.1 Backend tests pass: `uv run pytest`
-- [ ] 5.2 Lint + format pass: `uv run ruff check . && uv run ruff format --check .`
-- [ ] 5.3 Endpoint tests: add with `is_important=true`; OR-merge in both directions
+- [x] 5.1 Backend tests pass: `uv run pytest`
+- [x] 5.2 Lint + format pass: `uv run ruff check . && uv run ruff format --check .`
+- [x] 5.3 Endpoint tests: add with `is_important=true`; OR-merge in both directions
 
 #### Manual
 
-- [ ] 5.4 Adding with the important flag produces an important entry; re-add merges and preserves importance
+- [x] 5.4 Adding with the important flag produces an important entry; re-add merges and preserves importance
 
 ### Phase 6: Frontend — settings feature
 

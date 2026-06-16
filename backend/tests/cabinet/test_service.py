@@ -273,15 +273,20 @@ def _make_variant(
     return v
 
 
-def _make_entry(package_count: int = 1, partial: int | None = None) -> MagicMock:
-    e = MagicMock(spec=CabinetEntry)
-    e.id = uuid4()
-    e.user_id = _USER_ID
-    e.medication_registry_id = _REGISTRY_ID
-    e.package_count = package_count
-    e.partial_tablet_count = partial
-    e.expiry_date = _EXPIRY
-    return e
+def _make_entry(
+    package_count: int = 1,
+    partial: int | None = None,
+    is_important: bool = False,
+) -> MagicMock:
+    entry = MagicMock(spec=CabinetEntry)
+    entry.id = uuid4()
+    entry.user_id = _USER_ID
+    entry.medication_registry_id = _REGISTRY_ID
+    entry.package_count = package_count
+    entry.partial_tablet_count = partial
+    entry.expiry_date = _EXPIRY
+    entry.is_important = is_important
+    return entry
 
 
 @pytest.fixture
@@ -337,6 +342,30 @@ class TestAddEntryFreshInsert:
         assert result.merged is False
         assert result.entry.total_tablets is None
 
+    async def test_fresh_insert_with_is_important_true(
+        self, mock_session: AsyncMock, mock_crud
+    ):
+        variant = _make_variant(is_tablet_based=False, capacity=None)
+        entry = _make_entry(package_count=1, is_important=True)
+        mock_crud.get_registry_by_id = AsyncMock(return_value=variant)
+        mock_crud.find_entry = AsyncMock(return_value=None)
+        mock_crud.insert_entry = AsyncMock(return_value=entry)
+
+        result = await add_entry(
+            session=mock_session,
+            user_id=_USER_ID,
+            medication_registry_id=_REGISTRY_ID,
+            package_count=1,
+            partial_tablet_count=None,
+            expiry_date=_EXPIRY,
+            is_important=True,
+        )
+
+        assert result.merged is False
+        assert result.entry.is_important is True
+        call_kwargs = mock_crud.insert_entry.call_args.kwargs
+        assert call_kwargs["is_important"] is True
+
 
 class TestAddEntryMerge:
     async def test_tablet_merge_returns_merged_true_with_summary(
@@ -386,6 +415,50 @@ class TestAddEntryMerge:
         assert result.merged is True
         assert result.entry.package_count == 5
         assert result.merge_summary.previous_package_count == 3
+
+    @pytest.mark.parametrize(
+        ("existing_important", "incoming_important", "expected_important"),
+        [
+            (False, True, True),  # non-important existing + important add → important
+            (
+                True,
+                False,
+                True,
+            ),  # important existing + non-important add → stays important
+            (True, True, True),  # both important → important
+            (False, False, False),  # neither important → not important
+        ],
+        ids=["false+true", "true+false", "true+true", "false+false"],
+    )
+    async def test_merge_or_semantics_for_is_important(
+        self,
+        mock_session: AsyncMock,
+        mock_crud,
+        existing_important: bool,
+        incoming_important: bool,
+        expected_important: bool,
+    ):
+        variant = _make_variant(is_tablet_based=False, capacity=None)
+        existing = _make_entry(package_count=1, is_important=existing_important)
+        updated = _make_entry(package_count=2, is_important=expected_important)
+        mock_crud.get_registry_by_id = AsyncMock(return_value=variant)
+        mock_crud.find_entry = AsyncMock(return_value=existing)
+        mock_crud.update_entry_counts = AsyncMock(return_value=updated)
+
+        result = await add_entry(
+            session=mock_session,
+            user_id=_USER_ID,
+            medication_registry_id=_REGISTRY_ID,
+            package_count=1,
+            partial_tablet_count=None,
+            expiry_date=_EXPIRY,
+            is_important=incoming_important,
+        )
+
+        assert result.merged is True
+        assert result.entry.is_important is expected_important
+        call_kwargs = mock_crud.update_entry_counts.call_args.kwargs
+        assert call_kwargs["is_important"] is expected_important
 
 
 class TestAddEntryRaceCondition:

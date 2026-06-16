@@ -70,6 +70,7 @@ class AddEntryRequest(BaseModel):
     package_count: int
     expiry_date: date
     partial_tablet_count: int | None = None
+    is_important: bool = False
 
     @field_validator("package_count")
     @classmethod
@@ -126,6 +127,7 @@ class AddEntryOut(BaseModel):
     partial_tablet_count: int | None
     expiry_date: date
     total_tablets: int | None
+    is_important: bool
 
 
 class CabinetEntryOut(BaseModel):
