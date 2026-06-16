@@ -27,7 +27,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="Home Medicine Cabinet API", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="Home Medicine Cabinet API", version="0.2.0", lifespan=lifespan)
 
     _frontend_url = os.getenv("FRONTEND_URL")
     _allowed_origins = (
