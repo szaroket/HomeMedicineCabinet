@@ -129,6 +129,8 @@ Let the user update `min_package_count` (1–10). Provision the row on first wri
 
 **Contract**: `async def upsert_min_package_count(session, user_id, min_package_count) -> UserPreferences`. Follows `L-004`: wrap `execute`/`flush`/`refresh` in `try/except SQLAlchemyError`, log with `exc_info=True`, raise `UserDatabaseError` chained `from exc`. Reuse the `persist(...)` context manager pattern used in `cabinet/crud.py`.
 
+> **Addendum (impl review, 2026-06-16)**: shipped as two thin CRUD functions — `update_min_package_count(session, prefs, ...)` + `insert_preferences(session, prefs)` — with the get-existing → branch → construct-new orchestration kept in `service.update_preferences`. Behavior is equivalent to the single-`upsert` contract above; the split keeps CRUD thin and orchestration in the service.
+
 #### 3. Service + router
 
 **File**: `backend/app/api/v1/users/service.py`, `backend/app/api/v1/users/router.py`
@@ -541,13 +543,13 @@ None — `is_important` and `min_package_count` columns already exist in the ini
 
 #### Automated
 
-- [x] 2.1 Backend tests pass: `uv run pytest`
-- [x] 2.2 Lint + format pass: `uv run ruff check . && uv run ruff format --check .`
-- [x] 2.3 PATCH updates existing row, provisions when absent, rejects 0 and 11 (422)
+- [x] 2.1 Backend tests pass: `uv run pytest` — 3b738a4
+- [x] 2.2 Lint + format pass: `uv run ruff check . && uv run ruff format --check .` — 3b738a4
+- [x] 2.3 PATCH updates existing row, provisions when absent, rejects 0 and 11 (422) — 3b738a4
 
 #### Manual
 
-- [x] 2.4 PATCH min_package_count persists across a subsequent GET
+- [x] 2.4 PATCH min_package_count persists across a subsequent GET — 3b738a4
 
 ### Phase 3: GET /cabinet/entries — importance field, out-of-stock signal, category filter
 
