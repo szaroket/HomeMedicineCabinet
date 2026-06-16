@@ -60,11 +60,15 @@ export interface CabinetEntryOut {
   expiry_date: string;
   total_tablets: number | null;
   status: string;
+  active_ingredient: string | null;
+  route_of_administration: string | null;
+  leaflet_url: string | null;
+  specification_url: string | null;
 }
 
-export function searchProducts(q: string): Promise<ProductOut[]> {
+export function searchProducts(search: string): Promise<ProductOut[]> {
   return apiJson<ProductOut[]>(
-    `/medicines/products?query=${encodeURIComponent(q)}`,
+    `/medicines/products?search=${encodeURIComponent(search)}`,
   );
 }
 
@@ -94,6 +98,31 @@ export function addEntry(payload: AddEntryPayload): Promise<AddEntryResult> {
   });
 }
 
-export function listEntries(): Promise<CabinetEntryOut[]> {
-  return apiJson<CabinetEntryOut[]>("/cabinet/entries");
+export interface CabinetListParams {
+  status?: "valid" | "expiring" | "expired";
+  search?: string;
+  order?: "asc" | "desc";
+  page?: number;
+  page_size?: 20 | 50 | 100;
+}
+
+export interface CabinetPageOut {
+  items: CabinetEntryOut[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export function listEntries(
+  params?: CabinetListParams,
+): Promise<CabinetPageOut> {
+  const searchParams = new URLSearchParams();
+  if (params?.status) searchParams.set("status", params.status);
+  if (params?.search) searchParams.set("search", params.search);
+  if (params?.order) searchParams.set("order", params.order);
+  if (params?.page != null) searchParams.set("page", String(params.page));
+  if (params?.page_size != null)
+    searchParams.set("page_size", String(params.page_size));
+  const qs = searchParams.toString();
+  return apiJson<CabinetPageOut>(`/cabinet/entries${qs ? `?${qs}` : ""}`);
 }

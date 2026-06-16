@@ -7,7 +7,7 @@ entry, unsorted-beyond-name, with a computed expiry status. S-02 turns that flat
 list into the cabinet the PRD describes (US-03, FR-004, FR-006): a list the user
 can **filter by expiry status**, **search by medication name or active
 ingredient**, **sort by name**, and **page through**, where each entry also shows
-its registry-sourced **producer**, **route of administration**, and **leaflet /
+its registry-sourced **route of administration** and **leaflet /
 specification links** (FR-011, FR-012).
 
 We deliver this in four small, independently verifiable phases: (1) backend adds
@@ -116,7 +116,9 @@ frontend keeps all list state in the URL.
   `GET /cabinet/entries` from `list[CabinetEntryOut]` to
   `{ items, total, page, page_size }` breaks the Phase-1/2 frontend until Phase 4
   lands. This is expected; between Phase 3 and Phase 4 the list is verified via
-  Swagger, not the UI.
+  Swagger, not the UI. **Deploy constraint:** Phases 3 and 4 land in the same
+  merge/deploy — Phase 3 is never shipped standalone to any environment, or the
+  live cabinet list breaks.
 - **`page_size` allow-list.** Only 20 / 50 / 100 are accepted; any other value is
   a 422. Do not accept arbitrary page sizes (prevents unbounded result sets).
 
@@ -137,7 +139,7 @@ list ordered by name.
 **File**: `backend/app/api/v1/cabinet/schemas.py`
 
 **Intent**: Add the FR-011/FR-012 display fields to `CabinetEntryOut` so each
-entry carries its producer, route of administration, and document links.
+entry carries its route of administration and document links.
 
 **Contract**: Add to `CabinetEntryOut`: `route_of_administration: str | None`,
 `leaflet_url: str | None`, `specification_url: str | None`. (`AddEntryOut` is
@@ -148,7 +150,7 @@ unchanged — the add flow does not display these.)
 **File**: `backend/app/api/v1/cabinet/service.py`
 
 **Intent**: Populate the new fields when building each `CabinetEntryOut` in
-`list_entries`, applying the producer fallback rule.
+`list_entries`.
 
 **Contract**: In the `list_entries` row loop (`service.py:187`), set
 `route_of_administration = variant.route_of_administration`,
@@ -167,7 +169,7 @@ crud change is needed.
 
 #### Manual Verification:
 
-- In Swagger (`/docs`), `GET /cabinet/entries` shows the four new fields on each
+- In Swagger (`/docs`), `GET /cabinet/entries` shows the three new fields on each
   item, populated for a real entry.
 
 **Implementation Note**: After completing this phase and all automated
@@ -179,7 +181,7 @@ verification passes, pause for manual confirmation before proceeding.
 
 ### Overview
 
-Show the producer, route of administration, and leaflet/specification links per
+Show the route of administration and leaflet/specification links per
 entry, consuming the still-bare list. Keeps the table scannable on mobile by
 revealing details in an expandable row.
 
@@ -189,7 +191,7 @@ revealing details in an expandable row.
 
 **File**: `frontend/src/features/cabinet/api/cabinet-api.ts`
 
-**Intent**: Mirror the four new backend fields on the TS `CabinetEntryOut`.
+**Intent**: Mirror the three new backend fields on the TS `CabinetEntryOut`.
 
 **Contract**: Add `route_of_administration: string | null`,
 `leaflet_url: string | null`, `specification_url: string | null` to the
@@ -200,7 +202,7 @@ revealing details in an expandable row.
 **File**: `frontend/src/features/cabinet/components/cabinet-list.tsx`
 
 **Intent**: Add a per-row expand affordance that reveals a detail panel with
-Producent, Droga podania, and links to Ulotka / Charakterystyka. Links open in a
+Droga podania and links to Ulotka / Charakterystyka. Links open in a
 new tab; missing values show "—"; missing links are omitted (no dead link).
 
 **Contract**: Each entry row gains a toggle (chevron) controlling a collapsible
@@ -208,6 +210,13 @@ detail sub-row. Detail labels (Polish): `Droga podania`, `Ulotka`,
 `Charakterystyka`. `leaflet_url` / `specification_url` render as
 `<a target="_blank" rel="noopener noreferrer">`; render the link only when the
 URL is non-null. Expansion state is local component state (not URL).
+
+**Addendum (2026-06-15, impl review F1)**: To meet the Overview goal of keeping
+the table scannable on mobile, `Dawka` (strength) and `Postać`
+(pharmaceutical_form) were moved out of the main table columns into the
+expandable detail panel, slimming the table from 7 to 5 columns. The three
+required detail labels above remain present; `Dawka` / `Postać` join them in the
+detail. Accepted as an improvement aligned with the phase intent.
 
 ### Success Criteria:
 
@@ -277,7 +286,10 @@ join (`crud.py:132`):
   Critical Implementation Details;
 - search → `text("medication_registry.search_vector @@ to_tsquery('simple', :tsquery)")`
   with `tsquery` bound (never interpolated);
-- sort → `ORDER BY lower(medication_registry.name)` asc/desc;
+- sort → `ORDER BY lower(medication_registry.name) <asc|desc>, cabinet_entries.id ASC`
+  — the `id` tiebreaker makes paging deterministic when names collide; the
+  asc/desc toggle flips only the name key, not the tiebreaker. The COUNT query
+  needs no ORDER BY.
 - pagination → `LIMIT/OFFSET`; total → `select(func.count())` over the same
   filtered join (no limit/offset).
 
@@ -311,16 +323,35 @@ string into a safe tsquery via the medicines builder, then delegate.
 `status`, `order`, `page`, `page_size`, and the resolved `threshold` to
 `cabinet_service.list_entries`. Returns `CabinetPageOut`.
 
-#### 6. Router params + envelope
+#### 6. Shared `NonEmptyStr` alias
+
+**File**: `backend/app/utilities/types.py` (new),
+`backend/app/api/v1/medicines/router.py`
+
+**Intent**: Give the stripped, non-empty query-string alias a shared home so the
+cabinet router reuses it instead of importing a sibling router's private alias or
+redefining it.
+
+**Contract**: Create `app/utilities/types.py` defining
+`NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]`
+(move the existing L-003 comment from `medicines/router.py:17-23` with it).
+Update `medicines/router.py` to import `NonEmptyStr` from `app.utilities.types`
+and delete its local definition (behaviour identical; existing
+`Annotated[NonEmptyStr, Query(...)]` call sites unchanged).
+
+#### 7. Router params + envelope
 
 **File**: `backend/app/api/v1/cabinet/router.py`
 
 **Intent**: Expose the query parameters with validation and return the envelope.
 
-**Contract**: `GET /cabinet/entries` `response_model=CabinetPageOut`, params
-(all `Query()` **inside** `Annotated`, L-003):
+**Contract**: `GET /cabinet/entries` `response_model=CabinetPageOut`; import
+`NonEmptyStr` from `app.utilities.types`. Params (all `Query()` **inside**
+`Annotated`, L-003):
 - `status: Literal["valid","expiring","expired"] | None = None`
-- `q: NonEmptyStr | None = None` (stripped; None when absent)
+- `q: Annotated[NonEmptyStr, Query(description=...)] | None = None` (stripped;
+  None when absent — `Query()` stays inside `Annotated` so the OpenAPI
+  description is preserved and the L-003 convention holds)
 - `sort: Literal["name"] = "name"`
 - `order: Literal["asc","desc"] = "asc"`
 - `page: int = Query(1, ge=1)`
@@ -328,6 +359,25 @@ string into a safe tsquery via the medicines builder, then delegate.
 
 Keep the existing error→HTTP mapping (`CabinetDatabaseError`/`UserDatabaseError`
 → 503, `CabinetError` → 400, catch-all → 500).
+
+**Addendum (2026-06-15, impl review F2)**: The tsquery builder was not promoted
+in `medicines/service.py` and routed through the facade (plan items 1 & 5).
+Instead it moved to a domain-neutral `app/utilities/common.py` as
+`build_tsquery(...)` and is called from the cabinet **service**; the facade
+forwards the raw `search` string. This supersedes items 1 & 5: a shared utility
+sidesteps the cross-domain hop while still honoring the facade rule (no domain
+calls into another domain). Accepted as an improvement aligned with the phase
+intent.
+
+**Addendum (2026-06-15, impl review F3)**: The query parameters (item 7) were
+consolidated into a single `CabinetListParams` Pydantic model instead of inline
+`Annotated[..., Query()]` params (L-003 satisfied via field-level `NonEmptyStr`).
+The model (a) renames `q` → `search` (per L-005) and (b) omits `sort` entirely,
+since only name sort exists. Consequence: with `extra="forbid"`, the old
+documented URL contract (`?q=apap&sort=name&order=desc`, Overview line 60) now
+422s; the new contract is `?search=apap&order=desc`. The Phase 4 frontend already
+emits the new shape, so there is no live break. `sort` was intentionally not
+re-added — revisit only if a second sort key is introduced.
 
 ### Success Criteria:
 
@@ -394,6 +444,15 @@ termin / Przeterminowany), a page-size selector (20/50/100), and prev/next
 pagination showing current page and total page count derived from `total`.
 Changing any filter/search/sort/page-size resets `page` to 1.
 
+**Addendum (2026-06-16, impl review F2)**: The Phase 4 commit also carried two
+out-of-scope add-flow UX fixes, accepted and documented here rather than split
+out. (a) `add-medication-form.tsx` gained a `formKey` reset mechanism (remount to
+clear fields after a successful add) and `defaultValue={1}` on `package_count`.
+(b) `product-autocomplete.tsx` gained a `productLabel()` helper and a scrollable
+dropdown (`maxHeight`) so long result lists don't overflow. These do not touch the
+cabinet list and are unverified by any Phase 4 success criterion; they are
+add-medication polish that landed alongside the list controls.
+
 #### 3. List rendering + empty states
 
 **File**: `frontend/src/features/cabinet/components/cabinet-list.tsx`
@@ -428,6 +487,73 @@ the URL params. Preserve loading/error states. Keep the Phase 2 expandable detai
 - Usable on a narrow (mobile) viewport.
 
 **Implementation Note**: Final phase — confirm the end-to-end flow with the human.
+
+---
+
+## Phase 5: Active ingredient — backend + frontend
+
+### Overview
+
+Surface the active ingredient on each cabinet entry. Purely additive: the field
+already lives on `medication_registry` and is returned by the existing join in
+`crud.list_entries` — nothing in the DB or query layer needs to change.
+
+### Changes Required:
+
+#### 1. Response schema
+
+**File**: `backend/app/api/v1/cabinet/schemas.py`
+
+**Intent**: Add `active_ingredient` to `CabinetEntryOut`.
+
+**Contract**: Add `active_ingredient: str | None` to `CabinetEntryOut`.
+`AddEntryOut` is unchanged.
+
+#### 2. Service mapping
+
+**File**: `backend/app/api/v1/cabinet/service.py`
+
+**Intent**: Populate the new field when building each `CabinetEntryOut` in
+`list_entries`.
+
+**Contract**: In the row loop, set
+`active_ingredient = variant.active_ingredient`. The existing join already
+returns the full `MedicationRegistry` row, so no crud change is needed.
+
+#### 3. Frontend type
+
+**File**: `frontend/src/features/cabinet/api/cabinet-api.ts`
+
+**Intent**: Mirror the new field on the TS `CabinetEntryOut`.
+
+**Contract**: Add `active_ingredient: string | null` to the `CabinetEntryOut`
+interface.
+
+#### 4. Frontend display
+
+**File**: `frontend/src/features/cabinet/components/cabinet-list.tsx`
+
+**Intent**: Show the active ingredient in the expandable detail panel alongside
+the other Phase 2 fields.
+
+**Contract**: Add a `Substancja czynna` row to the `<dl>` in the detail panel;
+render the value or `"—"` when null.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Backend lint + format: `cd backend && uv run ruff check . && uv run ruff format --check .`
+- Backend tests pass: `cd backend && uv run pytest`
+- Existing `list_entries` service test updated to assert the new field.
+- Frontend build passes: `cd frontend && npm run build`
+- Frontend lint passes: `cd frontend && npm run lint`
+- Frontend format passes: `cd frontend && npx prettier --check src/`
+
+#### Manual Verification:
+
+- Expanding a cabinet row shows the active ingredient (e.g. "Paracetamolum")
+  or "—" when the registry row has none.
 
 ---
 
@@ -488,56 +614,71 @@ schema change.
 
 #### Automated
 
-- [ ] 1.1 Lint + format pass (`ruff check` / `ruff format --check`)
-- [ ] 1.2 Backend tests pass (`uv run pytest`)
-- [ ] 1.3 `list_entries` test asserts the three new fields
+- [x] 1.1 Lint + format pass (`ruff check` / `ruff format --check`) — ae5ad12
+- [x] 1.2 Backend tests pass (`uv run pytest`) — ae5ad12
+- [x] 1.3 `list_entries` test asserts the three new fields — ae5ad12
 
 #### Manual
 
-- [ ] 1.4 Swagger shows the four new fields populated on a real entry
+- [x] 1.4 Swagger shows the three new fields populated on a real entry — ae5ad12
 
 ### Phase 2: Frontend — render entry display fields
 
 #### Automated
 
-- [ ] 2.1 Build passes (`npm run build`)
-- [ ] 2.2 Lint passes (`npm run lint`)
-- [ ] 2.3 Format passes (`prettier --check src/`)
+- [x] 2.1 Build passes (`npm run build`) — c493cf7
+- [x] 2.2 Lint passes (`npm run lint`) — c493cf7
+- [x] 2.3 Format passes (`prettier --check src/`) — c493cf7
 
 #### Manual
 
-- [ ] 2.4 Expanding a row shows route of administration and working leaflet/spec links
-- [ ] 2.5 Missing route/link degrades gracefully ("—" / omitted link)
+- [x] 2.4 Expanding a row shows route of administration and working leaflet/spec links — c493cf7
+- [x] 2.5 Missing route/link degrades gracefully ("—" / omitted link) — c493cf7
 - [ ] 2.6 Usable on a narrow (mobile) viewport
 
 ### Phase 3: Backend — filtering, search, sort, pagination
 
 #### Automated
 
-- [ ] 3.1 Lint + format pass
-- [ ] 3.2 Backend tests pass (`uv run pytest`)
-- [ ] 3.3 Parity test: SQL status filter ↔ `classify_status` at boundary dates
-- [ ] 3.4 Search test: name match and active-ingredient match; < 2 chars = no filter
-- [ ] 3.5 Pagination test: correct `total`, page slicing, and `order=desc`
-- [ ] 3.6 Validation test: `page_size=25` → 422; `status=foo` → 422
+- [x] 3.1 Lint + format pass — a7cd2a3
+- [x] 3.2 Backend tests pass (`uv run pytest`) — a7cd2a3
+- [x] 3.3 Parity test: SQL status filter ↔ `classify_status` at boundary dates — a7cd2a3
+- [x] 3.4 Search test: name match and active-ingredient match; < 2 chars = no filter — a7cd2a3
+- [x] 3.5 Pagination test: correct `total`, page slicing, and `order=desc` — a7cd2a3
+- [x] 3.6 Validation test: `page_size=25` → 422; `status=foo` → 422 — a7cd2a3
 
 #### Manual
 
-- [ ] 3.7 Swagger: combined status + q + order + page + page_size returns a correct envelope
+- [x] 3.7 Swagger: combined status + q + order + page + page_size returns a correct envelope — a7cd2a3
 
 ### Phase 4: Frontend — controls + URL-driven state
 
 #### Automated
 
-- [ ] 4.1 Build passes (`npm run build`)
-- [ ] 4.2 Lint passes (`npm run lint`)
-- [ ] 4.3 Format passes (`prettier --check src/`)
+- [x] 4.1 Build passes (`npm run build`) — 9156538
+- [x] 4.2 Lint passes (`npm run lint`) — 9156538
+- [x] 4.3 Format passes (`prettier --check src/`) — 9156538
 
 #### Manual
 
-- [ ] 4.4 Search narrows the list (debounced) and updates URL `q`
-- [ ] 4.5 Status filter + search intersect; clearing returns all
-- [ ] 4.6 Sort toggle, page-size selector, and prev/next pagination work with correct page count
-- [ ] 4.7 Reload and paste-into-new-tab restore full state from the URL
-- [ ] 4.8 Distinct empty states + "Wyczyść filtry" reset
+- [x] 4.4 Search narrows the list (debounced) and updates URL `search` — 9156538
+- [x] 4.5 Status filter + search intersect; clearing returns all — 9156538
+- [x] 4.6 Sort toggle, page-size selector, and prev/next pagination work with correct page count — 9156538
+- [x] 4.7 Reload and paste-into-new-tab restore full state from the URL — 9156538
+- [x] 4.8 Distinct empty states + "Wyczyść filtry" reset — 9156538
 - [ ] 4.9 Usable on a narrow (mobile) viewport
+
+### Phase 5: Active ingredient — backend + frontend
+
+#### Automated
+
+- [x] 5.1 Backend lint + format pass — ed2261a
+- [x] 5.2 Backend tests pass (`uv run pytest`) — ed2261a
+- [x] 5.3 `list_entries` service test asserts `active_ingredient` field — ed2261a
+- [x] 5.4 Frontend build passes (`npm run build`) — ed2261a
+- [x] 5.5 Frontend lint passes (`npm run lint`) — ed2261a
+- [x] 5.6 Frontend format passes (`prettier --check src/`) — ed2261a
+
+#### Manual
+
+- [x] 5.7 Expanding a row shows the active ingredient or "—" when absent — ed2261a

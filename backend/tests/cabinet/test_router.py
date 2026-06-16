@@ -14,10 +14,12 @@ from app.api.v1.cabinet.schemas import (
     AddEntryOut,
     AddEntryResult,
     CabinetEntryOut,
+    CabinetPageOut,
     MergeSummary,
 )
 from app.utilities.errors import (
     CabinetDatabaseError,
+    CabinetError,
     CabinetInvariantError,
     InvalidPartialTabletCountError,
     MedicationNotFoundError,
@@ -224,6 +226,10 @@ def _make_cabinet_entry_out(**overrides) -> CabinetEntryOut:
         expiry_date=date(2027, 6, 1),
         total_tablets=25,
         status="valid",
+        active_ingredient="Paracetamolum",
+        route_of_administration="doustna",
+        leaflet_url="https://example.com/leaflet",
+        specification_url="https://example.com/spec",
     )
     return CabinetEntryOut(**(defaults | overrides))
 
@@ -235,6 +241,11 @@ class TestListEntriesAuthGuard:
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
+def _make_page_out(entries: list[CabinetEntryOut] | None = None) -> CabinetPageOut:
+    items = entries if entries is not None else [_make_cabinet_entry_out()]
+    return CabinetPageOut(items=items, total=len(items), page=1, page_size=20)
+
+
 class TestListEntriesSuccess:
     @pytest.mark.asyncio
     async def test_returns_200_with_entry_list(
@@ -243,32 +254,112 @@ class TestListEntriesSuccess:
         mocker.patch(
             "app.api.v1.cabinet.router.cabinet_facade.list_entries",
             new_callable=AsyncMock,
-            return_value=[_make_cabinet_entry_out()],
+            return_value=_make_page_out(),
         )
 
         response = await authed_client.get("/api/v1/cabinet/entries")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert len(data) == 1
-        assert data[0]["name"] == "Apap"
-        assert data[0]["status"] == "valid"
-        assert data[0]["total_tablets"] == 25
+        assert data["total"] == 1
+        assert data["page"] == 1
+        assert data["page_size"] == 20
+        assert len(data["items"]) == 1
+        assert data["items"][0]["name"] == "Apap"
+        assert data["items"][0]["status"] == "valid"
+        assert data["items"][0]["total_tablets"] == 25
 
     @pytest.mark.asyncio
-    async def test_returns_empty_list_when_no_entries(
+    async def test_returns_empty_page_when_no_entries(
         self, authed_client: AsyncClient, mocker: MockerFixture
     ):
         mocker.patch(
             "app.api.v1.cabinet.router.cabinet_facade.list_entries",
             new_callable=AsyncMock,
-            return_value=[],
+            return_value=_make_page_out([]),
         )
 
         response = await authed_client.get("/api/v1/cabinet/entries")
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.json() == []
+        data = response.json()
+        assert data["items"] == []
+        assert data["total"] == 0
+
+    @pytest.mark.asyncio
+    async def test_query_params_accepted(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mock_facade = mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.list_entries",
+            new_callable=AsyncMock,
+            return_value=_make_page_out([]),
+        )
+
+        response = await authed_client.get(
+            "/api/v1/cabinet/entries",
+            params={
+                "status": "expiring",
+                "search": "apap",
+                "order": "desc",
+                "page": 2,
+                "page_size": 50,
+            },
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        mock_facade.assert_awaited_once()
+        call_kwargs = mock_facade.call_args.kwargs
+        assert call_kwargs["status"] == "expiring"
+        assert call_kwargs["search"] == "apap"
+        assert call_kwargs["order"] == "desc"
+        assert call_kwargs["page"] == 2
+        assert call_kwargs["page_size"] == 50
+
+
+class TestListEntriesParamValidation:
+    @pytest.mark.asyncio
+    async def test_invalid_page_size_returns_422(self, authed_client: AsyncClient):
+        response = await authed_client.get(
+            "/api/v1/cabinet/entries", params={"page_size": 25}
+        )
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+    @pytest.mark.asyncio
+    async def test_invalid_status_returns_422(self, authed_client: AsyncClient):
+        response = await authed_client.get(
+            "/api/v1/cabinet/entries", params={"status": "foo"}
+        )
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+    @pytest.mark.asyncio
+    async def test_page_zero_returns_422(self, authed_client: AsyncClient):
+        response = await authed_client.get(
+            "/api/v1/cabinet/entries", params={"page": 0}
+        )
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+    @pytest.mark.asyncio
+    async def test_whitespace_search_returns_422(self, authed_client: AsyncClient):
+        response = await authed_client.get(
+            "/api/v1/cabinet/entries", params={"search": "   "}
+        )
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("page_size", [20, 50, 100])
+    async def test_valid_page_sizes_accepted(
+        self, authed_client: AsyncClient, mocker: MockerFixture, page_size: int
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.list_entries",
+            new_callable=AsyncMock,
+            return_value=_make_page_out([]),
+        )
+        response = await authed_client.get(
+            "/api/v1/cabinet/entries", params={"page_size": page_size}
+        )
+        assert response.status_code == status.HTTP_200_OK
 
 
 class TestListEntriesErrorMapping:
@@ -299,3 +390,18 @@ class TestListEntriesErrorMapping:
         response = await authed_client.get("/api/v1/cabinet/entries")
 
         assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+
+    @pytest.mark.asyncio
+    async def test_cabinet_error_returns_400(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.list_entries",
+            new_callable=AsyncMock,
+            side_effect=CabinetError("bad request"),
+        )
+
+        response = await authed_client.get("/api/v1/cabinet/entries")
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.json()["detail"] == "bad request"

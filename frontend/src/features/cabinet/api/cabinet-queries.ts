@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   searchProducts,
   listVariants,
@@ -8,20 +13,23 @@ import {
 import type {
   ProductOut,
   AddEntryPayload,
+  CabinetListParams,
 } from "@/features/cabinet/api/cabinet-api";
 
 export const cabinetKeys = {
-  products: (q: string) => ["cabinet", "products", q] as const,
+  products: (search: string) => ["cabinet", "products", search] as const,
   variants: (name: string, strength: string | null, form: string | null) =>
     ["cabinet", "variants", name, strength, form] as const,
-  entries: () => ["cabinet", "entries"] as const,
+  entriesAll: () => ["cabinet", "entries"] as const,
+  entries: (params: CabinetListParams) =>
+    ["cabinet", "entries", params] as const,
 };
 
-export function useProductSearch(debouncedQ: string) {
+export function useProductSearch(debouncedSearch: string) {
   return useQuery({
-    queryKey: cabinetKeys.products(debouncedQ),
-    queryFn: () => searchProducts(debouncedQ),
-    enabled: debouncedQ.length >= 2,
+    queryKey: cabinetKeys.products(debouncedSearch),
+    queryFn: () => searchProducts(debouncedSearch),
+    enabled: debouncedSearch.length >= 2,
   });
 }
 
@@ -42,10 +50,11 @@ export function useVariants(product: ProductOut | null) {
   });
 }
 
-export function useCabinetEntries() {
+export function useCabinetEntries(params: CabinetListParams) {
   return useQuery({
-    queryKey: cabinetKeys.entries(),
-    queryFn: listEntries,
+    queryKey: cabinetKeys.entries(params),
+    queryFn: () => listEntries(params),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -54,7 +63,7 @@ export function useAddEntry() {
   return useMutation({
     mutationFn: (payload: AddEntryPayload) => addEntry(payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: cabinetKeys.entries() });
+      queryClient.invalidateQueries({ queryKey: cabinetKeys.entriesAll() });
     },
   });
 }

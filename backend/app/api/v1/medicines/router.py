@@ -5,7 +5,6 @@ from typing import Annotated
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Security, status
-from pydantic import StringConstraints
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.v1.medicines import service as medicines_service
@@ -13,14 +12,7 @@ from app.api.v1.medicines.schemas import ProductOut, VariantOut
 from app.core.jwt_security import get_current_user
 from app.db.connector import get_session
 from app.utilities.errors import MedicineSearchError
-
-# Stripped, non-empty string — the shared constraint for all query-string params
-# in this router.  Each endpoint wraps it in Annotated[NonEmptyStr, Query(...)]
-# with its own description rather than bundling the Query() here, so the
-# description stays co-located with the param that uses it.
-# Query() must stay INSIDE Annotated (not a default value) or the constraints
-# are silently dropped — see lessons.md L-003.
-NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+from app.utilities.types import NonEmptyStr
 
 logger = logging.getLogger("app.medicines.router")
 
@@ -31,7 +23,7 @@ router = APIRouter(
 
 @router.get("/products", response_model=list[ProductOut])
 async def search_products(
-    query: Annotated[
+    search: Annotated[
         NonEmptyStr,
         Query(description="Search term (matches name or active ingredient)."),
     ],
@@ -45,7 +37,7 @@ async def search_products(
     short inputs.
     """
     try:
-        return await medicines_service.search_products(session, query, limit)
+        return await medicines_service.search_products(session, search, limit)
     except MedicineSearchError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
