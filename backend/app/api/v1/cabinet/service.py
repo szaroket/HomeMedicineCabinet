@@ -582,6 +582,7 @@ async def set_entry_importance(
 
     Raises:
         EntryNotFoundError: When the entry does not exist or does not belong to the user.
+        MedicationNotFoundError: When the entry's registry variant no longer exists.
         CabinetDatabaseError: When a database operation fails.
     """
     entry = await crud.find_entry_by_id(
@@ -592,8 +593,8 @@ async def set_entry_importance(
     updated_entry = await crud.update_entry_importance(
         session=session, entry=entry, is_important=is_important
     )
-    variant = await crud.get_registry_by_id(
-        session=session, registry_id=entry.medication_registry_id
+    variant = await _get_variant_or_raise(
+        session=session, medication_registry_id=entry.medication_registry_id
     )
     today = datetime.now(timezone.utc).date()
     return _map_row_to_entry_out(

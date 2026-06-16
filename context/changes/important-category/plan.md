@@ -288,6 +288,8 @@ Add an endpoint to set `is_important` on a single entry owned by the current use
 
 **Implementation Note**: After automated verification passes, pause for human confirmation before proceeding.
 
+**Addendum (impl, 2026-06-16)**: The prefs-resolution logic was extracted into a `_ResolvedPrefs` NamedTuple + `_resolve_prefs` helper in `facade.py`, now shared by both `list_entries` (Phase 3) and `set_entry_importance`. This DRYs the cross-domain prefs read across the two facade paths; the Phase 3 `list_entries` path was rewired to consume the helper with no behavior change (all cabinet tests pass).
+
 ---
 
 ## Phase 5: `POST /cabinet/entries` — mark important at add time
@@ -570,13 +572,13 @@ None — `is_important` and `min_package_count` columns already exist in the ini
 
 #### Automated
 
-- [x] 4.1 Backend tests pass: `uv run pytest`
-- [x] 4.2 Lint + format pass: `uv run ruff check . && uv run ruff format --check .`
-- [x] 4.3 Endpoint tests: toggle on/off; 404 for missing/other-user entry
+- [x] 4.1 Backend tests pass: `uv run pytest` — af2e2a6
+- [x] 4.2 Lint + format pass: `uv run ruff check . && uv run ruff format --check .` — af2e2a6
+- [x] 4.3 Endpoint tests: toggle on/off; 404 for missing/other-user entry — af2e2a6
 
 #### Manual
 
-- [ ] 4.4 PATCH flips importance and is reflected in a subsequent list call
+- [x] 4.4 PATCH flips importance and is reflected in a subsequent list call — af2e2a6
 
 ### Phase 5: POST /cabinet/entries — mark important at add time
 

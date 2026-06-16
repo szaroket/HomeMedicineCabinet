@@ -533,6 +533,24 @@ class TestSetEntryImportanceErrorMapping:
         assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
 
     @pytest.mark.asyncio
+    async def test_cabinet_error_returns_400(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.set_entry_importance",
+            new_callable=AsyncMock,
+            side_effect=CabinetError("bad request"),
+        )
+
+        response = await authed_client.patch(
+            f"/api/v1/cabinet/entries/{_ENTRY_ID}",
+            json={"is_important": True},
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.json()["detail"] == "bad request"
+
+    @pytest.mark.asyncio
     async def test_missing_token_returns_401(self, client: AsyncClient):
         response = await client.patch(
             f"/api/v1/cabinet/entries/{_ENTRY_ID}",
