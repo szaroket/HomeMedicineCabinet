@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   searchProducts,
   listVariants,
@@ -49,6 +54,7 @@ export function useCabinetEntries(params: CabinetListParams) {
   return useQuery({
     queryKey: cabinetKeys.entries(params),
     queryFn: () => listEntries(params),
+    placeholderData: keepPreviousData,
   });
 }
 

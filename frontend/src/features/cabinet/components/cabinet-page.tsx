@@ -21,6 +21,10 @@ const STATUS_OPTIONS: { value: StatusFilter | ""; label: string }[] = [
 
 const PAGE_SIZE_OPTIONS: PageSize[] = [20, 50, 100];
 
+// Minimum characters before a search is sent to the API (mirrors the backend
+// tsquery threshold). Shorter input is treated as no search at all.
+const MIN_SEARCH_LEN = 2;
+
 function parsePageSize(raw: string | null): PageSize {
   const num = Number(raw);
   if (num === 50 || num === 100) return num;
@@ -62,34 +66,40 @@ export function CabinetPage() {
     setSearchInput(rawSearch);
   }
 
-  // Reflect the debounced search into the URL. Uses replace so a single typed
+  // Only searches of at least MIN_SEARCH_LEN characters are sent to the API, so
+  // shorter input must not leak into the URL either — otherwise the URL would
+  // advertise a search the query ignores.
+  const effectiveSearch =
+    debouncedSearch.length >= MIN_SEARCH_LEN ? debouncedSearch : "";
+
+  // Reflect the effective search into the URL. Uses replace so a single typed
   // word doesn't push one history entry per keystroke, and resets pagination
   // whenever the query changes.
   useEffect(() => {
-    if (debouncedSearch === rawSearch) return;
+    if (effectiveSearch === rawSearch) return;
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev);
-        if (debouncedSearch === "") {
+        if (effectiveSearch === "") {
           next.delete("search");
         } else {
-          next.set("search", debouncedSearch);
+          next.set("search", effectiveSearch);
         }
         next.delete("page");
         return next;
       },
       { replace: true },
     );
-  }, [debouncedSearch, rawSearch, setSearchParams]);
+  }, [effectiveSearch, rawSearch, setSearchParams]);
 
-  const hasFilters = !!status || debouncedSearch.length >= 2;
+  const hasFilters = !!status || effectiveSearch !== "";
 
   const params: CabinetListParams = {
     order,
     page,
     page_size: pageSize,
     ...(status ? { status } : {}),
-    ...(debouncedSearch.length >= 2 ? { search: debouncedSearch } : {}),
+    ...(effectiveSearch !== "" ? { search: effectiveSearch } : {}),
   };
 
   const { data: pageData, isLoading, isError } = useCabinetEntries(params);
@@ -109,12 +119,42 @@ export function CabinetPage() {
 
   function clearFilters() {
     setSearchInput("");
-    setSearchParams({});
+    // Clear only the filters (status/search) and reset pagination; sort order
+    // and page size are display preferences, not filters, so they are kept.
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("status");
+        next.delete("search");
+        next.delete("page");
+        return next;
+      },
+      { replace: true },
+    );
   }
 
   const totalPages = pageData
-    ? Math.ceil(pageData.total / pageData.page_size)
+    ? Math.max(1, Math.ceil(pageData.total / pageData.page_size))
     : 1;
+
+  // Guard against an out-of-range page (e.g. ?page=999, or a page that no longer
+  // exists after filtering): once the real total is known, redirect to the last
+  // valid page so the list never renders headers over an empty body.
+  useEffect(() => {
+    if (!pageData || page <= totalPages) return;
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (totalPages <= 1) {
+          next.delete("page");
+        } else {
+          next.set("page", String(totalPages));
+        }
+        return next;
+      },
+      { replace: true },
+    );
+  }, [pageData, page, totalPages, setSearchParams]);
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-900">

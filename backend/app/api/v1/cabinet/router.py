@@ -58,6 +58,10 @@ async def list_entries(
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=exc.message
         ) from exc
+    except CabinetError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
+        ) from exc
     except Exception as exc:
         logger.exception("Unexpected error when listing entries: %s", exc)
         raise HTTPException(

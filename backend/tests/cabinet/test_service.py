@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
+from pytest_mock import MockerFixture
 from sqlalchemy.exc import IntegrityError
 
 from app.api.v1.cabinet.models import CabinetEntry
@@ -667,3 +668,29 @@ class TestListEntries:
 
         call_kwargs = mock_list_crud.list_entries.call_args.kwargs
         assert call_kwargs["tsquery"] is None
+
+    @pytest.mark.parametrize(
+        "capacity",
+        [None, Decimal(0), Decimal(-5)],
+        ids=["none", "zero", "negative"],
+    )
+    async def test_tablet_variant_with_invalid_capacity_yields_none_total_and_warns(
+        self,
+        mock_session: AsyncMock,
+        mock_list_crud,
+        mocker: MockerFixture,
+        capacity: Decimal | None,
+    ):
+        spy_logger = mocker.patch("app.api.v1.cabinet.service.logger", autospec=True)
+        entry = _make_real_entry(package_count=3)
+        variant = _make_variant(is_tablet_based=True, capacity=capacity)
+        mock_list_crud.list_entries = AsyncMock(return_value=([(entry, variant)], 1))
+
+        result = await list_entries(
+            session=mock_session,
+            user_id=_USER_ID,
+            expiry_threshold_days=30,
+        )
+
+        assert result.items[0].total_tablets is None
+        spy_logger.warning.assert_called_once()

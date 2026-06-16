@@ -19,6 +19,7 @@ from app.api.v1.cabinet.schemas import (
 )
 from app.utilities.errors import (
     CabinetDatabaseError,
+    CabinetError,
     CabinetInvariantError,
     InvalidPartialTabletCountError,
     MedicationNotFoundError,
@@ -389,3 +390,18 @@ class TestListEntriesErrorMapping:
         response = await authed_client.get("/api/v1/cabinet/entries")
 
         assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+
+    @pytest.mark.asyncio
+    async def test_cabinet_error_returns_400(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.list_entries",
+            new_callable=AsyncMock,
+            side_effect=CabinetError("bad request"),
+        )
+
+        response = await authed_client.get("/api/v1/cabinet/entries")
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.json()["detail"] == "bad request"

@@ -184,7 +184,8 @@ def _map_row_to_entry_out(
     Returns:
         Populated CabinetEntryOut.
     """
-    if _tablet_capacity_invalid(variant):
+    capacity_invalid = _tablet_capacity_invalid(variant)
+    if capacity_invalid:
         logger.warning(
             "Tablet-based registry row %s has invalid capacity %r; "
             "total_tablets left None for cabinet entry %s",
@@ -194,7 +195,7 @@ def _map_row_to_entry_out(
         )
     tpp = (
         int(variant.capacity)
-        if variant.is_tablet_based and not _tablet_capacity_invalid(variant)
+        if variant.is_tablet_based and not capacity_invalid
         else None
     )
     return CabinetEntryOut(
