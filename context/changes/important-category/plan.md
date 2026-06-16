@@ -541,13 +541,13 @@ None — `is_important` and `min_package_count` columns already exist in the ini
 
 #### Automated
 
-- [ ] 2.1 Backend tests pass: `uv run pytest`
-- [ ] 2.2 Lint + format pass: `uv run ruff check . && uv run ruff format --check .`
-- [ ] 2.3 PATCH updates existing row, provisions when absent, rejects 0 and 11 (422)
+- [x] 2.1 Backend tests pass: `uv run pytest`
+- [x] 2.2 Lint + format pass: `uv run ruff check . && uv run ruff format --check .`
+- [x] 2.3 PATCH updates existing row, provisions when absent, rejects 0 and 11 (422)
 
 #### Manual
 
-- [ ] 2.4 PATCH min_package_count persists across a subsequent GET
+- [x] 2.4 PATCH min_package_count persists across a subsequent GET
 
 ### Phase 3: GET /cabinet/entries — importance field, out-of-stock signal, category filter
 

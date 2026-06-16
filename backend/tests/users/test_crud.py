@@ -1,14 +1,22 @@
 """Unit tests for users CRUD layer."""
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
 from sqlalchemy import Result
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.api.v1.users.crud import get_user_preferences
+from app.api.v1.users.crud import (
+    get_user_preferences,
+    insert_preferences,
+    update_min_package_count,
+)
 from app.api.v1.users.models import UserPreferences
+from app.utilities.const import (
+    DEFAULT_CLOSE_TO_FINISH_THRESHOLD_DAYS,
+    DEFAULT_EXPIRY_THRESHOLD_DAYS,
+)
 from app.utilities.errors import UserDatabaseError
 
 _USER_ID = uuid4()
@@ -39,8 +47,12 @@ class TestGetUserPreferences:
     async def test_db_error_raises_user_database_error(self, mock_session: AsyncMock):
         mock_session.execute.side_effect = SQLAlchemyError("timeout")
 
-        with pytest.raises(UserDatabaseError):
+        with pytest.raises(UserDatabaseError) as exc_info:
             await get_user_preferences(mock_session, _USER_ID)
+
+        assert (
+            exc_info.value.message == "A database error occurred in the users domain."
+        )
 
     async def test_db_error_is_chained(self, mock_session: AsyncMock):
         original = SQLAlchemyError("timeout")
@@ -48,5 +60,103 @@ class TestGetUserPreferences:
 
         with pytest.raises(UserDatabaseError) as exc_info:
             await get_user_preferences(mock_session, _USER_ID)
+
+        assert exc_info.value.__cause__ is original
+
+
+def _mock_persist(side_effect=None):
+    cm = MagicMock()
+    cm.__aenter__ = AsyncMock(return_value=None)
+    cm.__aexit__ = AsyncMock(return_value=False, side_effect=side_effect)
+    return cm
+
+
+class TestUpdateMinPackageCount:
+    def _make_prefs(self) -> MagicMock:
+        prefs = MagicMock(spec=UserPreferences)
+        prefs.user_id = _USER_ID
+        prefs.min_package_count = 1
+        return prefs
+
+    async def test_sets_min_package_count_and_returns_prefs(
+        self, mock_session: AsyncMock
+    ):
+        prefs = self._make_prefs()
+        with patch("app.api.v1.users.crud.persist", return_value=_mock_persist()):
+            result = await update_min_package_count(
+                session=mock_session, prefs=prefs, min_package_count=4
+            )
+
+        assert result is prefs
+        assert prefs.min_package_count == 4
+
+    async def test_db_error_raises_user_database_error(self, mock_session: AsyncMock):
+        prefs = self._make_prefs()
+        with patch(
+            "app.api.v1.users.crud.persist",
+            return_value=_mock_persist(side_effect=SQLAlchemyError("disk full")),
+        ):
+            with pytest.raises(UserDatabaseError) as exc_info:
+                await update_min_package_count(
+                    session=mock_session, prefs=prefs, min_package_count=4
+                )
+
+        assert (
+            exc_info.value.message == "A database error occurred in the users domain."
+        )
+
+    async def test_db_error_is_chained(self, mock_session: AsyncMock):
+        prefs = self._make_prefs()
+        original = SQLAlchemyError("disk full")
+        with patch(
+            "app.api.v1.users.crud.persist",
+            return_value=_mock_persist(side_effect=original),
+        ):
+            with pytest.raises(UserDatabaseError) as exc_info:
+                await update_min_package_count(
+                    session=mock_session, prefs=prefs, min_package_count=4
+                )
+
+        assert exc_info.value.__cause__ is original
+
+
+class TestInsertPreferences:
+    def _make_new_prefs(self) -> UserPreferences:
+        return UserPreferences(
+            user_id=_USER_ID,
+            expiry_threshold_days=DEFAULT_EXPIRY_THRESHOLD_DAYS,
+            close_to_finish_threshold_days=DEFAULT_CLOSE_TO_FINISH_THRESHOLD_DAYS,
+            min_package_count=3,
+        )
+
+    async def test_returns_inserted_prefs(self, mock_session: AsyncMock):
+        prefs = self._make_new_prefs()
+        with patch("app.api.v1.users.crud.persist", return_value=_mock_persist()):
+            result = await insert_preferences(session=mock_session, prefs=prefs)
+
+        assert result is prefs
+
+    async def test_db_error_raises_user_database_error(self, mock_session: AsyncMock):
+        prefs = self._make_new_prefs()
+        with patch(
+            "app.api.v1.users.crud.persist",
+            return_value=_mock_persist(side_effect=SQLAlchemyError("disk full")),
+        ):
+            with pytest.raises(UserDatabaseError) as exc_info:
+                await insert_preferences(session=mock_session, prefs=prefs)
+
+        assert (
+            exc_info.value.message == "A database error occurred in the users domain."
+        )
+
+    async def test_db_error_is_chained(self, mock_session: AsyncMock):
+        prefs = self._make_new_prefs()
+        original = SQLAlchemyError("disk full")
+        with patch(
+            "app.api.v1.users.crud.persist",
+            return_value=_mock_persist(side_effect=original),
+        ):
+            with pytest.raises(UserDatabaseError) as exc_info:
+                await insert_preferences(session=mock_session, prefs=prefs)
 
         assert exc_info.value.__cause__ is original

@@ -30,6 +30,46 @@ async def get_user_preferences(
     return await crud.get_user_preferences(session, user_id)
 
 
+async def update_preferences(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    min_package_count: int,
+) -> UserPreferencesOut:
+    """Upsert min_package_count and return the effective preferences.
+
+    Args:
+        session: Active async database session.
+        user_id: UUID of the user.
+        min_package_count: New minimum package count (1-10).
+
+    Returns:
+        UserPreferencesOut with the updated values.
+
+    Raises:
+        UserDatabaseError: If the database operation fails.
+    """
+    existing = await crud.get_user_preferences(session=session, user_id=user_id)
+    if existing is not None:
+        prefs = await crud.update_min_package_count(
+            session=session,
+            prefs=existing,
+            min_package_count=min_package_count,
+        )
+    else:
+        new_prefs = UserPreferences(
+            user_id=user_id,
+            expiry_threshold_days=DEFAULT_EXPIRY_THRESHOLD_DAYS,
+            close_to_finish_threshold_days=DEFAULT_CLOSE_TO_FINISH_THRESHOLD_DAYS,
+            min_package_count=min_package_count,
+        )
+        prefs = await crud.insert_preferences(session=session, prefs=new_prefs)
+    return UserPreferencesOut(
+        expiry_threshold_days=prefs.expiry_threshold_days,
+        close_to_finish_threshold_days=prefs.close_to_finish_threshold_days,
+        min_package_count=prefs.min_package_count,
+    )
+
+
 async def get_effective_preferences(
     session: AsyncSession,
     user_id: uuid.UUID,

@@ -7,7 +7,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.v1.auth.types import CurrentUser
 from app.api.v1.users import service as users_service
-from app.api.v1.users.schemas import UserPreferencesOut
+from app.api.v1.users.schemas import UpdatePreferencesRequest, UserPreferencesOut
 from app.core.jwt_security import get_current_user
 from app.db.connector import get_session
 from app.utilities.errors import UserDatabaseError
@@ -39,6 +39,34 @@ async def get_preferences(
         ) from exc
     except Exception as exc:
         logger.exception("Unexpected error when fetching user preferences: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred.",
+        ) from exc
+
+
+@router.patch(
+    "/preferences",
+    response_model=UserPreferencesOut,
+)
+async def patch_preferences(
+    data: UpdatePreferencesRequest,
+    current_user: CurrentUser = Security(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> UserPreferencesOut:
+    """Update the authenticated user's preferences (upsert)."""
+    try:
+        return await users_service.update_preferences(
+            session=session,
+            user_id=current_user.id,
+            min_package_count=data.min_package_count,
+        )
+    except UserDatabaseError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=exc.message
+        ) from exc
+    except Exception as exc:
+        logger.exception("Unexpected error when updating user preferences: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred.",
