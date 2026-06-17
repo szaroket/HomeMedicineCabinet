@@ -208,9 +208,9 @@ Negligible — both layouts render the same already-paginated `pageData.items` (
 
 #### Automated
 
-- [ ] 1.1 Type check + build passes: `cd frontend && npm run build`
-- [ ] 1.2 Lint passes: `cd frontend && npm run lint`
-- [ ] 1.3 Format check passes: `cd frontend && npx prettier --check src/`
+- [x] 1.1 Type check + build passes: `cd frontend && npm run build`
+- [x] 1.2 Lint passes: `cd frontend && npm run lint`
+- [x] 1.3 Format check passes: `cd frontend && npx prettier --check src/`
 
 #### Manual
 
