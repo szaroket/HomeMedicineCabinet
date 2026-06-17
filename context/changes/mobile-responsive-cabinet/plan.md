@@ -230,25 +230,25 @@ Negligible — both layouts render the same already-paginated `pageData.items` (
 
 #### Automated
 
-- [x] 2.1 Type check + build passes: `cd frontend && npm run build`
-- [x] 2.2 Lint passes: `cd frontend && npm run lint`
-- [x] 2.3 Format check passes: `cd frontend && npx prettier --check src/`
+- [x] 2.1 Type check + build passes: `cd frontend && npm run build` — e4b471c
+- [x] 2.2 Lint passes: `cd frontend && npm run lint` — e4b471c
+- [x] 2.3 Format check passes: `cd frontend && npx prettier --check src/` — e4b471c
 
 #### Manual
 
-- [x] 2.4 Mobile controls show search + `Filtry` + `Sortowanie`; header button hidden; FAB present
-- [x] 2.5 Filter sheet changes + combined filters update list and URL; `Wyczyść filtry` resets
-- [x] 2.6 `Sortowanie` toggles A→Z / Z→A and reorders
-- [x] 2.7 FAB navigates to add page and never obscures last card or pagination
-- [x] 2.8 Desktop controls bar + inline `Dodaj lek` unchanged
+- [x] 2.4 Mobile controls show search + `Filtry` + `Sortowanie`; header button hidden; FAB present — e4b471c
+- [x] 2.5 Filter sheet changes + combined filters update list and URL; `Wyczyść filtry` resets — e4b471c
+- [x] 2.6 `Sortowanie` toggles A→Z / Z→A and reorders — e4b471c
+- [x] 2.7 FAB navigates to add page and never obscures last card or pagination — e4b471c
+- [x] 2.8 Desktop controls bar + inline `Dodaj lek` unchanged — e4b471c
 
 ### Phase 3: Compact mobile pagination
 
 #### Automated
 
-- [ ] 3.1 Type check + build passes: `cd frontend && npm run build`
-- [ ] 3.2 Lint passes: `cd frontend && npm run lint`
-- [ ] 3.3 Format check passes: `cd frontend && npx prettier --check src/`
+- [x] 3.1 Type check + build passes: `cd frontend && npm run build`
+- [x] 3.2 Lint passes: `cd frontend && npm run lint`
+- [x] 3.3 Format check passes: `cd frontend && npx prettier --check src/`
 
 #### Manual
 

@@ -322,9 +322,36 @@ export function CabinetPage() {
           + Dodaj lek
         </Link>
 
-        {/* Pagination */}
+        {/* Mobile compact pagination */}
         {pageData && pageData.total > 0 && (
-          <div className="mt-4 flex flex-shrink-0 items-center justify-between text-sm text-slate-400">
+          <div className="mt-2 flex flex-shrink-0 items-center justify-center gap-3 text-sm text-slate-400 md:hidden">
+            <button
+              type="button"
+              aria-label="Poprzednia strona"
+              disabled={page <= 1}
+              onClick={() => setParam("page", String(page - 1))}
+              className="rounded border border-slate-600 bg-slate-800 px-3 py-1.5 text-white disabled:opacity-40 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              ‹
+            </button>
+            <span>
+              {page} / {totalPages} · Leków: {pageData.total}
+            </span>
+            <button
+              type="button"
+              aria-label="Następna strona"
+              disabled={page >= totalPages}
+              onClick={() => setParam("page", String(page + 1))}
+              className="rounded border border-slate-600 bg-slate-800 px-3 py-1.5 text-white disabled:opacity-40 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              ›
+            </button>
+          </div>
+        )}
+
+        {/* Desktop pagination */}
+        {pageData && pageData.total > 0 && (
+          <div className="mt-4 hidden flex-shrink-0 items-center justify-between text-sm text-slate-400 md:flex">
             <span>
               Strona {pageData.page} z {totalPages} (łącznie {pageData.total})
             </span>
