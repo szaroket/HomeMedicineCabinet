@@ -1,32 +1,21 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { CabinetList } from "@/features/cabinet/components/cabinet-list";
+import { FilterSheet } from "@/features/cabinet/components/filter-sheet";
 import { AppLayout } from "@/app/components/app-layout";
 import { useCabinetEntries } from "@/features/cabinet/api/cabinet-queries";
 import { useDebounce } from "@/hooks/use-debounce";
 import type { CabinetListParams } from "@/features/cabinet/api/cabinet-api";
+import {
+  STATUS_OPTIONS,
+  CATEGORY_OPTIONS,
+  STOCK_OPTIONS,
+  type StatusFilter,
+  type CategoryFilter,
+} from "@/features/cabinet/components/filter-options";
 
-type StatusFilter = "valid" | "expiring" | "expired";
-type CategoryFilter = "important";
 type OrderDir = "asc" | "desc";
 type PageSize = 20 | 50 | 100;
-
-const STATUS_OPTIONS: { value: StatusFilter | ""; label: string }[] = [
-  { value: "", label: "Wszystkie" },
-  { value: "valid", label: "Aktualny" },
-  { value: "expiring", label: "Bliski termin" },
-  { value: "expired", label: "Przeterminowany" },
-];
-
-const CATEGORY_OPTIONS: { value: CategoryFilter | ""; label: string }[] = [
-  { value: "", label: "Wszystkie" },
-  { value: "important", label: "Ważne" },
-];
-
-const STOCK_OPTIONS: { value: "low" | ""; label: string }[] = [
-  { value: "", label: "Wszystkie" },
-  { value: "low", label: "Brak w apteczce" },
-];
 
 const PAGE_SIZE_OPTIONS: PageSize[] = [20, 50, 100];
 
@@ -185,14 +174,44 @@ export function CabinetPage() {
           <h2 className="text-xl font-semibold text-white">Lista leków</h2>
           <Link
             to="/cabinet/add"
-            className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
+            className="inline-flex rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
           >
             Dodaj lek
           </Link>
         </div>
 
-        {/* Controls */}
-        <div className="mb-4 flex flex-shrink-0 flex-wrap gap-3 items-end">
+        {/* Mobile controls */}
+        <div className="mb-4 flex flex-shrink-0 items-center gap-2 md:hidden">
+          <input
+            type="search"
+            placeholder="Szukaj po nazwie lub składniku…"
+            value={searchInput}
+            onChange={(ev) => {
+              setSearchInput(ev.target.value);
+            }}
+            className="min-w-0 flex-1 rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <FilterSheet
+            status={status}
+            category={category}
+            belowMinimum={belowMinimum}
+            setParam={setParam}
+            clearFilters={clearFilters}
+            hasFilters={hasFilters}
+          />
+          <button
+            type="button"
+            onClick={() =>
+              setParam("order", order === "asc" ? "desc" : "asc", true)
+            }
+            className="rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            Sortowanie {order === "asc" ? "A→Z" : "Z→A"}
+          </button>
+        </div>
+
+        {/* Desktop controls */}
+        <div className="mb-4 hidden flex-shrink-0 flex-wrap gap-3 items-end md:flex">
           <div className="flex flex-col gap-1 min-w-[220px] flex-1">
             <label className="text-xs text-slate-400">Szukaj</label>
             <input
@@ -294,9 +313,36 @@ export function CabinetPage() {
           />
         </div>
 
-        {/* Pagination */}
+        {/* Mobile compact pagination */}
         {pageData && pageData.total > 0 && (
-          <div className="mt-4 flex flex-shrink-0 items-center justify-between text-sm text-slate-400">
+          <div className="mt-2 flex flex-shrink-0 items-center justify-center gap-3 text-sm text-slate-400 md:hidden">
+            <button
+              type="button"
+              aria-label="Poprzednia strona"
+              disabled={page <= 1}
+              onClick={() => setParam("page", String(page - 1))}
+              className="rounded border border-slate-600 bg-slate-800 px-3 py-1.5 text-white disabled:opacity-40 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              ‹
+            </button>
+            <span>
+              {page} / {totalPages} · Leków: {pageData.total}
+            </span>
+            <button
+              type="button"
+              aria-label="Następna strona"
+              disabled={page >= totalPages}
+              onClick={() => setParam("page", String(page + 1))}
+              className="rounded border border-slate-600 bg-slate-800 px-3 py-1.5 text-white disabled:opacity-40 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              ›
+            </button>
+          </div>
+        )}
+
+        {/* Desktop pagination */}
+        {pageData && pageData.total > 0 && (
+          <div className="mt-4 hidden flex-shrink-0 items-center justify-between text-sm text-slate-400 md:flex">
             <span>
               Strona {pageData.page} z {totalPages} (łącznie {pageData.total})
             </span>

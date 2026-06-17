@@ -185,6 +185,7 @@ When Supabase credentials need to be rotated: update the three env vars in the R
 | Secrets in render.yaml | All env vars use `sync: false` — values in dashboard only ✅ |
 | Cold starts on free tier | Accept for solo dev phase; upgrade to $7/mo when sharing externally |
 | No CLI rollback | Use Render dashboard → Events → Rollback, or Render REST API |
+| SPA deep-link refresh → 404 | Static site has no rewrite rule; refreshing on a client-side route (e.g. `/cabinet`) 404s because Render looks for a literal file. Fix: add to `render.yaml` static service — `routes: [{ type: rewrite, source: /*, destination: /index.html }]`. Tracked for F-04 (`ci-cd-wiring`), not yet applied. |
 
 ---
 
