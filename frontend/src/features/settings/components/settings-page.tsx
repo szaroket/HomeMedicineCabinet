@@ -69,7 +69,7 @@ export function SettingsPage() {
         {!isLoading && !isError && (
           <form
             onSubmit={handleSubmit(onSubmit)}
-            className="max-w-sm space-y-6"
+            className="w-full max-w-sm space-y-6"
           >
             <div className="space-y-1">
               <label
@@ -78,7 +78,7 @@ export function SettingsPage() {
               >
                 Minimalna liczba opakowań
               </label>
-              <p className="text-xs text-slate-400 whitespace-nowrap">
+              <p className="text-xs text-slate-400">
                 Ważne leki poniżej tego progu będą oznaczone jako brak w
                 apteczce (1–10).
               </p>
@@ -107,7 +107,7 @@ export function SettingsPage() {
             <button
               type="submit"
               disabled={isPending}
-              className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
             >
               {isPending ? "Zapisywanie…" : "Zapisz"}
             </button>
