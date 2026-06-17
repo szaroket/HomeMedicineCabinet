@@ -223,24 +223,24 @@ Negligible — both layouts render the same already-paginated `pageData.items` (
 - [x] 1.4 Cards at ~375px show name, star, status pill, Opak./Sztuki/Ważność, expandable details — 968b9c5
 - [x] 1.5 Below-minimum entry shows amber `Brak w apteczce` badge on its card — 968b9c5
 - [x] 1.6 Star toggle and expand work independently; expand shows all fields + working links — 968b9c5
-- [ ] 1.7 Desktop table unchanged (columns, colored-text status, `Aktualny`, row tint)
-- [ ] 1.8 No regression: important toggled on mobile reflects in the table
+- [x] 1.7 Desktop table unchanged (columns, colored-text status, `Aktualny`, row tint)
+- [x] 1.8 No regression: important toggled on mobile reflects in the table
 
 ### Phase 2: Responsive controls + FAB
 
 #### Automated
 
-- [ ] 2.1 Type check + build passes: `cd frontend && npm run build`
-- [ ] 2.2 Lint passes: `cd frontend && npm run lint`
-- [ ] 2.3 Format check passes: `cd frontend && npx prettier --check src/`
+- [x] 2.1 Type check + build passes: `cd frontend && npm run build`
+- [x] 2.2 Lint passes: `cd frontend && npm run lint`
+- [x] 2.3 Format check passes: `cd frontend && npx prettier --check src/`
 
 #### Manual
 
-- [ ] 2.4 Mobile controls show search + `Filtry` + `Sortowanie`; header button hidden; FAB present
-- [ ] 2.5 Filter sheet changes + combined filters update list and URL; `Wyczyść filtry` resets
-- [ ] 2.6 `Sortowanie` toggles A→Z / Z→A and reorders
-- [ ] 2.7 FAB navigates to add page and never obscures last card or pagination
-- [ ] 2.8 Desktop controls bar + inline `Dodaj lek` unchanged
+- [x] 2.4 Mobile controls show search + `Filtry` + `Sortowanie`; header button hidden; FAB present
+- [x] 2.5 Filter sheet changes + combined filters update list and URL; `Wyczyść filtry` resets
+- [x] 2.6 `Sortowanie` toggles A→Z / Z→A and reorders
+- [x] 2.7 FAB navigates to add page and never obscures last card or pagination
+- [x] 2.8 Desktop controls bar + inline `Dodaj lek` unchanged
 
 ### Phase 3: Compact mobile pagination
 

@@ -1,32 +1,21 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { CabinetList } from "@/features/cabinet/components/cabinet-list";
+import { FilterSheet } from "@/features/cabinet/components/filter-sheet";
 import { AppLayout } from "@/app/components/app-layout";
 import { useCabinetEntries } from "@/features/cabinet/api/cabinet-queries";
 import { useDebounce } from "@/hooks/use-debounce";
 import type { CabinetListParams } from "@/features/cabinet/api/cabinet-api";
+import {
+  STATUS_OPTIONS,
+  CATEGORY_OPTIONS,
+  STOCK_OPTIONS,
+  type StatusFilter,
+  type CategoryFilter,
+} from "@/features/cabinet/components/filter-options";
 
-type StatusFilter = "valid" | "expiring" | "expired";
-type CategoryFilter = "important";
 type OrderDir = "asc" | "desc";
 type PageSize = 20 | 50 | 100;
-
-const STATUS_OPTIONS: { value: StatusFilter | ""; label: string }[] = [
-  { value: "", label: "Wszystkie" },
-  { value: "valid", label: "Aktualny" },
-  { value: "expiring", label: "Bliski termin" },
-  { value: "expired", label: "Przeterminowany" },
-];
-
-const CATEGORY_OPTIONS: { value: CategoryFilter | ""; label: string }[] = [
-  { value: "", label: "Wszystkie" },
-  { value: "important", label: "Ważne" },
-];
-
-const STOCK_OPTIONS: { value: "low" | ""; label: string }[] = [
-  { value: "", label: "Wszystkie" },
-  { value: "low", label: "Brak w apteczce" },
-];
 
 const PAGE_SIZE_OPTIONS: PageSize[] = [20, 50, 100];
 
@@ -185,14 +174,44 @@ export function CabinetPage() {
           <h2 className="text-xl font-semibold text-white">Lista leków</h2>
           <Link
             to="/cabinet/add"
-            className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
+            className="hidden rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 md:inline-flex"
           >
             Dodaj lek
           </Link>
         </div>
 
-        {/* Controls */}
-        <div className="mb-4 flex flex-shrink-0 flex-wrap gap-3 items-end">
+        {/* Mobile controls */}
+        <div className="mb-4 flex flex-shrink-0 items-center gap-2 md:hidden">
+          <input
+            type="search"
+            placeholder="Szukaj po nazwie lub składniku…"
+            value={searchInput}
+            onChange={(ev) => {
+              setSearchInput(ev.target.value);
+            }}
+            className="min-w-0 flex-1 rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <FilterSheet
+            status={status}
+            category={category}
+            belowMinimum={belowMinimum}
+            setParam={setParam}
+            clearFilters={clearFilters}
+            hasFilters={hasFilters}
+          />
+          <button
+            type="button"
+            onClick={() =>
+              setParam("order", order === "asc" ? "desc" : "asc", true)
+            }
+            className="rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            Sortowanie {order === "asc" ? "A→Z" : "Z→A"}
+          </button>
+        </div>
+
+        {/* Desktop controls */}
+        <div className="mb-4 hidden flex-shrink-0 flex-wrap gap-3 items-end md:flex">
           <div className="flex flex-col gap-1 min-w-[220px] flex-1">
             <label className="text-xs text-slate-400">Szukaj</label>
             <input
@@ -284,7 +303,7 @@ export function CabinetPage() {
         </div>
 
         {/* Scrollable table */}
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto pb-20 md:pb-0">
           <CabinetList
             pageData={pageData}
             isLoading={isLoading}
@@ -293,6 +312,15 @@ export function CabinetPage() {
             onClearFilters={clearFilters}
           />
         </div>
+
+        {/* Mobile FAB */}
+        <Link
+          to="/cabinet/add"
+          aria-label="Dodaj lek"
+          className="fixed bottom-6 right-4 z-30 inline-flex items-center gap-1 rounded-full bg-blue-600 px-4 py-3 text-sm font-medium text-white shadow-lg hover:bg-blue-500 md:hidden"
+        >
+          + Dodaj lek
+        </Link>
 
         {/* Pagination */}
         {pageData && pageData.total > 0 && (
