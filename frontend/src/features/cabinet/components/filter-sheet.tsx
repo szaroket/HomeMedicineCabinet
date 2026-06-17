@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   STATUS_OPTIONS,
   CATEGORY_OPTIONS,
@@ -64,6 +64,15 @@ export function FilterSheet({
   hasFilters,
 }: FilterSheetProps) {
   const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsOpen(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [isOpen]);
 
   const activeCount =
     (status ? 1 : 0) + (category ? 1 : 0) + (belowMinimum ? 1 : 0);
@@ -133,7 +142,10 @@ export function FilterSheet({
 
               <button
                 type="button"
-                onClick={clearFilters}
+                onClick={() => {
+                  clearFilters();
+                  setIsOpen(false);
+                }}
                 disabled={!hasFilters}
                 className="mt-1 rounded border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-white hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
               >
