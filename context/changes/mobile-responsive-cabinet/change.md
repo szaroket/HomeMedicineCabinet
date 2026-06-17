@@ -1,7 +1,7 @@
 ---
 change_id: mobile-responsive-cabinet
 title: Mobile responsive cabinet
-status: impl_reviewed
+status: implemented
 created: 2026-06-17
 updated: 2026-06-17
 archived_at: null

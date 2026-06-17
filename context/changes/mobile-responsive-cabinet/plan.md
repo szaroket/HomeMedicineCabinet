@@ -246,12 +246,12 @@ Negligible — both layouts render the same already-paginated `pageData.items` (
 
 #### Automated
 
-- [x] 3.1 Type check + build passes: `cd frontend && npm run build`
-- [x] 3.2 Lint passes: `cd frontend && npm run lint`
-- [x] 3.3 Format check passes: `cd frontend && npx prettier --check src/`
+- [x] 3.1 Type check + build passes: `cd frontend && npm run build` — 1b1ca0f
+- [x] 3.2 Lint passes: `cd frontend && npm run lint` — 1b1ca0f
+- [x] 3.3 Format check passes: `cd frontend && npx prettier --check src/` — 1b1ca0f
 
 #### Manual
 
-- [ ] 3.4 Mobile pagination shows `‹ page / totalPages ›` + `Leków: total`; arrows disable/navigate correctly
-- [ ] 3.5 Desktop verbose pagination + page-size select unchanged
-- [ ] 3.6 Page change on mobile persists across resize to desktop (URL-driven)
+- [x] 3.4 Mobile pagination shows `‹ page / totalPages ›` + `Leków: total`; arrows disable/navigate correctly — 1b1ca0f
+- [x] 3.5 Desktop verbose pagination + page-size select unchanged — 1b1ca0f
+- [x] 3.6 Page change on mobile persists across resize to desktop (URL-driven) — 1b1ca0f
