@@ -80,6 +80,12 @@ Split the medicine list into a card layout below `md` and the existing table at 
 
 **Contract**: Keep the existing loading/error/empty-with-filters branches unchanged. For the populated state, wrap the current `<table>` block in a `hidden md:block` container and add a `md:hidden` container mapping `pageData.items` to `CabinetCard`. `EntryRow` keeps rendering `<tr>`s but sources expand/star/status/date from `useCabinetEntry`; `STATUS_LABEL`/`formatDate` move to the shared module.
 
+#### 5. Shared entry icons (addendum)
+
+**File**: `frontend/src/features/cabinet/components/entry-icons.tsx` (new)
+
+**Intent**: Extract `StarIcon` and `ChevronIcon` (previously inline in `cabinet-list.tsx`) into a shared module so the table row (`EntryRow`) and the new `CabinetCard` consume one icon definition instead of duplicating SVG markup. Discovered during implementation; consistent with the phase's "share logic, don't duplicate" intent.
+
 ### Success Criteria:
 
 #### Automated Verification:
@@ -208,15 +214,15 @@ Negligible — both layouts render the same already-paginated `pageData.items` (
 
 #### Automated
 
-- [x] 1.1 Type check + build passes: `cd frontend && npm run build`
-- [x] 1.2 Lint passes: `cd frontend && npm run lint`
-- [x] 1.3 Format check passes: `cd frontend && npx prettier --check src/`
+- [x] 1.1 Type check + build passes: `cd frontend && npm run build` — 968b9c5
+- [x] 1.2 Lint passes: `cd frontend && npm run lint` — 968b9c5
+- [x] 1.3 Format check passes: `cd frontend && npx prettier --check src/` — 968b9c5
 
 #### Manual
 
-- [ ] 1.4 Cards at ~375px show name, star, status pill, Opak./Sztuki/Ważność, expandable details
-- [ ] 1.5 Below-minimum entry shows amber `Brak w apteczce` badge on its card
-- [ ] 1.6 Star toggle and expand work independently; expand shows all fields + working links
+- [x] 1.4 Cards at ~375px show name, star, status pill, Opak./Sztuki/Ważność, expandable details — 968b9c5
+- [x] 1.5 Below-minimum entry shows amber `Brak w apteczce` badge on its card — 968b9c5
+- [x] 1.6 Star toggle and expand work independently; expand shows all fields + working links — 968b9c5
 - [ ] 1.7 Desktop table unchanged (columns, colored-text status, `Aktualny`, row tint)
 - [ ] 1.8 No regression: important toggled on mobile reflects in the table
 
