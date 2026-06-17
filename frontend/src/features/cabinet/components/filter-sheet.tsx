@@ -16,6 +16,45 @@ interface FilterSheetProps {
   hasFilters: boolean;
 }
 
+interface FilterGroupProps {
+  label: string;
+  options: { value: string; label: string }[];
+  selected: string;
+  onSelect: (value: string) => void;
+}
+
+// Tap-to-select rows instead of a native <select>: on mobile a native picker
+// slides up over the bottom sheet and dismisses on selection, which reads as
+// the sheet flickering closed/open. Plain buttons keep selection inside the
+// sheet with no native overlay.
+function FilterGroup({ label, options, selected, onSelect }: FilterGroupProps) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-xs text-slate-400">{label}</span>
+      <div className="flex flex-wrap gap-2">
+        {options.map((option) => {
+          const isActive = option.value === selected;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => onSelect(option.value)}
+              aria-pressed={isActive}
+              className={`rounded-full border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                isActive
+                  ? "border-blue-500 bg-blue-600 text-white"
+                  : "border-slate-600 bg-slate-900 text-slate-300 hover:bg-slate-700"
+              }`}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function FilterSheet({
   status,
   category,
@@ -65,62 +104,32 @@ export function FilterSheet({
             </div>
 
             <div className="flex flex-col gap-3">
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-slate-400">
-                  Kategoria ważności (status)
-                </label>
-                <select
-                  value={status ?? ""}
-                  onChange={(ev) => {
-                    setParam("status", ev.target.value || null, true);
-                  }}
-                  className="rounded border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {STATUS_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <FilterGroup
+                label="Kategoria ważności (status)"
+                options={STATUS_OPTIONS}
+                selected={status ?? ""}
+                onSelect={(value) => setParam("status", value || null, true)}
+              />
 
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-slate-400">Kategoria</label>
-                <select
-                  value={category ?? ""}
-                  onChange={(ev) => {
-                    setParam("category", ev.target.value || null, true);
-                  }}
-                  className="rounded border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {CATEGORY_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <FilterGroup
+                label="Kategoria"
+                options={CATEGORY_OPTIONS}
+                selected={category ?? ""}
+                onSelect={(value) => setParam("category", value || null, true)}
+              />
 
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-slate-400">Zapasy</label>
-                <select
-                  value={belowMinimum ? "low" : ""}
-                  onChange={(ev) => {
-                    setParam(
-                      "below_minimum",
-                      ev.target.value === "low" ? "true" : null,
-                      true,
-                    );
-                  }}
-                  className="rounded border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {STOCK_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <FilterGroup
+                label="Zapasy"
+                options={STOCK_OPTIONS}
+                selected={belowMinimum ? "low" : ""}
+                onSelect={(value) =>
+                  setParam(
+                    "below_minimum",
+                    value === "low" ? "true" : null,
+                    true,
+                  )
+                }
+              />
 
               <button
                 type="button"
