@@ -42,4 +42,4 @@ class Settings(BaseSettings):
         return f"{self.jwt_issuer}/.well-known/jwks.json"
 
 
-settings = Settings()
+settings = Settings()  # pyright: ignore[reportCallIssue]

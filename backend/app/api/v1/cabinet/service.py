@@ -3,8 +3,9 @@
 import logging
 import uuid
 from datetime import date, datetime, timedelta, timezone
+from decimal import Decimal
 from enum import StrEnum
-from typing import NamedTuple
+from typing import NamedTuple, cast
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -215,11 +216,9 @@ def _map_row_to_entry_out(
             variant.capacity,
             entry.id,
         )
-    tpp = (
-        int(variant.capacity)
-        if variant.is_tablet_based and not capacity_invalid
-        else None
-    )
+    tpp = None
+    if variant.is_tablet_based and not capacity_invalid:
+        tpp = int(cast(Decimal, variant.capacity))
     return CabinetEntryOut(
         id=entry.id,
         name=variant.name,
@@ -352,7 +351,7 @@ def _validate_and_get_tpp(
                 f"Registry invariant violated: tablet-based row {variant.id} "
                 f"has invalid capacity {variant.capacity!r}"
             )
-        tpp = int(variant.capacity)
+        tpp = int(cast(Decimal, variant.capacity))
         if partial_tablet_count is not None and not (
             1 <= partial_tablet_count <= tpp - 1
         ):
@@ -480,20 +479,19 @@ async def _dedup_or_insert(
     Raises:
         CabinetInvariantError: If an IntegrityError occurs but the row is missing.
     """
-    merge_kwargs = dict(
-        session=session,
-        new_package_count=package_count,
-        new_partial=partial_tablet_count,
-        variant=variant,
-        tpp=tpp,
-        is_important=is_important,
-    )
-
     existing = await crud.find_entry(
         session, user_id, medication_registry_id, expiry_date
     )
     if existing is not None:
-        return await _merge_and_commit(existing=existing, **merge_kwargs)
+        return await _merge_and_commit(
+            session=session,
+            existing=existing,
+            new_package_count=package_count,
+            new_partial=partial_tablet_count,
+            variant=variant,
+            tpp=tpp,
+            is_important=is_important,
+        )
 
     entry = await _insert_with_race_guard(
         session,
@@ -512,7 +510,15 @@ async def _dedup_or_insert(
             raise CabinetInvariantError(
                 "Race-condition insert failed but row not found"
             )
-        return await _merge_and_commit(existing=existing, **merge_kwargs)
+        return await _merge_and_commit(
+            session=session,
+            existing=existing,
+            new_package_count=package_count,
+            new_partial=partial_tablet_count,
+            variant=variant,
+            tpp=tpp,
+            is_important=is_important,
+        )
 
     return AddEntryResult(
         merged=False,

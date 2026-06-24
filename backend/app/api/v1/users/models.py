@@ -12,18 +12,18 @@ from app.utilities.const import (
 
 
 class User(SQLModel, table=True):
-    __tablename__ = "users"
+    __tablename__ = "users"  # pyright: ignore[reportAssignmentType]
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    email: str = Field(unique=True, index=True, sa_type=sa.Text())
+    email: str = Field(unique=True, index=True, sa_type=sa.Text)
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        sa_type=sa.DateTime(timezone=True),
+        sa_type=sa.DateTime(timezone=True),  # pyright: ignore[reportArgumentType]
     )
 
 
 class UserPreferences(SQLModel, table=True):
-    __tablename__ = "user_preferences"
+    __tablename__ = "user_preferences"  # pyright: ignore[reportAssignmentType]
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(foreign_key="users.id", unique=True)
@@ -34,9 +34,9 @@ class UserPreferences(SQLModel, table=True):
     min_package_count: int = Field(default=DEFAULT_MIN_PACKAGE_COUNT)
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        sa_type=sa.DateTime(timezone=True),
+        sa_type=sa.DateTime(timezone=True),  # pyright: ignore[reportArgumentType]
     )
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        sa_type=sa.DateTime(timezone=True),
+        sa_type=sa.DateTime(timezone=True),  # pyright: ignore[reportArgumentType]
     )
