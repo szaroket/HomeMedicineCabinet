@@ -17,7 +17,10 @@ from app.api.v1.cabinet.schemas import (
     AddEntryResult,
     CabinetEntryOut,
     CabinetPageOut,
+    DosagePeriod,
     MergeSummary,
+    ResolvedUsage,
+    UsageFields,
 )
 from app.api.v1.medicines.models import MedicationRegistry
 from app.utilities.common import build_tsquery
@@ -25,6 +28,7 @@ from app.utilities.const import DEFAULT_MIN_PACKAGE_COUNT
 from app.utilities.errors import (
     CabinetInvariantError,
     EntryNotFoundError,
+    InvalidDosageError,
     InvalidPartialTabletCountError,
     MedicationNotFoundError,
 )
@@ -167,6 +171,102 @@ def classify_status(
     if expiry_date <= today + timedelta(days=expiry_threshold_days):
         return Status.EXPIRING
     return Status.VALID
+
+
+def validate_usage(
+    is_tablet_based: bool,
+    is_used: bool,
+    dosage_times: int | None,
+    dosage_period: DosagePeriod | None,
+    dosage_amount: int | None,
+    dosage_start_date: date | None,
+    dosage_end_date: date | None,
+    today: date,
+) -> ResolvedUsage:
+    """Validate and resolve usage/dosage fields against the variant type.
+
+    Args:
+        is_tablet_based (bool): Whether the medication variant is tablet-based.
+        is_used (bool): Whether the entry is being marked as used.
+        dosage_times (int | None): Number of doses per period.
+        dosage_period (DosagePeriod | None): Dosage period ('day' or 'week').
+        dosage_amount (int | None): Tablets per dose.
+        dosage_start_date (date | None): Start date; defaults to today when omitted.
+        dosage_end_date (date | None): Optional end date.
+        today (date): Reference date (UTC today from caller).
+
+    Returns:
+        ResolvedUsage: Cleaned usage values ready for persistence.
+
+    Raises:
+        InvalidDosageError: When the supplied combination violates the usage rules.
+    """
+    if not is_used:
+        dosage_fields = (
+            dosage_times,
+            dosage_period,
+            dosage_amount,
+            dosage_start_date,
+            dosage_end_date,
+        )
+        if any(field is not None for field in dosage_fields):
+            raise InvalidDosageError(
+                "Dosage and date fields must be omitted when is_used is False."
+            )
+        return ResolvedUsage(
+            is_used=False,
+            dosage_times=None,
+            dosage_period=None,
+            dosage_amount=None,
+            dosage_start_date=None,
+            dosage_end_date=None,
+        )
+
+    resolved_start = dosage_start_date if dosage_start_date is not None else today
+
+    if is_tablet_based:
+        if dosage_times is None or dosage_period is None or dosage_amount is None:
+            raise InvalidDosageError(
+                "dosage_times, dosage_period, and dosage_amount are required for tablet-based used entries."
+            )
+        if dosage_times < 1:
+            raise InvalidDosageError("dosage_times must be at least 1.")
+        if dosage_amount < 1:
+            raise InvalidDosageError("dosage_amount must be at least 1.")
+        if dosage_end_date is not None and dosage_end_date < resolved_start:
+            raise InvalidDosageError(
+                "dosage_end_date must not be earlier than dosage_start_date."
+            )
+        return ResolvedUsage(
+            is_used=True,
+            dosage_times=dosage_times,
+            dosage_period=dosage_period,
+            dosage_amount=dosage_amount,
+            dosage_start_date=resolved_start,
+            dosage_end_date=dosage_end_date,
+        )
+
+    # Non-tablet variant: no dosage fields allowed, only dates
+    if (
+        dosage_times is not None
+        or dosage_period is not None
+        or dosage_amount is not None
+    ):
+        raise InvalidDosageError(
+            "dosage_times, dosage_period, and dosage_amount are not applicable for non-tablet variants."
+        )
+    if dosage_end_date is not None and dosage_end_date < resolved_start:
+        raise InvalidDosageError(
+            "dosage_end_date must not be earlier than dosage_start_date."
+        )
+    return ResolvedUsage(
+        is_used=True,
+        dosage_times=None,
+        dosage_period=None,
+        dosage_amount=None,
+        dosage_start_date=resolved_start,
+        dosage_end_date=dosage_end_date,
+    )
 
 
 def _tablet_capacity_invalid(variant: MedicationRegistry) -> bool:
@@ -400,6 +500,14 @@ def _build_add_entry_out(
         expiry_date=entry.expiry_date,
         total_tablets=_computed_total(entry, tpp),
         is_important=entry.is_important,
+        is_used=entry.is_used,
+        dosage_times=entry.dosage_times,
+        dosage_period=DosagePeriod(entry.dosage_period)
+        if entry.dosage_period
+        else None,
+        dosage_amount=entry.dosage_amount,
+        dosage_start_date=entry.dosage_start_date,
+        dosage_end_date=entry.dosage_end_date,
     )
 
 
@@ -411,6 +519,7 @@ async def _insert_with_race_guard(
     partial_tablet_count: int | None,
     expiry_date: date,
     is_important: bool = False,
+    resolved_usage: ResolvedUsage | None = None,
 ) -> CabinetEntry | None:
     """Insert a new cabinet entry, returning None on a concurrent-insert race.
 
@@ -426,6 +535,7 @@ async def _insert_with_race_guard(
         partial_tablet_count (int | None): Tablets in the last package, or None.
         expiry_date (date): Expiry date for the entry.
         is_important (bool): Whether the entry is marked important.
+        resolved_usage (ResolvedUsage | None): Validated usage to persist, or None.
 
     Returns:
         CabinetEntry | None: The newly created CabinetEntry, or None if a race condition was detected.
@@ -439,6 +549,7 @@ async def _insert_with_race_guard(
             partial_tablet_count,
             expiry_date,
             is_important=is_important,
+            resolved_usage=resolved_usage,
         )
     except IntegrityError:
         return None
@@ -455,6 +566,7 @@ async def _dedup_or_insert(
     variant: MedicationRegistry,
     tpp: int | None,
     is_important: bool = False,
+    resolved_usage: ResolvedUsage | None = None,
 ) -> AddEntryResult:
     """Check for a duplicate entry and merge, or insert fresh (with race guard).
 
@@ -472,6 +584,7 @@ async def _dedup_or_insert(
         variant (MedicationRegistry): Already-fetched MedicationRegistry row.
         tpp (int | None): Tablets per package, or None for non-tablet variants.
         is_important (bool): Whether the incoming add marks this entry as important.
+        resolved_usage (ResolvedUsage | None): Validated usage to persist, or None.
 
     Returns:
         AddEntryResult: with merged=False for a fresh insert, merged=True on merge.
@@ -491,6 +604,7 @@ async def _dedup_or_insert(
             variant=variant,
             tpp=tpp,
             is_important=is_important,
+            resolved_usage=resolved_usage,
         )
 
     entry = await _insert_with_race_guard(
@@ -501,6 +615,7 @@ async def _dedup_or_insert(
         partial_tablet_count,
         expiry_date,
         is_important=is_important,
+        resolved_usage=resolved_usage,
     )
     if entry is None:
         existing = await crud.find_entry(
@@ -518,6 +633,7 @@ async def _dedup_or_insert(
             variant=variant,
             tpp=tpp,
             is_important=is_important,
+            resolved_usage=resolved_usage,
         )
 
     return AddEntryResult(
@@ -535,6 +651,7 @@ async def add_entry(
     partial_tablet_count: int | None,
     expiry_date: date,
     is_important: bool = False,
+    usage: UsageFields | None = None,
 ) -> AddEntryResult:
     """Validate, dedup/merge, persist, and return the add result.
 
@@ -549,7 +666,8 @@ async def add_entry(
 
     On merge, importance is OR'd: an entry already marked important stays
     important; a new add with is_important=True marks a previously unimportant
-    entry important (FR-010 addendum).
+    entry important (FR-010 addendum). Usage is overwritten only when the POST
+    provided a usage block; a restock without usage preserves the existing schedule.
 
     Args:
         session (AsyncSession): Active async database session.
@@ -559,6 +677,7 @@ async def add_entry(
         partial_tablet_count (int | None): Tablets in the last package, or None.
         expiry_date (date): Expiry date for the entry.
         is_important (bool): Whether the incoming add marks this entry as important.
+        usage (UsageFields | None): Optional usage block; None means restock (no usage update).
 
     Returns:
         AddEntryResult: with merged flag, the resulting entry, and an optional
@@ -568,9 +687,25 @@ async def add_entry(
         MedicationNotFoundError: When the registry variant does not exist.
         InvalidPartialTabletCountError: When partial_tablet_count is supplied
             for a non-tablet variant, or outside the valid range.
+        InvalidDosageError: When the usage block contains invalid dosage fields.
     """
     variant = await _get_variant_or_raise(session, medication_registry_id)
     tpp = _validate_and_get_tpp(variant, partial_tablet_count)
+
+    resolved_usage: ResolvedUsage | None = None
+    if usage is not None:
+        today = datetime.now(timezone.utc).date()
+        resolved_usage = validate_usage(
+            is_tablet_based=variant.is_tablet_based,
+            is_used=usage.is_used,
+            dosage_times=usage.dosage_times,
+            dosage_period=usage.dosage_period,
+            dosage_amount=usage.dosage_amount,
+            dosage_start_date=usage.dosage_start_date,
+            dosage_end_date=usage.dosage_end_date,
+            today=today,
+        )
+
     return await _dedup_or_insert(
         session=session,
         user_id=user_id,
@@ -581,6 +716,7 @@ async def add_entry(
         variant=variant,
         tpp=tpp,
         is_important=is_important,
+        resolved_usage=resolved_usage,
     )
 
 
@@ -640,6 +776,7 @@ async def _merge_and_commit(
     variant: MedicationRegistry,
     tpp: int | None,
     is_important: bool = False,
+    resolved_usage: ResolvedUsage | None = None,
 ) -> AddEntryResult:
     """Apply FR-010 merge math, persist the update, and return AddEntryResult.
 
@@ -651,6 +788,7 @@ async def _merge_and_commit(
         variant (MedicationRegistry): The MedicationRegistry row for display fields.
         tpp (int | None): Tablets per package for tablet-based variants, None otherwise.
         is_important (bool): Importance of the incoming add; OR'd with existing flag.
+        resolved_usage (ResolvedUsage | None): Validated usage to overwrite, or None to preserve.
 
     Returns:
         AddEntryResult: with merged=True and populated merge_summary.
@@ -688,6 +826,11 @@ async def _merge_and_commit(
     updated = await crud.update_entry_counts(
         session, existing, new_pkg, new_partial_result, is_important=merged_important
     )
+
+    if resolved_usage is not None:
+        updated = await crud.update_entry_usage(
+            session=session, entry=updated, resolved_usage=resolved_usage
+        )
 
     return AddEntryResult(
         merged=True,

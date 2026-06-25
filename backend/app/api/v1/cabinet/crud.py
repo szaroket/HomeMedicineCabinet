@@ -10,6 +10,7 @@ from sqlmodel import col
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.cabinet.models import CabinetEntry
+from app.api.v1.cabinet.schemas import ResolvedUsage
 from app.api.v1.medicines.models import MedicationRegistry
 from app.db.connector import persist
 from app.utilities.errors import CabinetDatabaseError
@@ -82,6 +83,16 @@ async def find_entry(
     return result.scalar_one_or_none()
 
 
+def _apply_usage(entry: CabinetEntry, resolved_usage: ResolvedUsage) -> None:
+    """Write all usage/dosage fields from resolved_usage onto entry in place."""
+    entry.is_used = resolved_usage.is_used
+    entry.dosage_times = resolved_usage.dosage_times
+    entry.dosage_period = resolved_usage.dosage_period
+    entry.dosage_amount = resolved_usage.dosage_amount
+    entry.dosage_start_date = resolved_usage.dosage_start_date
+    entry.dosage_end_date = resolved_usage.dosage_end_date
+
+
 async def insert_entry(
     session: AsyncSession,
     user_id: uuid.UUID,
@@ -90,6 +101,7 @@ async def insert_entry(
     partial_tablet_count: int | None,
     expiry_date: date,
     is_important: bool = False,
+    resolved_usage: ResolvedUsage | None = None,
 ) -> CabinetEntry:
     """Insert a new cabinet entry and flush to obtain its ID.
 
@@ -101,6 +113,7 @@ async def insert_entry(
         partial_tablet_count (int | None): Tablets in the last (partial) package, or None.
         expiry_date (date): Expiry date for the entry.
         is_important (bool): Whether the entry is marked important.
+        resolved_usage (ResolvedUsage | None): Validated usage fields to persist, or None.
 
     Returns:
         CabinetEntry: The newly created CabinetEntry (committed).
@@ -119,6 +132,8 @@ async def insert_entry(
         expiry_date=expiry_date,
         is_important=is_important,
     )
+    if resolved_usage is not None:
+        _apply_usage(entry, resolved_usage)
     try:
         async with persist(session, entry):
             session.add(entry)
@@ -128,6 +143,40 @@ async def insert_entry(
         raise
     except SQLAlchemyError as exc:
         logger.error("Failed to insert cabinet entry: %s", exc, exc_info=True)
+        raise CabinetDatabaseError() from exc
+    return entry
+
+
+async def update_entry_usage(
+    session: AsyncSession,
+    entry: CabinetEntry,
+    resolved_usage: ResolvedUsage,
+) -> CabinetEntry:
+    """Write usage/dosage columns onto an existing cabinet entry and persist it.
+
+    Args:
+        session (AsyncSession): Active async database session.
+        entry (CabinetEntry): The CabinetEntry to update.
+        resolved_usage (ResolvedUsage): Validated usage values; when is_used is False all
+            dosage/date columns are set to None.
+
+    Returns:
+        CabinetEntry: The updated CabinetEntry (committed).
+
+    Raises:
+        CabinetDatabaseError: If the flush or commit fails.
+    """
+    _apply_usage(entry, resolved_usage)
+    try:
+        async with persist(session, entry):
+            session.add(entry)
+    except SQLAlchemyError as exc:
+        logger.error(
+            "Failed to update usage for cabinet entry %s: %s",
+            entry.id,
+            exc,
+            exc_info=True,
+        )
         raise CabinetDatabaseError() from exc
     return entry
 

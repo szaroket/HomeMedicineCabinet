@@ -23,6 +23,7 @@ from app.utilities.errors import (
     CabinetError,
     CabinetInvariantError,
     EntryNotFoundError,
+    InvalidDosageError,
     InvalidPartialTabletCountError,
     MedicationNotFoundError,
     UserDatabaseError,
@@ -189,6 +190,20 @@ class TestAddEntryErrorMapping:
             "app.api.v1.cabinet.router.cabinet_service.add_entry",
             new_callable=AsyncMock,
             side_effect=InvalidPartialTabletCountError(),
+        )
+
+        response = await authed_client.post("/api/v1/cabinet/entries", json=_VALID_BODY)
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+    @pytest.mark.asyncio
+    async def test_invalid_dosage_returns_422(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_service.add_entry",
+            new_callable=AsyncMock,
+            side_effect=InvalidDosageError(),
         )
 
         response = await authed_client.post("/api/v1/cabinet/entries", json=_VALID_BODY)

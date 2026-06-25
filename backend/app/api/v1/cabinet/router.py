@@ -25,6 +25,7 @@ from app.utilities.errors import (
     CabinetError,
     CabinetInvariantError,
     EntryNotFoundError,
+    InvalidDosageError,
     InvalidPackageCountError,
     InvalidPartialTabletCountError,
     MedicationNotFoundError,
@@ -99,12 +100,17 @@ async def add_entry(
             partial_tablet_count=data.partial_tablet_count,
             expiry_date=data.expiry_date,
             is_important=data.is_important,
+            usage=data.usage,
         )
     except MedicationNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=e.message
         ) from e
-    except (InvalidPackageCountError, InvalidPartialTabletCountError) as e:
+    except (
+        InvalidPackageCountError,
+        InvalidPartialTabletCountError,
+        InvalidDosageError,
+    ) as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=e.message
         ) from e

@@ -4,11 +4,40 @@ import uuid
 from datetime import date
 from decimal import Decimal
 from enum import StrEnum
-from typing import Literal
+from typing import Literal, NamedTuple
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.utilities.types import NonEmptyStr
+
+
+class DosagePeriod(StrEnum):
+    """Dosage period values — must match the DB CHECK constraint exactly."""
+
+    day = "day"
+    week = "week"
+
+
+class UsageFields(BaseModel):
+    """Usage/dosage fields shared by the POST and PATCH write paths."""
+
+    is_used: bool = False
+    dosage_times: int | None = None
+    dosage_period: DosagePeriod | None = None
+    dosage_amount: int | None = None
+    dosage_start_date: date | None = None
+    dosage_end_date: date | None = None
+
+
+class ResolvedUsage(NamedTuple):
+    """Cleaned, validated usage values ready for persistence."""
+
+    is_used: bool
+    dosage_times: int | None
+    dosage_period: DosagePeriod | None
+    dosage_amount: int | None
+    dosage_start_date: date | None
+    dosage_end_date: date | None
 
 
 class CabinetCategory(StrEnum):
@@ -72,6 +101,7 @@ class AddEntryRequest(BaseModel):
     expiry_date: date
     partial_tablet_count: int | None = None
     is_important: bool = False
+    usage: UsageFields | None = None
 
     @field_validator("package_count")
     @classmethod
@@ -129,6 +159,12 @@ class AddEntryOut(BaseModel):
     expiry_date: date
     total_tablets: int | None
     is_important: bool
+    is_used: bool = False
+    dosage_times: int | None = None
+    dosage_period: DosagePeriod | None = None
+    dosage_amount: int | None = None
+    dosage_start_date: date | None = None
+    dosage_end_date: date | None = None
 
 
 class CabinetEntryOut(BaseModel):

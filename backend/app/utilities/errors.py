@@ -295,6 +295,21 @@ class CabinetInvariantError(CabinetError):
         super().__init__(message)
 
 
+class InvalidDosageError(CabinetError):
+    """Raised when the supplied usage/dosage fields are invalid for the selected variant."""
+
+    def __init__(
+        self,
+        message: str = "Invalid dosage configuration for the selected variant.",
+    ) -> None:
+        """Initialise with a default message.
+
+        Args:
+            message (str): Description of what went wrong.
+        """
+        super().__init__(message)
+
+
 class CabinetDatabaseError(CabinetError):
     """Raised when a cabinet database query fails (e.g. connection unavailable).
 
