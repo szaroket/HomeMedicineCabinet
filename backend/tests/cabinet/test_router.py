@@ -2,6 +2,7 @@
 
 from datetime import date
 from decimal import Decimal
+from typing import Any
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
@@ -39,8 +40,8 @@ _VALID_BODY = {
 }
 
 
-def _make_add_entry_out(**overrides) -> AddEntryOut:
-    defaults = dict(
+def _make_add_entry_out(**overrides: Any) -> AddEntryOut:
+    defaults: dict[str, Any] = dict(
         id=_ENTRY_ID,
         name="Apap",
         strength="500 mg",
@@ -255,8 +256,8 @@ class TestAddEntryRequestValidation:
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
-def _make_cabinet_entry_out(**overrides) -> CabinetEntryOut:
-    defaults = dict(
+def _make_cabinet_entry_out(**overrides: Any) -> CabinetEntryOut:
+    defaults: dict[str, Any] = dict(
         id=_ENTRY_ID,
         name="Apap",
         strength="500 mg",

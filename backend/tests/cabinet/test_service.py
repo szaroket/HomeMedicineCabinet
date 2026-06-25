@@ -414,6 +414,7 @@ class TestAddEntryMerge:
 
         assert result.merged is True
         assert result.entry.package_count == 5
+        assert result.merge_summary is not None
         assert result.merge_summary.previous_package_count == 3
 
     @pytest.mark.parametrize(

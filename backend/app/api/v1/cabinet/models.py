@@ -6,7 +6,7 @@ from sqlmodel import Field, SQLModel
 
 
 class CabinetEntry(SQLModel, table=True):
-    __tablename__ = "cabinet_entries"
+    __tablename__ = "cabinet_entries"  # pyright: ignore[reportAssignmentType]
     __table_args__ = (
         sa.UniqueConstraint(
             "user_id",
@@ -25,16 +25,16 @@ class CabinetEntry(SQLModel, table=True):
     is_important: bool = Field(default=False)
     is_used: bool = Field(default=False)
     dosage_times: int | None = None
-    dosage_period: str | None = Field(default=None, sa_type=sa.Text())
+    dosage_period: str | None = Field(default=None, sa_type=sa.Text)
     dosage_amount: int | None = None
     dosage_start_date: date | None = None
     dosage_end_date: date | None = None
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        sa_type=sa.DateTime(timezone=True),
+        sa_type=sa.DateTime(timezone=True),  # pyright: ignore[reportArgumentType]
     )
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        sa_type=sa.DateTime(timezone=True),
+        sa_type=sa.DateTime(timezone=True),  # pyright: ignore[reportArgumentType]
         sa_column_kwargs={"onupdate": lambda: datetime.now(timezone.utc)},
     )
