@@ -13,7 +13,6 @@ from app.api.v1.cabinet.models import CabinetEntry
 from app.api.v1.cabinet.schemas import (
     AddEntryResult,
     CabinetPageOut,
-    DosagePeriod,
     UsageFields,
 )
 from app.api.v1.cabinet.service import (
@@ -36,6 +35,7 @@ from app.utilities.errors import (
     InvalidPartialTabletCountError,
     MedicationNotFoundError,
 )
+from app.utilities.types import DosagePeriod
 
 # ---------------------------------------------------------------------------
 # total_tablets
@@ -1149,13 +1149,12 @@ class TestAddEntryWithUsage:
         # update_entry_usage should NOT be called (no usage block provided)
         mock_crud.update_entry_usage.assert_not_called()
 
-    async def test_merge_with_usage_calls_update_entry_usage(
+    async def test_merge_with_usage_persists_usage_atomically(
         self, mock_session: AsyncMock, mock_crud
     ):
         variant = _make_variant()
         existing = _make_entry(package_count=1)
-        updated_counts = _make_entry(package_count=2)
-        updated_usage = _make_entry(
+        updated = _make_entry(
             package_count=2,
             is_used=True,
             dosage_times=1,
@@ -1165,8 +1164,7 @@ class TestAddEntryWithUsage:
         )
         mock_crud.get_registry_by_id = AsyncMock(return_value=variant)
         mock_crud.find_entry = AsyncMock(return_value=existing)
-        mock_crud.update_entry_counts = AsyncMock(return_value=updated_counts)
-        mock_crud.update_entry_usage = AsyncMock(return_value=updated_usage)
+        mock_crud.update_entry_counts = AsyncMock(return_value=updated)
 
         await add_entry(
             session=mock_session,
@@ -1183,8 +1181,11 @@ class TestAddEntryWithUsage:
             ),
         )
 
-        mock_crud.update_entry_usage.assert_called_once()
-        call_kwargs = mock_crud.update_entry_usage.call_args.kwargs
+        # Usage is folded into the single update_entry_counts transaction, not a
+        # separate update_entry_usage commit, so the merge stays atomic (impl review F1).
+        mock_crud.update_entry_usage.assert_not_called()
+        mock_crud.update_entry_counts.assert_called_once()
+        call_kwargs = mock_crud.update_entry_counts.call_args.kwargs
         assert call_kwargs["resolved_usage"].is_used is True
 
     async def test_invalid_dosage_raises_invalid_dosage_error(

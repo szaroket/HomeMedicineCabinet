@@ -4,18 +4,11 @@ import uuid
 from datetime import date
 from decimal import Decimal
 from enum import StrEnum
-from typing import Literal, NamedTuple
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.utilities.types import NonEmptyStr
-
-
-class DosagePeriod(StrEnum):
-    """Dosage period values — must match the DB CHECK constraint exactly."""
-
-    day = "day"
-    week = "week"
+from app.utilities.types import DosagePeriod, NonEmptyStr
 
 
 class UsageFields(BaseModel):
@@ -27,17 +20,6 @@ class UsageFields(BaseModel):
     dosage_amount: int | None = None
     dosage_start_date: date | None = None
     dosage_end_date: date | None = None
-
-
-class ResolvedUsage(NamedTuple):
-    """Cleaned, validated usage values ready for persistence."""
-
-    is_used: bool
-    dosage_times: int | None
-    dosage_period: DosagePeriod | None
-    dosage_amount: int | None
-    dosage_start_date: date | None
-    dosage_end_date: date | None
 
 
 class CabinetCategory(StrEnum):

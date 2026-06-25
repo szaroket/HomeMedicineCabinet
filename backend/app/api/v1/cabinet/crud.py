@@ -10,10 +10,10 @@ from sqlmodel import col
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.cabinet.models import CabinetEntry
-from app.api.v1.cabinet.schemas import ResolvedUsage
 from app.api.v1.medicines.models import MedicationRegistry
 from app.db.connector import persist
 from app.utilities.errors import CabinetDatabaseError
+from app.utilities.types import ResolvedUsage
 
 logger = logging.getLogger("app.cabinet.crud")
 
@@ -417,6 +417,7 @@ async def update_entry_counts(
     package_count: int,
     partial_tablet_count: int | None,
     is_important: bool | None = None,
+    resolved_usage: ResolvedUsage | None = None,
 ) -> CabinetEntry:
     """Update the package and partial-tablet counts of an existing entry.
 
@@ -426,6 +427,9 @@ async def update_entry_counts(
         package_count (int): New package count.
         partial_tablet_count (int | None): New partial tablet count, or None.
         is_important (bool | None): When provided, also update the importance flag.
+        resolved_usage (ResolvedUsage | None): When provided, also write the usage/dosage
+            columns in the same transaction so counts and usage commit atomically (used by
+            the dedup merge path).
 
     Returns:
         CabinetEntry: The updated CabinetEntry (committed).
@@ -437,6 +441,8 @@ async def update_entry_counts(
     entry.partial_tablet_count = partial_tablet_count
     if is_important is not None:
         entry.is_important = is_important
+    if resolved_usage is not None:
+        _apply_usage(entry, resolved_usage)
     try:
         async with persist(session, entry):
             session.add(entry)

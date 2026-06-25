@@ -56,7 +56,7 @@ verified at commit 27a2675).
     apart).
   - Blind spot: Whether Phase 5 ends up wanting the standalone fn anyway, making A's split
     feel redundant.
-- **Decision**: PENDING
+- **Decision**: FIXED (Fix A)
 
 ### F2 — crud.py now imports from schemas (new layer dependency)
 
@@ -74,7 +74,9 @@ verified at commit 27a2675).
 - **Fix**: Move `ResolvedUsage` to a neutral shared location — `app/utilities/types.py`
   (where `NonEmptyStr` already lives) — and import it from there in both schemas.py and
   crud.py, so crud stays free of the schemas layer.
-- **Decision**: PENDING
+- **Decision**: FIXED — moved both `ResolvedUsage` and its dependency `DosagePeriod` to
+  `app/utilities/types.py`; updated call-site imports directly in crud.py, service.py,
+  schemas.py, and tests/cabinet/test_service.py (no re-export shim).
 
 ### F3 — validate_usage takes is_tablet_based, not the full variant
 
@@ -87,4 +89,4 @@ verified at commit 27a2675).
   keeps the validator a pure function of primitives (matching the plan's own stated purity
   goal and the injected-today style), and the parametrized tests confirm it. No action
   needed; noted only because it's a documented signature deviation from the plan text.
-- **Decision**: PENDING
+- **Decision**: ACKNOWLEDGED — benign improvement, accepted as-is.

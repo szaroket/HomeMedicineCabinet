@@ -17,9 +17,7 @@ from app.api.v1.cabinet.schemas import (
     AddEntryResult,
     CabinetEntryOut,
     CabinetPageOut,
-    DosagePeriod,
     MergeSummary,
-    ResolvedUsage,
     UsageFields,
 )
 from app.api.v1.medicines.models import MedicationRegistry
@@ -32,6 +30,7 @@ from app.utilities.errors import (
     InvalidPartialTabletCountError,
     MedicationNotFoundError,
 )
+from app.utilities.types import DosagePeriod, ResolvedUsage
 
 logger = logging.getLogger("app.cabinet.service")
 
@@ -824,13 +823,13 @@ async def _merge_and_commit(
         )
 
     updated = await crud.update_entry_counts(
-        session, existing, new_pkg, new_partial_result, is_important=merged_important
+        session,
+        existing,
+        new_pkg,
+        new_partial_result,
+        is_important=merged_important,
+        resolved_usage=resolved_usage,
     )
-
-    if resolved_usage is not None:
-        updated = await crud.update_entry_usage(
-            session=session, entry=updated, resolved_usage=resolved_usage
-        )
 
     return AddEntryResult(
         merged=True,
