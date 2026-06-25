@@ -4,18 +4,18 @@
 - **Plan**: context/changes/dosage-tracking/plan.md
 - **Mode**: Deep
 - **Date**: 2026-06-25
-- **Verdict**: REVISE
+- **Verdict**: REVISE → SOUND (all 5 findings fixed in plan, 2026-06-25)
 - **Findings**: 0 critical, 3 warnings, 2 observations
 
 ## Verdicts
 
-| Dimension | Verdict |
-|-----------|---------|
-| End-State Alignment | WARNING |
-| Lean Execution | PASS |
-| Architectural Fitness | PASS |
-| Blind Spots | WARNING |
-| Plan Completeness | WARNING |
+| Dimension | Verdict | Post-fix |
+|-----------|---------|----------|
+| End-State Alignment | WARNING | PASS (F1 fixed) |
+| Lean Execution | PASS | PASS |
+| Architectural Fitness | PASS | PASS |
+| Blind Spots | WARNING | PASS (F1, F3 fixed) |
+| Plan Completeness | WARNING | PASS (F2, F4, F5 fixed) |
 
 ## Grounding
 
@@ -40,7 +40,7 @@
   - Tradeoff: Pushes correctness into the UI; any non-form client (or a user who doesn't re-enter dosage) still wipes the schedule.
   - Confidence: MEDIUM — relies on every caller cooperating.
   - Blind spot: Add form doesn't currently detect dups pre-submit at all.
-- **Decision**: PENDING
+- **Decision**: Fixed via Fix A (optional `usage` block as the sentinel; conditional overwrite; `is_used: bool = False`; explicit `is_used: false` still clears)
 
 ### F2 — Threading chain skips `_insert_with_race_guard`
 
@@ -50,7 +50,7 @@
 - **Location**: Phase 1 §3
 - **Detail**: The plan's contract says `add_entry` threads usage into `_dedup_or_insert`, then "`crud.insert_entry` gains usage params." But the insert path is `_dedup_or_insert` → `_insert_with_race_guard` (service.py:406) → `crud.insert_entry`. The intermediate `_insert_with_race_guard` must also forward the usage params; it's unnamed in the plan, so the implementer could miss it and usage would never reach a fresh insert.
 - **Fix**: Name `_insert_with_race_guard` in the threading chain (it forwards usage params to crud.insert_entry), alongside `_dedup_or_insert` and `_merge_and_commit`.
-- **Decision**: PENDING
+- **Decision**: Fixed (named `_insert_with_race_guard` as forwarding usage params in Phase 1 §3)
 
 ### F3 — `compute_usage_view` doesn't guard tablet variant with invalid capacity
 
@@ -60,7 +60,7 @@
 - **Location**: Phase 3 §1
 - **Detail**: The plan says compute_usage_view returns all-None when "not used or non-tablet." But `_map_row_to_entry_out` (service.py:210-221) already handles a third case: a tablet-based variant whose `capacity` is None or ≤0 → `tpp=None` → `total_tablets=None` (it logs a warning). For such a "used" tablet entry, `days_of_supply(None, rate)` has no defined behavior in the plan.
 - **Fix**: Specify that compute_usage_view also returns all-None when total_tablets is None (tpp unavailable), mirroring the existing capacity-invalid guard.
-- **Decision**: PENDING
+- **Decision**: Fixed (compute_usage_view returns all-None when total_tablets is None, Phase 3 §1)
 
 ### F4 — `validate_usage` start-date default breaks purity/testability
 
@@ -70,7 +70,7 @@
 - **Location**: Phase 1 §2
 - **Detail**: validate_usage is described as a pure validator but also "defaults dosage_start_date to UTC today when omitted." If it calls datetime.now() internally it's no longer pure and its tests can't pin a deterministic today — at odds with the project's pure-function-in-service convention and the parametrized-test plan for Risk #6.
 - **Fix**: Pass `today: date` into validate_usage rather than reading the clock inside it.
-- **Decision**: PENDING
+- **Decision**: Fixed (validate_usage now takes `today: date`, caller computes UTC today; Phase 1 §2)
 
 ### F5 — Phase 1 manual verification depends on Phase 3 (GET)
 
@@ -80,4 +80,4 @@
 - **Location**: Phase 1 Manual Verification
 - **Detail**: Phase 1's manual check "persists is_used + dosage columns" can't be observed via API until Phase 3's GET lands — the plan acknowledges this ("verify via DB or a follow-up GET"). Not a blocker; just means Phase 1 manual sign-off needs DB inspection or deferral.
 - **Fix**: None required — acknowledged. Optionally note the DB-inspection step explicitly so it isn't mistaken for a gap.
-- **Decision**: PENDING
+- **Decision**: Fixed (added explicit DB-inspection SELECT to Phase 1 manual verification)

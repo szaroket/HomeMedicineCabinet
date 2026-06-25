@@ -59,7 +59,10 @@ filterable. Verify via: `uv run pytest` (backend calc + endpoint tests green),
 - DB `CHECK` constraint already restricts `dosage_period` to `'day'`/`'week'` —
   the Pydantic enum must match exactly (`day`/`week`), or inserts raise `IntegrityError`.
 - `add_entry` already OR-merges importance on dedup (`service.py:660`); usage merge follows
-  the same "incoming wins" shape but **overwrites** the usage fields rather than OR-ing.
+  the same "incoming wins" shape but **overwrites** the usage fields rather than OR-ing —
+  and only when the POST actually carried a usage block, so a restock that omits usage
+  preserves the existing schedule (importance-OR can never lose state; usage-overwrite can,
+  hence the conditional).
 - `_map_row_to_entry_out` is the single read-path mapper (`service.py:191`) used by both
   list and the importance PATCH — extend it once and both endpoints gain usage fields.
 - The list query's `category` filter is centralised in `_build_base_query` (`crud.py:135`)
@@ -118,11 +121,15 @@ a domain error for invalid dosage that the router maps to 422.
 
 **Contract**:
 - `DosagePeriod(StrEnum)` with members `day = "day"`, `week = "week"` (must match the DB CHECK).
-- A `UsageFields` model (or mixin) with: `is_used: bool`, `dosage_times: int | None`,
+- A `UsageFields` model (or mixin) with: `is_used: bool = False`, `dosage_times: int | None`,
   `dosage_period: DosagePeriod | None`, `dosage_amount: int | None`,
-  `dosage_start_date: date | None`, `dosage_end_date: date | None`. Add usage fields to
-  `AddEntryRequest`. `AddEntryOut` echoes the stored usage fields back (no computed finish —
-  the existing "fetch GET for computed values" note already applies).
+  `dosage_start_date: date | None`, `dosage_end_date: date | None`. `is_used` **must default to
+  `False`** so the existing `POST /cabinet/entries` contract is not broken (current clients/tests
+  don't send it). `AddEntryRequest` carries usage as an **optional nested block** —
+  `usage: UsageFields | None = None` — so "usage omitted" (the restock case) is distinguishable
+  from "usage explicitly provided"; this is the sentinel the merge path relies on (see §3).
+  `AddEntryOut` echoes the stored usage fields back (no computed finish — the existing
+  "fetch GET for computed values" note already applies).
 - `InvalidDosageError(CabinetError)` in `errors.py`, default English message, mirroring
   `InvalidPartialTabletCountError`.
 
@@ -134,11 +141,14 @@ a domain error for invalid dosage that the router maps to 422.
 invalid combinations never reach the DB.
 
 **Contract**: `validate_usage(variant, is_used, dosage_times, dosage_period, dosage_amount,
-dosage_start_date, dosage_end_date) -> ResolvedUsage` (NamedTuple of the cleaned values).
-Rules: when `is_used` is False → all dosage/date fields must be None (or are cleared). When
-`is_used` is True and the variant is **tablet-based** → `dosage_times`, `dosage_period`,
-`dosage_amount` are all required and ≥ 1; `dosage_start_date` defaults to UTC today when
-omitted; `dosage_end_date` optional but, if set, must be ≥ start date. When `is_used` is True
+dosage_start_date, dosage_end_date, today: date) -> ResolvedUsage` (NamedTuple of the cleaned
+values). `today` is **passed in** (the caller in `service.py` computes
+`datetime.now(timezone.utc).date()`) so the validator stays pure and its parametrized tests
+pin a deterministic today without patching the clock — matching the injected-`today` style of
+`compute_usage_view` (Phase 3 §1). Rules: when `is_used` is False → all dosage/date fields must
+be None (or are cleared). When `is_used` is True and the variant is **tablet-based** →
+`dosage_times`, `dosage_period`, `dosage_amount` are all required and ≥ 1; `dosage_start_date`
+defaults to `today` when omitted; `dosage_end_date` optional but, if set, must be ≥ start date. When `is_used` is True
 and the variant is **non-tablet** → dosage_* must be None; only start/end dates allowed (end
 ≥ start). Raise `InvalidDosageError` with a specific message otherwise. Use descriptive
 names (no single letters — L-005).
@@ -148,15 +158,24 @@ names (no single letters — L-005).
 **File**: `backend/app/api/v1/cabinet/service.py`, `backend/app/api/v1/cabinet/crud.py`
 
 **Intent**: Carry the validated usage through `add_entry` into both the insert and the merge
-path; on merge the incoming usage overwrites the existing entry's usage fields.
+path; on merge the incoming usage overwrites the existing entry's usage **only when the POST
+actually provided usage** — a restock that omits usage must preserve the existing schedule.
 
-**Contract**: `add_entry` accepts the usage fields, calls `validate_usage`, and threads the
-resolved values into `_dedup_or_insert`. `crud.insert_entry` gains usage params; a
+**Contract**: `add_entry` accepts the optional `usage` block. When `usage is None` it threads
+no usage into the flow (insert uses column defaults; merge leaves the existing entry's usage
+untouched). When `usage` is provided it calls `validate_usage`, then threads the resolved
+values into `_dedup_or_insert`. The fresh-insert path is `_dedup_or_insert` →
+`_insert_with_race_guard` (service.py:406) → `crud.insert_entry`, so
+`_insert_with_race_guard` must also **forward the usage params** to `crud.insert_entry` —
+otherwise usage never reaches a brand-new insert. `crud.insert_entry` gains usage params; a
 `crud.update_entry_usage(session, entry, resolved_usage)` (or extend `update_entry_counts`)
 writes the usage columns inside the existing `persist(...)` / `try/except SQLAlchemyError`
-pattern (L-004). `_merge_and_commit` sets the entry's usage fields from the incoming resolved
-usage (overwrite), independent of the tablet-pool sum. `_build_add_entry_out` includes the
-usage fields.
+pattern (L-004). `_merge_and_commit` overwrites the entry's usage fields from the incoming
+resolved usage **only when usage was provided** (conditional overwrite — restock without usage
+keeps the schedule), independent of the tablet-pool sum; this mirrors the non-destructive
+spirit of the importance-OR merge while keeping "incoming wins" when the caller expresses
+usage intent. An explicit `is_used: false` in a provided usage block still clears the schedule.
+`_build_add_entry_out` includes the usage fields.
 
 #### 4. Router error mapping
 
@@ -175,15 +194,20 @@ router layer only.
 - Lint/format pass: `cd backend && uv run ruff check . && uv run ruff format --check .`
 - Type check passes: `uv run pyright`
 - Unit tests pass: `cd backend && uv run pytest tests/cabinet/test_service.py tests/cabinet/test_router.py`
-- New tests cover: usage persisted on insert; merge overwrites usage; `validate_usage`
+- New tests cover: usage persisted on insert; merge overwrites usage when provided; merge
+  **preserves** existing usage when the POST omits the usage block (restock); `validate_usage`
   rejects each invalid combination (tablet missing dosage, non-tablet with dosage, end < start);
   invalid dosage → 422.
 
 #### Manual Verification:
 
-- `POST /cabinet/entries` with valid tablet usage persists `is_used` + dosage columns (verify
-  via DB or a follow-up GET once Phase 3 lands).
-- A second POST of the same drug+expiry with different usage overwrites the stored schedule.
+- `POST /cabinet/entries` with valid tablet usage persists `is_used` + dosage columns. GET does
+  not expose usage until Phase 3, so verify by DB inspection here — e.g.
+  `SELECT is_used, dosage_times, dosage_period, dosage_amount, dosage_start_date, dosage_end_date
+  FROM cabinet_entries WHERE id = :id;` — or defer this sign-off until Phase 3's GET lands. (Not
+  a gap — the read path is intentionally built in Phase 3.)
+- A second POST of the same drug+expiry **with** a usage block overwrites the stored schedule;
+  a second POST that **omits** usage (restock) adds packages and preserves the existing schedule.
 
 ---
 
@@ -263,7 +287,10 @@ as pure functions (per project convention pure domain logic lives in `service.py
   `None` when `daily_rate <= 0`.
 - `compute_usage_view(entry, tablets_per_package, today) -> UsageView` (NamedTuple:
   `days_of_supply: int | None`, `days_until_end: int | None`, `is_sufficient: bool | None`).
-  Returns all-None when the entry is not "used" or is non-tablet. `days_until_end = (end_date
+  Returns all-None when the entry is not "used", is non-tablet, **or `total_tablets` is None**
+  (tpp unavailable — the tablet variant has invalid/None capacity, the same guard
+  `_map_row_to_entry_out` already applies at service.py:210-221; never call
+  `days_of_supply(None, rate)`). `days_until_end = (end_date
   - today).days` when an end date is set, else None. `is_sufficient = days_of_supply >=
   days_until_end` when both present, else None.
 
@@ -297,7 +324,8 @@ PATCH inherit the fields automatically.
 - Unit tests pass: `cd backend && uv run pytest tests/cabinet/`
 - Calc tests (Risk #6) cover, via `pytest.mark.parametrize`: per-day vs per-week rate; partial
   package included in total; floor boundary (e.g. 10 tablets ÷ 3/day = 3); `daily_rate <= 0`
-  guard returns None; non-tablet "used" ⇒ all-None; not-used ⇒ all-None; end date in the
+  guard returns None; non-tablet "used" ⇒ all-None; not-used ⇒ all-None; tablet "used" with
+  `total_tablets` None (invalid capacity) ⇒ all-None; end date in the
   future (sufficient / short both ways); end date in the past (`days_until_end <= 0`).
 - `GET /cabinet/entries?category=used` returns only used entries (router/crud test).
 
