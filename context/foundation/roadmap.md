@@ -3,7 +3,7 @@ project: "Home Medicine Cabinet"
 version: 1
 status: draft
 created: 2026-06-03
-updated: 2026-06-16
+updated: 2026-06-25
 prd_version: 1
 main_goal: low-complexity
 top_blocker: skills
@@ -34,7 +34,7 @@ A single adult can't reliably track their home medication inventory — what the
 | S-01 | add-medication-from-registry | add a medication by searching the Polish registry autocomplete, choosing tablet count, entering package count and expiry date; entry appears in cabinet with correct status; duplicate entries merge per dedup rule | F-01, F-02, F-03 | US-01, FR-003, FR-010, FR-022 | done |
 | S-08 | mobile-responsive-cabinet    | view and use the cabinet add flow and list on a mobile-width screen without layout breakage; desktop experience is preserved unchanged                                                                              | S-01             | NFR (responsive design)       | proposed |
 | S-02 | cabinet-view-and-search      | view cabinet as a filterable, sortable, paginated list; search by name or active ingredient; see route of administration and leaflet/specification links on each entry | S-01 | US-03, FR-004, FR-006, FR-011, FR-012 | done |
-| S-04 | important-category           | mark a medication as "important", set the global minimum package count, and see an attention badge when stock falls below minimum or medication is expiring/expired | S-02 | FR-013, FR-014, FR-020 (partial) | proposed |
+| S-04 | important-category           | mark a medication as "important", set the global minimum package count, and see an attention badge when stock falls below minimum or medication is expiring/expired | S-02 | FR-013, FR-014, FR-020 (partial) | done |
 | S-05 | dosage-tracking              | assign a tablet-based medication to the "used" category with a dosage schedule and optional end date; see the estimated finish date or sufficiency indicator; non-tablet medications marked used for date tracking only | S-02 | US-04, FR-015, FR-016, FR-017, FR-018 | proposed |
 | S-03 | manage-cabinet-entry         | increment or decrement package count, update partial tablet count, and delete an entry with confirmation; important/used entries stay at zero so the user can restock | S-02, S-04 | FR-005 | proposed |
 | S-06 | notifications-and-badges     | see a notification bell with unread count; notification center lists expiry alerts, below-minimum important stock, and used medications at risk of running out; configure expiry and close-to-finish thresholds in settings; dismiss individual notifications | S-03, S-05 | US-02, US-05, FR-007, FR-008, FR-019, FR-020 | proposed |
@@ -170,7 +170,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** S-03 (manage entry) depends on this slice for the "stay at zero packages" behaviour on important entries; sequencing S-04 before S-03 prevents that branch logic being retrofitted after the fact.
-- **Status:** proposed
+- **Status:** done
 
 ### S-05: Dosage tracking
 
@@ -262,3 +262,4 @@ _(none — all questions resolved before roadmap finalisation)_
 - **F-02: (foundation) SQLModel installed; cabinet, medication-registry, and user-preference models defined; Alembic migration tooling wired; FastAPI connects to Supabase PostgreSQL via `DATABASE_URL`.** — Archived 2026-06-15 → `context/archive/2026-06-04-data-layer-scaffold/`. Lesson: —.
 - **S-01: user can type a medication name, select from the autocomplete dropdown sourced from the Polish registry, choose tablet count, enter package count (≥ 1), and set an expiry date; the entry appears in their cabinet with the correct status classification (valid / expiring soon / expired); adding the same drug + tablet count + expiry date a second time merges the entries per the deduplication and normalisation rule.** — Archived 2026-06-15 → `context/archive/2026-06-09-add-medication-from-registry/`. Lesson: —.
 - **S-02: user can view their cabinet as a filterable (by status and category), sortable (by name), and paginated list; search by medication name or active ingredient; each entry shows route of administration and links to the drug leaflet and specification sourced from the registry.** — Archived 2026-06-16 → `context/archive/2026-06-15-cabinet-view-and-search/`. Lesson: —.
+- **S-04: user can mark a cabinet entry as "important", set a global minimum package count, and see an attention badge on entries that fall below the minimum or are expiring/expired; the badge clears automatically when the condition resolves.** — Archived 2026-06-25 → `context/archive/2026-06-16-important-category/`. Lesson: —.
