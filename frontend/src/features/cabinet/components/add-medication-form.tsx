@@ -13,6 +13,7 @@ import type {
 import { ProductAutocomplete } from "@/features/cabinet/components/product-autocomplete";
 import { VariantSelect } from "@/features/cabinet/components/variant-select";
 import { AddResultDialog } from "@/features/cabinet/components/add-result-dialog";
+import { DosageFields } from "@/features/cabinet/components/dosage-fields";
 
 export function AddMedicationForm() {
   const navigate = useNavigate();
@@ -33,11 +34,17 @@ export function AddMedicationForm() {
     setValue,
     setError,
     reset,
+    watch,
     formState: { errors },
-  } = useForm<AddEntryValues>({ resolver: zodResolver(addEntrySchema) });
+  } = useForm<AddEntryValues>({
+    resolver: zodResolver(addEntrySchema),
+    shouldUnregister: true,
+  });
 
-  function handleProductSelect(p: ProductOut) {
-    setSelectedProduct(p);
+  const isUsed = watch("is_used") ?? false;
+
+  function handleProductSelect(product: ProductOut) {
+    setSelectedProduct(product);
     setSelectedVariant(null);
     setValue("medication_registry_id", "");
   }
@@ -48,9 +55,10 @@ export function AddMedicationForm() {
     setValue("medication_registry_id", "");
   }
 
-  function handleVariantChange(v: VariantOut) {
-    setSelectedVariant(v);
-    setValue("medication_registry_id", v.id);
+  function handleVariantChange(variant: VariantOut) {
+    setSelectedVariant(variant);
+    setValue("medication_registry_id", variant.id);
+    setValue("is_tablet_based", variant.is_tablet_based);
   }
 
   function onSubmit(values: AddEntryValues) {
@@ -70,6 +78,31 @@ export function AddMedicationForm() {
       }
     }
 
+    const usagePayload = values.is_used
+      ? {
+          is_used: true,
+          dosage_times: selectedVariant.is_tablet_based
+            ? (values.dosage_times ?? null)
+            : null,
+          dosage_period: selectedVariant.is_tablet_based
+            ? (values.dosage_period ?? null)
+            : null,
+          dosage_amount: selectedVariant.is_tablet_based
+            ? (values.dosage_amount ?? null)
+            : null,
+          dosage_start_date: values.dosage_start_date || null,
+          dosage_end_date: values.dosage_end_date || null,
+        }
+      : null;
+
+    if (values.is_used && !values.dosage_start_date) {
+      setError("dosage_start_date", {
+        type: "manual",
+        message: "Podaj datę rozpoczęcia",
+      });
+      return;
+    }
+
     setServerError(null);
     mutate(
       {
@@ -80,6 +113,7 @@ export function AddMedicationForm() {
           ? (values.partial_tablet_count ?? null)
           : null,
         is_important: values.is_important ?? false,
+        usage: usagePayload,
       },
       {
         onSuccess: (data) => setResult(data),
@@ -161,8 +195,8 @@ export function AddMedicationForm() {
               placeholder={`Opcjonalnie (1–${(selectedVariant?.capacity ?? 2) - 1} szt.)`}
               className="rounded border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               {...register("partial_tablet_count", {
-                setValueAs: (v: string) =>
-                  v === "" || v == null ? null : Number(v),
+                setValueAs: (value: string) =>
+                  value === "" || value == null ? null : Number(value),
               })}
             />
             <p className="text-xs text-slate-400">
@@ -200,11 +234,20 @@ export function AddMedicationForm() {
           />
           <label
             htmlFor="is_important"
-            className="text-sm font-medium text-blue-400 cursor-pointer"
+            className="cursor-pointer text-sm font-medium text-blue-400"
           >
             Oznacz jako ważny
           </label>
         </div>
+
+        {selectedVariant && (
+          <DosageFields
+            isTabletBased={isTablet}
+            isUsed={isUsed}
+            register={register}
+            errors={errors}
+          />
+        )}
 
         {serverError && <p className="text-sm text-red-400">{serverError}</p>}
 

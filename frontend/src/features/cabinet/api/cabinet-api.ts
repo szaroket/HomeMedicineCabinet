@@ -85,12 +85,22 @@ export function listVariants(
   return apiJson<VariantOut[]>(`/medicines/variants?${params.toString()}`);
 }
 
+export interface UsageFieldsPayload {
+  is_used: boolean;
+  dosage_times?: number | null;
+  dosage_period?: "day" | "week" | null;
+  dosage_amount?: number | null;
+  dosage_start_date?: string | null;
+  dosage_end_date?: string | null;
+}
+
 export interface AddEntryPayload {
   medication_registry_id: string;
   package_count: number;
   expiry_date: string;
   partial_tablet_count?: number | null;
   is_important?: boolean;
+  usage?: UsageFieldsPayload | null;
 }
 
 export function addEntry(payload: AddEntryPayload): Promise<AddEntryResult> {
