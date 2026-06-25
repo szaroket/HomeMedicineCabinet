@@ -561,15 +561,15 @@ None — the dosage columns and the `dosage_period` CHECK constraint already exi
 
 #### Automated
 
-- [x] 1.1 Lint/format pass (ruff check + format --check)
-- [x] 1.2 Type check passes (pyright)
-- [x] 1.3 Unit tests pass (test_service.py + test_router.py)
-- [x] 1.4 New tests cover usage persisted, merge overwrites, validate_usage rejects, invalid→422
+- [x] 1.1 Lint/format pass (ruff check + format --check) — 27a2675
+- [x] 1.2 Type check passes (pyright) — 27a2675
+- [x] 1.3 Unit tests pass (test_service.py + test_router.py) — 27a2675
+- [x] 1.4 New tests cover usage persisted, merge overwrites, validate_usage rejects, invalid→422 — 27a2675
 
 #### Manual
 
-- [x] 1.5 POST with valid tablet usage persists is_used + dosage columns
-- [x] 1.6 Second POST same drug+expiry overwrites the stored schedule
+- [x] 1.5 POST with valid tablet usage persists is_used + dosage columns — 27a2675
+- [x] 1.6 Second POST same drug+expiry overwrites the stored schedule — 27a2675
 
 ### Phase 2: POST frontend — usage fields in the add form
 
