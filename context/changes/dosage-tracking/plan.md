@@ -601,14 +601,14 @@ None — the dosage columns and the `dosage_period` CHECK constraint already exi
 
 #### Automated
 
-- [x] 4.1 Build + lint + format pass
+- [x] 4.1 Build + lint + format pass — 1ecd9f8
 
 #### Manual
 
-- [x] 4.2 No-end-date entry shows finish date matching local date math
-- [x] 4.3 End-date entry shows day counts + Wystarczy/Zabraknie badge
-- [x] 4.4 "W użyciu" filter returns only used entries
-- [x] 4.5 Changing browser timezone shifts the finish date
+- [x] 4.2 No-end-date entry shows finish date matching local date math — 1ecd9f8
+- [x] 4.3 End-date entry shows day counts + Wystarczy/Zabraknie badge — 1ecd9f8
+- [x] 4.4 "W użyciu" filter returns only used entries — 1ecd9f8
+- [x] 4.5 Changing browser timezone shifts the finish date — 1ecd9f8
 
 ### Phase 5: PATCH backend — update / unassign usage
 
