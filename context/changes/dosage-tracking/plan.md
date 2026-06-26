@@ -382,6 +382,23 @@ styling conventions.
 label: "W użyciu" }`), and the `category` param union in `CabinetListParams`. `filter-sheet`
 renders the new option.
 
+> **Addendum (post-impl review, 2026-06-26).** Two items not enumerated above were
+> implemented and accepted during review:
+>
+> - **Table/page wiring.** `cabinet-list.tsx` (desktop table view) and `cabinet-page.tsx`
+>   (page wiring) also surface the usage display and the stock filter — they share the
+>   same `useCabinetEntry` view the card uses, so the table needs the same columns/badges.
+> - **Server-side `sufficiency` filter.** A `sufficiency=insufficient|sufficient` query
+>   param was added (schemas/service/facade/router/`crud._sufficiency_clauses`) so the
+>   Wystarczy/Zabraknie filter works across all pages, not just the current one. The SQL
+>   duplicates the Python `compute_usage_view` arithmetic (SQL can't call per-row Python);
+>   the two paths are pinned together by parity tests in `tests/cabinet/test_crud.py`
+>   (`TestBuildBaseQuerySufficiency`) and a "change both together" note on the builder —
+>   the same documented-duplication pattern as `is_below_minimum` (Risk #6).
+> - **Sufficiency badge.** Rendered via the shared `StatusBadge` (descriptor
+>   `sufficiencyInfo` in `use-cabinet-entry.ts`) rather than hand-rolled spans, satisfying
+>   the "Reuse `StatusBadge` styling conventions" intent above.
+
 ### Success Criteria:
 
 #### Automated Verification:

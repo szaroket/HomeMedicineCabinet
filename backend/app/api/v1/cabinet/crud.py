@@ -181,6 +181,85 @@ async def update_entry_usage(
     return entry
 
 
+def _sufficiency_clauses(today: date, sufficiency: str):
+    """Build WHERE clauses filtering used tablet entries by sufficiency verdict.
+
+    Mirrors the canonical Python calc in ``cabinet.service``: ``total_tablets``,
+    ``daily_consumption_rate``, ``days_of_supply_from_rate`` and the
+    ``is_sufficient`` verdict in ``compute_usage_view``. SQL cannot call that
+    per-row Python code, so the arithmetic is duplicated here; the two paths are
+    pinned together by the parity tests in ``tests/cabinet/test_crud.py``. Change
+    both together if the calc ever changes (Risk #6).
+
+    The guards reproduce ``compute_usage_view``'s None cases so a row matches
+    neither filter exactly when the Python calc yields ``is_sufficient is None``:
+
+    * ``dosage_end_date > today`` mirrors the ``until_end > 0`` gate — once the
+      window is closed (end date today or past) there is no verdict.
+    * Dividing by ``NULLIF(daily_rate, 0)`` mirrors ``days_of_supply_from_rate``
+      returning None for ``daily_rate <= 0``: a zero rate yields a NULL supply,
+      so the verdict is NULL and the row matches neither filter — and there is no
+      divide-by-zero regardless of WHERE evaluation order.
+
+    Args:
+        today (date): Reference date for the supply projection.
+        sufficiency (str): "insufficient" or "sufficient".
+
+    Returns:
+        list: SQLAlchemy boolean clauses to AND into the query's WHERE.
+    """
+    # total_tablets is not a DB column — compute from package_count,
+    # partial_tablet_count, and MedicationRegistry.capacity (tablets per package),
+    # matching service.total_tablets():
+    #   if partial_tablet_count is not None: (pkg_count - 1) * tpp + partial
+    #   else: pkg_count * tpp
+    tpp_expr = cast(col(MedicationRegistry.capacity), Integer)
+    total_tablets_expr = cast(
+        case(
+            (
+                col(CabinetEntry.partial_tablet_count).is_not(None),
+                (col(CabinetEntry.package_count) - 1) * tpp_expr
+                + col(CabinetEntry.partial_tablet_count),
+            ),
+            else_=col(CabinetEntry.package_count) * tpp_expr,
+        ),
+        Float,
+    )
+    period_days_expr = case(
+        (col(CabinetEntry.dosage_period) == "day", literal(1.0)),
+        else_=literal(7.0),
+    )
+    daily_rate_expr = (
+        cast(col(CabinetEntry.dosage_times) * col(CabinetEntry.dosage_amount), Float)
+        / period_days_expr
+    )
+    # NULLIF(rate, 0) -> NULL supply on a zero rate (mirrors the Python None-guard
+    # and removes the divide-by-zero F4 flagged), independent of clause order.
+    days_supply_expr = cast(
+        func.floor(total_tablets_expr / func.nullif(daily_rate_expr, literal(0.0))),
+        Integer,
+    )
+    # Reframe as a date comparison to avoid date-minus-date type ambiguity.
+    # PostgreSQL adds integer days to a date natively.
+    projected_finish_expr = literal(today) + days_supply_expr
+    end_date_col = col(CabinetEntry.dosage_end_date)
+    verdict = (
+        projected_finish_expr < end_date_col
+        if sufficiency == "insufficient"
+        else projected_finish_expr >= end_date_col
+    )
+    return [
+        col(CabinetEntry.is_used).is_(True),
+        end_date_col.is_not(None),
+        # F2: closed window (until_end <= 0) yields no verdict
+        end_date_col > literal(today),
+        col(MedicationRegistry.capacity).is_not(None),
+        col(CabinetEntry.dosage_times).is_not(None),
+        col(CabinetEntry.dosage_amount).is_not(None),
+        verdict,
+    ]
+
+
 def _build_base_query(
     user_id: uuid.UUID,
     today: date,
@@ -247,54 +326,7 @@ def _build_base_query(
             col(CabinetEntry.package_count) < min_package_count,
         )
     if sufficiency in ("insufficient", "sufficient"):
-        # Mirrors compute_usage_view / days_of_supply logic in service.py.
-        # total_tablets is not a DB column — compute from package_count,
-        # partial_tablet_count, and MedicationRegistry.capacity (tablets per package).
-        # Mirrors service.py total_tablets():
-        #   if partial_tablet_count is not None: (pkg_count - 1) * tpp + partial
-        #   else: pkg_count * tpp
-        tpp_expr = cast(col(MedicationRegistry.capacity), Integer)
-        total_tablets_expr = cast(
-            case(
-                (
-                    col(CabinetEntry.partial_tablet_count).is_not(None),
-                    (col(CabinetEntry.package_count) - 1) * tpp_expr
-                    + col(CabinetEntry.partial_tablet_count),
-                ),
-                else_=col(CabinetEntry.package_count) * tpp_expr,
-            ),
-            Float,
-        )
-        period_days_expr = case(
-            (col(CabinetEntry.dosage_period) == "day", literal(1.0)),
-            else_=literal(7.0),
-        )
-        daily_rate_expr = (
-            cast(
-                col(CabinetEntry.dosage_times) * col(CabinetEntry.dosage_amount), Float
-            )
-            / period_days_expr
-        )
-        days_supply_expr = cast(
-            func.floor(total_tablets_expr / daily_rate_expr), Integer
-        )
-        # Reframe as date comparison to avoid date-minus-date type ambiguity.
-        # PostgreSQL adds integer days to date natively.
-        projected_finish_expr = literal(today) + days_supply_expr
-        end_date_col = col(CabinetEntry.dosage_end_date)
-        sufficiency_predicate = (
-            projected_finish_expr < end_date_col
-            if sufficiency == "insufficient"
-            else projected_finish_expr >= end_date_col
-        )
-        stmt = stmt.where(
-            col(CabinetEntry.is_used).is_(True),
-            end_date_col.is_not(None),
-            col(MedicationRegistry.capacity).is_not(None),
-            col(CabinetEntry.dosage_times).is_not(None),
-            col(CabinetEntry.dosage_amount).is_not(None),
-            sufficiency_predicate,
-        )
+        stmt = stmt.where(*_sufficiency_clauses(today, sufficiency))
     return stmt
 
 

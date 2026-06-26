@@ -19,6 +19,7 @@ export function CabinetCard({ entry }: CabinetCardProps) {
     toggleExpanded,
     toggleImportant,
     statusInfo,
+    sufficiencyInfo,
     belowMinimum,
     formattedExpiryDate,
     usageView,
@@ -73,16 +74,7 @@ export function CabinetCard({ entry }: CabinetCardProps) {
             {OUT_OF_STOCK_LABEL}
           </span>
         )}
-        {entry.is_sufficient === false && (
-          <span className="inline-flex items-center rounded-full bg-red-950/60 px-2 py-0.5 text-xs font-medium text-red-400">
-            Zabraknie
-          </span>
-        )}
-        {entry.is_sufficient === true && (
-          <span className="inline-flex items-center rounded-full bg-green-950/60 px-2 py-0.5 text-xs font-medium text-green-400">
-            Wystarczy
-          </span>
-        )}
+        {sufficiencyInfo && <StatusBadge status={sufficiencyInfo} />}
       </div>
 
       <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-300">

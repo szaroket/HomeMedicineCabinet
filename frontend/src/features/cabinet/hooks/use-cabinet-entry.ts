@@ -25,6 +25,20 @@ export const STATUS_LABEL: Record<
   },
 };
 
+export const SUFFICIENCY_LABEL: Record<
+  "insufficient" | "sufficient",
+  { label: string; pillClassName: string }
+> = {
+  insufficient: {
+    label: "Zabraknie",
+    pillClassName: "bg-red-950/60 text-red-400",
+  },
+  sufficient: {
+    label: "Wystarczy",
+    pillClassName: "bg-green-950/60 text-green-400",
+  },
+};
+
 export function formatDate(dateStr: string): string {
   const date = new Date(dateStr + "T00:00:00");
   return date.toLocaleDateString("pl-PL", {
@@ -123,6 +137,13 @@ export function useCabinetEntry(entry: CabinetEntryOut) {
     pillClassName: "bg-slate-800 text-slate-400",
   };
 
+  const sufficiencyInfo =
+    entry.is_sufficient === false
+      ? SUFFICIENCY_LABEL.insufficient
+      : entry.is_sufficient === true
+        ? SUFFICIENCY_LABEL.sufficient
+        : null;
+
   function toggleExpanded() {
     setExpanded((prev) => !prev);
   }
@@ -136,6 +157,7 @@ export function useCabinetEntry(entry: CabinetEntryOut) {
     toggleExpanded,
     toggleImportant: toggleImportantFlag,
     statusInfo,
+    sufficiencyInfo,
     belowMinimum: entry.below_minimum,
     formattedExpiryDate: formatDate(entry.expiry_date),
     usageView: buildUsageView(entry),
