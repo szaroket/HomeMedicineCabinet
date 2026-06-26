@@ -588,10 +588,10 @@ None — the dosage columns and the `dosage_period` CHECK constraint already exi
 
 #### Automated
 
-- [ ] 3.1 Lint/format + type check pass
-- [ ] 3.2 Unit tests pass (tests/cabinet/)
-- [ ] 3.3 Calc tests (Risk #6) cover parametrized rate/floor/guard/non-tablet/end-date cases
-- [ ] 3.4 GET ?category=used returns only used entries
+- [x] 3.1 Lint/format + type check pass
+- [x] 3.2 Unit tests pass (tests/cabinet/)
+- [x] 3.3 Calc tests (Risk #6) cover parametrized rate/floor/guard/non-tablet/end-date cases
+- [x] 3.4 GET ?category=used returns only used entries
 
 #### Manual
 

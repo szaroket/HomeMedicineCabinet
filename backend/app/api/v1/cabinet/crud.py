@@ -233,6 +233,8 @@ def _build_base_query(
         )
     if category == "important":
         stmt = stmt.where(col(CabinetEntry.is_important).is_(True))
+    elif category == "used":
+        stmt = stmt.where(col(CabinetEntry.is_used).is_(True))
     if below_minimum and min_package_count is not None:
         # Must stay in sync with cabinet.service.is_below_minimum, which encodes the
         # same rule (important AND package_count < minimum) for the per-row badge.

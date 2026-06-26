@@ -26,6 +26,7 @@ class CabinetCategory(StrEnum):
     """Cabinet entry category filter values."""
 
     important = "important"
+    used = "used"
 
 
 class CabinetStatus(StrEnum):
@@ -170,6 +171,15 @@ class CabinetEntryOut(BaseModel):
     route_of_administration: str | None
     leaflet_url: str | None
     specification_url: str | None
+    is_used: bool = False
+    dosage_times: int | None = None
+    dosage_period: DosagePeriod | None = None
+    dosage_amount: int | None = None
+    dosage_start_date: date | None = None
+    dosage_end_date: date | None = None
+    days_of_supply: int | None = None
+    days_until_end: int | None = None
+    is_sufficient: bool | None = None
 
 
 class SetImportantRequest(BaseModel):

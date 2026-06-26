@@ -1,6 +1,7 @@
 """Cabinet service: pure domain logic and DB-backed orchestration."""
 
 import logging
+import math
 import uuid
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
@@ -48,6 +49,14 @@ class TabletPool(NamedTuple):
 
     package_count: int
     partial_tablet_count: int | None
+
+
+class UsageView(NamedTuple):
+    """Computed dosage supply view for a cabinet entry."""
+
+    days_of_supply: int | None
+    days_until_end: int | None
+    is_sufficient: bool | None
 
 
 def total_tablets(
@@ -170,6 +179,96 @@ def classify_status(
     if expiry_date <= today + timedelta(days=expiry_threshold_days):
         return Status.EXPIRING
     return Status.VALID
+
+
+def daily_consumption_rate(
+    dosage_times: int,
+    dosage_amount: int,
+    dosage_period: DosagePeriod,
+) -> float:
+    """Compute the daily tablet consumption rate.
+
+    Args:
+        dosage_times (int): Number of doses per period.
+        dosage_amount (int): Tablets per dose.
+        dosage_period (DosagePeriod): Period unit ('day' or 'week').
+
+    Returns:
+        float: Tablets consumed per day.
+    """
+    period_days = 1 if dosage_period == DosagePeriod.day else 7
+    return (dosage_times * dosage_amount) / period_days
+
+
+def days_of_supply_from_rate(
+    total_tablets_count: int,
+    daily_rate: float,
+) -> int | None:
+    """Compute floored days of supply from a daily rate.
+
+    Args:
+        total_tablets_count (int): Total available tablets.
+        daily_rate (float): Daily consumption rate in tablets per day.
+
+    Returns:
+        int | None: Floored days of supply, or None when daily_rate <= 0.
+    """
+    if daily_rate <= 0:
+        return None
+    return int(math.floor(total_tablets_count / daily_rate))
+
+
+def compute_usage_view(
+    entry: "CabinetEntry",
+    tablets_per_package: int | None,
+    today: date,
+) -> UsageView:
+    """Compute the dosage supply view for a cabinet entry.
+
+    Returns all-None when the entry is not used, is non-tablet, or tablets_per_package
+    is unavailable (invalid capacity in the registry row).
+
+    Args:
+        entry (CabinetEntry): The cabinet entry.
+        tablets_per_package (int | None): Tablets per package from the registry, or None.
+        today (date): Reference date (UTC today from caller).
+
+    Returns:
+        UsageView: Computed supply numbers; all fields None when calc is not applicable.
+    """
+    null_view = UsageView(days_of_supply=None, days_until_end=None, is_sufficient=None)
+    if not entry.is_used:
+        return null_view
+    if tablets_per_package is None:
+        return null_view
+    if (
+        entry.dosage_times is None
+        or entry.dosage_amount is None
+        or entry.dosage_period is None
+    ):
+        # Non-tablet used entry: date-only tracking
+        return null_view
+    total = total_tablets(
+        package_count=entry.package_count,
+        partial_tablet_count=entry.partial_tablet_count,
+        tablets_per_package=tablets_per_package,
+    )
+    rate = daily_consumption_rate(
+        dosage_times=entry.dosage_times,
+        dosage_amount=entry.dosage_amount,
+        dosage_period=DosagePeriod(entry.dosage_period),
+    )
+    supply = days_of_supply_from_rate(total_tablets_count=total, daily_rate=rate)
+    end_date = entry.dosage_end_date
+    until_end = (end_date - today).days if end_date is not None else None
+    sufficient: bool | None = None
+    if supply is not None and until_end is not None:
+        sufficient = supply >= until_end
+    return UsageView(
+        days_of_supply=supply,
+        days_until_end=until_end,
+        is_sufficient=sufficient,
+    )
 
 
 def validate_usage(
@@ -318,6 +417,7 @@ def _map_row_to_entry_out(
     tpp = None
     if variant.is_tablet_based and not capacity_invalid:
         tpp = int(cast(Decimal, variant.capacity))
+    usage_view = compute_usage_view(entry=entry, tablets_per_package=tpp, today=today)
     return CabinetEntryOut(
         id=entry.id,
         name=variant.name,
@@ -339,6 +439,17 @@ def _map_row_to_entry_out(
         route_of_administration=variant.route_of_administration,
         leaflet_url=variant.leaflet_url,
         specification_url=variant.specification_url,
+        is_used=entry.is_used,
+        dosage_times=entry.dosage_times,
+        dosage_period=DosagePeriod(entry.dosage_period)
+        if entry.dosage_period
+        else None,
+        dosage_amount=entry.dosage_amount,
+        dosage_start_date=entry.dosage_start_date,
+        dosage_end_date=entry.dosage_end_date,
+        days_of_supply=usage_view.days_of_supply,
+        days_until_end=usage_view.days_until_end,
+        is_sufficient=usage_view.is_sufficient,
     )
 
 

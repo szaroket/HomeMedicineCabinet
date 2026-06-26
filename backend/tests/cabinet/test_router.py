@@ -508,7 +508,7 @@ class TestListEntriesImportanceFields:
     @pytest.mark.asyncio
     async def test_invalid_category_returns_422(self, authed_client: AsyncClient):
         response = await authed_client.get(
-            "/api/v1/cabinet/entries", params={"category": "used"}
+            "/api/v1/cabinet/entries", params={"category": "unknown"}
         )
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
@@ -647,3 +647,31 @@ class TestSetEntryImportanceErrorMapping:
             json={"is_important": True},
         )
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+class TestListEntriesCategoryFilter:
+    @pytest.mark.asyncio
+    async def test_category_used_accepted_and_forwarded(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mock_facade = mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.list_entries",
+            new_callable=AsyncMock,
+            return_value=_make_page_out([_make_cabinet_entry_out(is_used=True)]),
+        )
+
+        response = await authed_client.get(
+            "/api/v1/cabinet/entries", params={"category": "used"}
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        call_kwargs = mock_facade.call_args.kwargs
+        assert call_kwargs["category"] == "used"
+        assert response.json()["items"][0]["is_used"] is True
+
+    @pytest.mark.asyncio
+    async def test_invalid_category_returns_422(self, authed_client: AsyncClient):
+        response = await authed_client.get(
+            "/api/v1/cabinet/entries", params={"category": "unknown"}
+        )
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT

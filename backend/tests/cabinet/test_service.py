@@ -1207,3 +1207,214 @@ class TestAddEntryWithUsage:
                     # missing dosage_times / dosage_period / dosage_amount for tablet
                 ),
             )
+
+
+# ---------------------------------------------------------------------------
+# daily_consumption_rate
+# ---------------------------------------------------------------------------
+
+from app.api.v1.cabinet.service import (  # noqa: E402
+    UsageView,
+    compute_usage_view,
+    daily_consumption_rate,
+    days_of_supply_from_rate,
+)
+
+
+class TestDailyConsumptionRate:
+    @pytest.mark.parametrize(
+        ("dosage_times", "dosage_amount", "dosage_period", "expected"),
+        [
+            (1, 1, DosagePeriod.day, 1.0),
+            (3, 2, DosagePeriod.day, 6.0),
+            (2, 3, DosagePeriod.week, 6 / 7),
+            (1, 7, DosagePeriod.week, 1.0),
+        ],
+    )
+    def test_daily_consumption_rate(
+        self, dosage_times, dosage_amount, dosage_period, expected
+    ):
+        result = daily_consumption_rate(
+            dosage_times=dosage_times,
+            dosage_amount=dosage_amount,
+            dosage_period=dosage_period,
+        )
+        assert abs(result - expected) < 1e-9
+
+
+# ---------------------------------------------------------------------------
+# days_of_supply_from_rate
+# ---------------------------------------------------------------------------
+
+
+class TestDaysOfSupplyFromRate:
+    @pytest.mark.parametrize(
+        ("total_tablets_count", "daily_rate", "expected"),
+        [
+            (10, 3.0, 3),  # floor: 10/3 = 3.33 → 3
+            (20, 2.0, 10),
+            (7, 1.0, 7),
+            (0, 2.0, 0),
+            (10, 0.0, None),  # zero rate guard
+            (10, -1.0, None),  # negative rate guard
+        ],
+    )
+    def test_days_of_supply_from_rate(self, total_tablets_count, daily_rate, expected):
+        result = days_of_supply_from_rate(
+            total_tablets_count=total_tablets_count,
+            daily_rate=daily_rate,
+        )
+        assert result == expected
+
+
+# ---------------------------------------------------------------------------
+# compute_usage_view
+# ---------------------------------------------------------------------------
+
+
+def _make_used_entry(
+    package_count: int = 2,
+    partial_tablet_count: int | None = None,
+    is_used: bool = True,
+    dosage_times: int | None = 3,
+    dosage_amount: int | None = 2,
+    dosage_period: str | None = DosagePeriod.day,
+    dosage_start_date: date | None = None,
+    dosage_end_date: date | None = None,
+) -> CabinetEntry:
+    entry = CabinetEntry(
+        id=_ENTRY_ID,
+        user_id=_USER_ID,
+        medication_registry_id=_REGISTRY_ID,
+        package_count=package_count,
+        partial_tablet_count=partial_tablet_count,
+        expiry_date=_EXPIRY,
+    )
+    entry.is_used = is_used
+    entry.dosage_times = dosage_times
+    entry.dosage_amount = dosage_amount
+    entry.dosage_period = dosage_period
+    entry.dosage_start_date = dosage_start_date
+    entry.dosage_end_date = dosage_end_date
+    return entry
+
+
+_TODAY = date(2026, 6, 26)
+
+
+class TestComputeUsageView:
+    def test_not_used_returns_all_none(self):
+        entry = _make_used_entry(
+            is_used=False, dosage_times=None, dosage_amount=None, dosage_period=None
+        )
+        result = compute_usage_view(entry=entry, tablets_per_package=20, today=_TODAY)
+        assert result == UsageView(
+            days_of_supply=None, days_until_end=None, is_sufficient=None
+        )
+
+    def test_no_tablets_per_package_returns_all_none(self):
+        entry = _make_used_entry()
+        result = compute_usage_view(entry=entry, tablets_per_package=None, today=_TODAY)
+        assert result == UsageView(
+            days_of_supply=None, days_until_end=None, is_sufficient=None
+        )
+
+    def test_non_tablet_used_entry_returns_all_none(self):
+        entry = _make_used_entry(
+            dosage_times=None, dosage_amount=None, dosage_period=None
+        )
+        result = compute_usage_view(entry=entry, tablets_per_package=None, today=_TODAY)
+        assert result == UsageView(
+            days_of_supply=None, days_until_end=None, is_sufficient=None
+        )
+
+    def test_per_day_no_end_date(self):
+        # 2 packages × 20 tpp = 40 tablets; rate = 3×2/day = 6; supply = floor(40/6) = 6
+        entry = _make_used_entry(
+            package_count=2,
+            dosage_times=3,
+            dosage_amount=2,
+            dosage_period=DosagePeriod.day,
+        )
+        result = compute_usage_view(entry=entry, tablets_per_package=20, today=_TODAY)
+        assert result.days_of_supply == 6
+        assert result.days_until_end is None
+        assert result.is_sufficient is None
+
+    def test_per_week_rate(self):
+        # 1 package × 14 tpp = 14 tablets; rate = 2×1/week = 2/7; supply = floor(14/(2/7)) = floor(49) = 49
+        entry = _make_used_entry(
+            package_count=1,
+            dosage_times=2,
+            dosage_amount=1,
+            dosage_period=DosagePeriod.week,
+        )
+        result = compute_usage_view(entry=entry, tablets_per_package=14, today=_TODAY)
+        assert result.days_of_supply == 49
+        assert result.days_until_end is None
+
+    def test_partial_package_included(self):
+        # 2 packages, 5 partial → (2-1)*20+5 = 25 tablets; rate=3*2/day=6; supply=floor(25/6)=4
+        entry = _make_used_entry(
+            package_count=2,
+            partial_tablet_count=5,
+            dosage_times=3,
+            dosage_amount=2,
+            dosage_period=DosagePeriod.day,
+        )
+        result = compute_usage_view(entry=entry, tablets_per_package=20, today=_TODAY)
+        assert result.days_of_supply == 4
+
+    def test_floor_boundary(self):
+        # 10 tablets / 3 per day = 3.33 → floor = 3
+        entry = _make_used_entry(
+            package_count=1,
+            dosage_times=3,
+            dosage_amount=1,
+            dosage_period=DosagePeriod.day,
+        )
+        result = compute_usage_view(entry=entry, tablets_per_package=10, today=_TODAY)
+        assert result.days_of_supply == 3
+
+    def test_sufficient_with_future_end_date(self):
+        # 40 tablets / 2 per day = 20 days supply; end in 10 days → sufficient
+        end = _TODAY + timedelta(days=10)
+        entry = _make_used_entry(
+            package_count=2,
+            dosage_times=2,
+            dosage_amount=1,
+            dosage_period=DosagePeriod.day,
+            dosage_end_date=end,
+        )
+        result = compute_usage_view(entry=entry, tablets_per_package=20, today=_TODAY)
+        assert result.days_of_supply == 20
+        assert result.days_until_end == 10
+        assert result.is_sufficient is True
+
+    def test_short_with_future_end_date(self):
+        # 6 tablets / 2 per day = 3 days supply; end in 10 days → short
+        end = _TODAY + timedelta(days=10)
+        entry = _make_used_entry(
+            package_count=1,
+            dosage_times=2,
+            dosage_amount=1,
+            dosage_period=DosagePeriod.day,
+            dosage_end_date=end,
+        )
+        result = compute_usage_view(entry=entry, tablets_per_package=6, today=_TODAY)
+        assert result.days_of_supply == 3
+        assert result.days_until_end == 10
+        assert result.is_sufficient is False
+
+    def test_end_date_in_past(self):
+        past = _TODAY - timedelta(days=3)
+        entry = _make_used_entry(
+            package_count=2,
+            dosage_times=1,
+            dosage_amount=1,
+            dosage_period=DosagePeriod.day,
+            dosage_end_date=past,
+        )
+        result = compute_usage_view(entry=entry, tablets_per_package=20, today=_TODAY)
+        assert result.days_until_end == -3
+        assert result.is_sufficient is True  # 40 days supply >= -3
