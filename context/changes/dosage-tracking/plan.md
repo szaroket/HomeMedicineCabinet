@@ -458,6 +458,16 @@ importance facade method).
 `MedicationNotFoundError`→404, `CabinetDatabaseError`→503, `CabinetError`→400, else 500 —
 mirroring the existing handlers.
 
+> **Addendum (post-impl review, 2026-06-26).** One item not enumerated above was
+> implemented and accepted during review:
+>
+> - **Shared dosage value caps.** Bound constraints were added to the *shared* `UsageFields`
+>   (`dosage_times: Field(None, ge=1, le=24)`, `dosage_amount: Field(None, ge=1, le=100)`) with
+>   matching `.max(24)`/`.max(100)` in the frontend zod schema (`cabinet-schemas.ts`). Because
+>   `UsageFields` is reused by the Phase 1 POST path, this also tightens the POST contract — both
+>   paths now reject out-of-range dosages with parametrized 422 coverage (times 0/25, amount
+>   0/101). The frontend `.max()` parity keeps client and server validation in sync.
+
 ### Success Criteria:
 
 #### Automated Verification:
@@ -631,13 +641,13 @@ None — the dosage columns and the `dosage_period` CHECK constraint already exi
 
 #### Automated
 
-- [x] 5.1 Lint/format + type check pass
-- [x] 5.2 Tests pass (tests/cabinet/)
-- [x] 5.3 Tests cover set, edit, unassign-nulls-columns, ownership 404, invalid 422
+- [x] 5.1 Lint/format + type check pass — 737007f
+- [x] 5.2 Tests pass (tests/cabinet/) — 737007f
+- [x] 5.3 Tests cover set, edit, unassign-nulls-columns, ownership 404, invalid 422 — 737007f
 
 #### Manual
 
-- [x] 5.4 PATCH sets, edits, then clears usage; cleared rows have NULL columns
+- [x] 5.4 PATCH sets, edits, then clears usage; cleared rows have NULL columns — 737007f
 
 ### Phase 6: PATCH frontend — inline usage form on the card
 

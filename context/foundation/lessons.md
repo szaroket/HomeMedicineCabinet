@@ -13,6 +13,7 @@ note. Newest first.
 **The rule**:
 
 - All imports live in the import block at the top of the module. Do not add a fresh `import` partway down the file when introducing new tests/functions — merge the names into the existing top-of-file import.
+- This includes **function-local / inside-the-body imports** (e.g. `from app.utilities.errors import EntryNotFoundError` inside a test method). Ruff's E402 only flags module-level imports not at top, so a function-body import slips past lint silently — it is still a violation. Recurred in `dosage-tracking` Phase 5 review (2026-06-26).
 - Never reach for `# noqa: E402` to silence module-level-import-not-at-top; the suppression is a smell that hides a self-inflicted placement problem. Fix the placement instead.
 - This applies equally to source and test modules.
 

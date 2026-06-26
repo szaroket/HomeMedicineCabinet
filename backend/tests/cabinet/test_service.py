@@ -36,6 +36,7 @@ from app.api.v1.cabinet.service import (
 from app.api.v1.medicines.models import MedicationRegistry
 from app.utilities.errors import (
     CabinetInvariantError,
+    EntryNotFoundError,
     InvalidDosageError,
     InvalidPartialTabletCountError,
     MedicationNotFoundError,
@@ -1494,8 +1495,6 @@ class TestSetEntryUsage:
     async def test_entry_not_found_raises_entry_not_found_error(
         self, mock_session: AsyncMock, mock_crud
     ):
-        from app.utilities.errors import EntryNotFoundError
-
         mock_crud.find_entry_by_id = AsyncMock(return_value=None)
 
         with pytest.raises(EntryNotFoundError):
