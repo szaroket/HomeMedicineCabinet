@@ -885,6 +885,64 @@ async def set_entry_importance(
     )
 
 
+async def set_entry_usage(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    entry_id: uuid.UUID,
+    usage: UsageFields,
+    expiry_threshold_days: int,
+    min_package_count: int = DEFAULT_MIN_PACKAGE_COUNT,
+) -> CabinetEntryOut:
+    """Set, update, or clear the usage/dosage schedule on a cabinet entry owned by the user.
+
+    Args:
+        session (AsyncSession): Active async database session.
+        user_id (uuid.UUID): Authenticated user's UUID.
+        entry_id (uuid.UUID): UUID of the cabinet entry to update.
+        usage (UsageFields): Incoming usage payload (is_used + dosage/date fields).
+        expiry_threshold_days (int): Days ahead that triggers "expiring" status.
+        min_package_count (int): User's global minimum package count for below-minimum signal.
+
+    Returns:
+        CabinetEntryOut: The updated entry with recomputed usage view.
+
+    Raises:
+        EntryNotFoundError: When the entry does not exist or does not belong to the user.
+        InvalidDosageError: When the provided usage fields are invalid.
+        MedicationNotFoundError: When the entry's registry variant no longer exists.
+        CabinetDatabaseError: When a database operation fails.
+    """
+    entry = await crud.find_entry_by_id(
+        session=session, user_id=user_id, entry_id=entry_id
+    )
+    if entry is None:
+        raise EntryNotFoundError()
+    variant = await _get_variant_or_raise(
+        session=session, medication_registry_id=entry.medication_registry_id
+    )
+    today = datetime.now(timezone.utc).date()
+    resolved_usage = validate_usage(
+        is_tablet_based=variant.is_tablet_based,
+        is_used=usage.is_used,
+        dosage_times=usage.dosage_times,
+        dosage_period=usage.dosage_period,
+        dosage_amount=usage.dosage_amount,
+        dosage_start_date=usage.dosage_start_date,
+        dosage_end_date=usage.dosage_end_date,
+        today=today,
+    )
+    updated_entry = await crud.update_entry_usage(
+        session=session, entry=entry, resolved_usage=resolved_usage
+    )
+    return _map_row_to_entry_out(
+        entry=updated_entry,
+        variant=variant,
+        today=today,
+        expiry_threshold_days=expiry_threshold_days,
+        min_package_count=min_package_count,
+    )
+
+
 async def _merge_and_commit(
     *,
     session: AsyncSession,

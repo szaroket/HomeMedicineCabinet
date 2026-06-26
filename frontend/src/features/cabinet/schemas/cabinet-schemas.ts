@@ -17,9 +17,9 @@ export const addEntrySchema = z
     is_important: z.boolean().optional(),
     is_tablet_based: z.boolean().optional(),
     is_used: z.boolean().optional(),
-    dosage_times: z.number().int().min(1).nullable().optional(),
+    dosage_times: z.number().int().min(1).max(24).nullable().optional(),
     dosage_period: z.enum(["day", "week"]).nullable().optional(),
-    dosage_amount: z.number().int().min(1).nullable().optional(),
+    dosage_amount: z.number().int().min(1).max(100).nullable().optional(),
     dosage_start_date: z.string().nullable().optional(),
     dosage_end_date: z.string().nullable().optional(),
   })

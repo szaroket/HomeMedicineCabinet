@@ -11,7 +11,7 @@ from typing import NamedTuple
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.cabinet import service as cabinet_service
-from app.api.v1.cabinet.schemas import CabinetEntryOut, CabinetPageOut
+from app.api.v1.cabinet.schemas import CabinetEntryOut, CabinetPageOut, UsageFields
 from app.api.v1.users import service as users_service
 from app.utilities.const import DEFAULT_EXPIRY_THRESHOLD_DAYS, DEFAULT_MIN_PACKAGE_COUNT
 
@@ -117,6 +117,36 @@ async def set_entry_importance(
         user_id=user_id,
         entry_id=entry_id,
         is_important=is_important,
+        expiry_threshold_days=resolved.expiry_threshold_days,
+        min_package_count=resolved.min_package_count,
+    )
+
+
+async def set_entry_usage(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    entry_id: uuid.UUID,
+    usage: UsageFields,
+) -> CabinetEntryOut:
+    """Set, update, or clear the usage/dosage schedule on a cabinet entry.
+
+    Fetches user preferences to resolve thresholds, then delegates to the cabinet service.
+
+    Args:
+        session (AsyncSession): Active async database session.
+        user_id (uuid.UUID): Authenticated user's UUID.
+        entry_id (uuid.UUID): UUID of the cabinet entry to update.
+        usage (UsageFields): Incoming usage payload.
+
+    Returns:
+        CabinetEntryOut: The updated entry with recomputed usage view.
+    """
+    resolved = await _resolve_prefs(session, user_id)
+    return await cabinet_service.set_entry_usage(
+        session=session,
+        user_id=user_id,
+        entry_id=entry_id,
+        usage=usage,
         expiry_threshold_days=resolved.expiry_threshold_days,
         min_package_count=resolved.min_package_count,
     )

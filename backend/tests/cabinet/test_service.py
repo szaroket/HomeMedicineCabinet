@@ -29,6 +29,7 @@ from app.api.v1.cabinet.service import (
     merge_non_tablet_entry,
     merge_tablet_entry,
     normalize_tablet_pool,
+    set_entry_usage,
     total_tablets,
     validate_usage,
 )
@@ -1416,3 +1417,112 @@ class TestComputeUsageView:
         assert result.days_until_end == -3
         # Window already closed (days_until_end <= 0): no sufficiency verdict.
         assert result.is_sufficient is None
+
+
+# ---------------------------------------------------------------------------
+# set_entry_usage
+# ---------------------------------------------------------------------------
+
+
+class TestSetEntryUsage:
+    async def test_sets_usage_on_existing_entry(
+        self, mock_session: AsyncMock, mock_crud
+    ):
+        variant = _make_variant()
+        entry = _make_entry(package_count=2)
+        updated = _make_entry(
+            package_count=2,
+            is_used=True,
+            dosage_times=3,
+            dosage_period="day",
+            dosage_amount=2,
+            dosage_start_date=_TODAY,
+        )
+        mock_crud.find_entry_by_id = AsyncMock(return_value=entry)
+        mock_crud.get_registry_by_id = AsyncMock(return_value=variant)
+        mock_crud.update_entry_usage = AsyncMock(return_value=updated)
+
+        result = await set_entry_usage(
+            session=mock_session,
+            user_id=_USER_ID,
+            entry_id=_ENTRY_ID,
+            usage=UsageFields(
+                is_used=True,
+                dosage_times=3,
+                dosage_period=DosagePeriod.day,
+                dosage_amount=2,
+            ),
+            expiry_threshold_days=30,
+        )
+
+        assert result.is_used is True
+        assert result.dosage_times == 3
+        assert result.dosage_amount == 2
+        mock_crud.update_entry_usage.assert_called_once()
+
+    async def test_unassign_clears_dosage_columns(
+        self, mock_session: AsyncMock, mock_crud
+    ):
+        variant = _make_variant()
+        entry = _make_entry(
+            package_count=1,
+            is_used=True,
+            dosage_times=2,
+            dosage_period="day",
+            dosage_amount=1,
+            dosage_start_date=_TODAY,
+        )
+        cleared = _make_entry(package_count=1, is_used=False)
+        mock_crud.find_entry_by_id = AsyncMock(return_value=entry)
+        mock_crud.get_registry_by_id = AsyncMock(return_value=variant)
+        mock_crud.update_entry_usage = AsyncMock(return_value=cleared)
+
+        result = await set_entry_usage(
+            session=mock_session,
+            user_id=_USER_ID,
+            entry_id=_ENTRY_ID,
+            usage=UsageFields(is_used=False),
+            expiry_threshold_days=30,
+        )
+
+        assert result.is_used is False
+        call_kwargs = mock_crud.update_entry_usage.call_args.kwargs
+        assert call_kwargs["resolved_usage"].is_used is False
+        assert call_kwargs["resolved_usage"].dosage_times is None
+        assert call_kwargs["resolved_usage"].dosage_amount is None
+
+    async def test_entry_not_found_raises_entry_not_found_error(
+        self, mock_session: AsyncMock, mock_crud
+    ):
+        from app.utilities.errors import EntryNotFoundError
+
+        mock_crud.find_entry_by_id = AsyncMock(return_value=None)
+
+        with pytest.raises(EntryNotFoundError):
+            await set_entry_usage(
+                session=mock_session,
+                user_id=_USER_ID,
+                entry_id=_ENTRY_ID,
+                usage=UsageFields(is_used=False),
+                expiry_threshold_days=30,
+            )
+
+    async def test_invalid_dosage_raises_invalid_dosage_error(
+        self, mock_session: AsyncMock, mock_crud
+    ):
+        variant = _make_variant()
+        entry = _make_entry()
+        mock_crud.find_entry_by_id = AsyncMock(return_value=entry)
+        mock_crud.get_registry_by_id = AsyncMock(return_value=variant)
+
+        with pytest.raises(InvalidDosageError):
+            await set_entry_usage(
+                session=mock_session,
+                user_id=_USER_ID,
+                entry_id=_ENTRY_ID,
+                usage=UsageFields(
+                    is_used=True,
+                    # missing dosage_times/period/amount for tablet variant
+                ),
+                expiry_threshold_days=30,
+            )

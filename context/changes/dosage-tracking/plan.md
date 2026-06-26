@@ -631,13 +631,13 @@ None — the dosage columns and the `dosage_period` CHECK constraint already exi
 
 #### Automated
 
-- [ ] 5.1 Lint/format + type check pass
-- [ ] 5.2 Tests pass (tests/cabinet/)
-- [ ] 5.3 Tests cover set, edit, unassign-nulls-columns, ownership 404, invalid 422
+- [x] 5.1 Lint/format + type check pass
+- [x] 5.2 Tests pass (tests/cabinet/)
+- [x] 5.3 Tests cover set, edit, unassign-nulls-columns, ownership 404, invalid 422
 
 #### Manual
 
-- [ ] 5.4 PATCH sets, edits, then clears usage; cleared rows have NULL columns
+- [x] 5.4 PATCH sets, edits, then clears usage; cleared rows have NULL columns
 
 ### Phase 6: PATCH frontend — inline usage form on the card
 
