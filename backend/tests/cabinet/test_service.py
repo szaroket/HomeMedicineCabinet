@@ -18,8 +18,12 @@ from app.api.v1.cabinet.schemas import (
 from app.api.v1.cabinet.service import (
     Status,
     TabletPool,
+    UsageView,
     add_entry,
     classify_status,
+    compute_usage_view,
+    daily_consumption_rate,
+    days_of_supply_from_rate,
     is_below_minimum,
     list_entries,
     merge_non_tablet_entry,
@@ -1213,13 +1217,6 @@ class TestAddEntryWithUsage:
 # daily_consumption_rate
 # ---------------------------------------------------------------------------
 
-from app.api.v1.cabinet.service import (  # noqa: E402
-    UsageView,
-    compute_usage_view,
-    daily_consumption_rate,
-    days_of_supply_from_rate,
-)
-
 
 class TestDailyConsumptionRate:
     @pytest.mark.parametrize(
@@ -1417,4 +1414,5 @@ class TestComputeUsageView:
         )
         result = compute_usage_view(entry=entry, tablets_per_package=20, today=_TODAY)
         assert result.days_until_end == -3
-        assert result.is_sufficient is True  # 40 days supply >= -3
+        # Window already closed (days_until_end <= 0): no sufficiency verdict.
+        assert result.is_sufficient is None

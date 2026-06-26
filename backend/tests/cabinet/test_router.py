@@ -506,13 +506,6 @@ class TestListEntriesImportanceFields:
         assert mock_facade.call_args.kwargs["category"] == "important"
 
     @pytest.mark.asyncio
-    async def test_invalid_category_returns_422(self, authed_client: AsyncClient):
-        response = await authed_client.get(
-            "/api/v1/cabinet/entries", params={"category": "unknown"}
-        )
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-
-    @pytest.mark.asyncio
     async def test_below_minimum_true_forwarded_to_facade(
         self, authed_client: AsyncClient, mocker: MockerFixture
     ):

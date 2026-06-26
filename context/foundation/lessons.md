@@ -6,6 +6,18 @@ note. Newest first.
 
 ---
 
+## L-006 — Keep all imports at the top of the file
+
+**Context**: Surfaced in `dosage-tracking` Phase 3 review (2026-06-26) when the calc tests appended a second import block mid-file (`backend/tests/cabinet/test_service.py`), suppressed with `# noqa: E402`.
+
+**The rule**:
+
+- All imports live in the import block at the top of the module. Do not add a fresh `import` partway down the file when introducing new tests/functions — merge the names into the existing top-of-file import.
+- Never reach for `# noqa: E402` to silence module-level-import-not-at-top; the suppression is a smell that hides a self-inflicted placement problem. Fix the placement instead.
+- This applies equally to source and test modules.
+
+---
+
 ## L-005 — Never use single-letter variable or argument names
 
 **Context**: Established during `cabinet-view-and-search` Phase 3 (2026-06-15) when `q` was used as a search parameter name and `e` as an exception variable.

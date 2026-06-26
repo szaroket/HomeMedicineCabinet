@@ -235,6 +235,8 @@ def compute_usage_view(
 
     Returns:
         UsageView: Computed supply numbers; all fields None when calc is not applicable.
+            is_sufficient is None when no end date is set or the end date has already
+            been reached/passed (days_until_end <= 0), since the window is then closed.
     """
     null_view = UsageView(days_of_supply=None, days_until_end=None, is_sufficient=None)
     if not entry.is_used:
@@ -246,7 +248,7 @@ def compute_usage_view(
         or entry.dosage_amount is None
         or entry.dosage_period is None
     ):
-        # Non-tablet used entry: date-only tracking
+        # Used tablet entry with incomplete dosage fields: treat as date-only
         return null_view
     total = total_tablets(
         package_count=entry.package_count,
@@ -262,7 +264,10 @@ def compute_usage_view(
     end_date = entry.dosage_end_date
     until_end = (end_date - today).days if end_date is not None else None
     sufficient: bool | None = None
-    if supply is not None and until_end is not None:
+    # Only a still-open window (until_end > 0) yields a sufficiency verdict; once the
+    # end date is reached or passed (until_end <= 0) the window is closed and neither
+    # "sufficient" nor "short" is meaningful, so is_sufficient stays None.
+    if supply is not None and until_end is not None and until_end > 0:
         sufficient = supply >= until_end
     return UsageView(
         days_of_supply=supply,
