@@ -60,6 +60,7 @@ async def list_entries(
             page_size=params.page_size,
             category=params.category,
             below_minimum=params.below_minimum,
+            sufficiency=params.sufficiency,
         )
     except (CabinetDatabaseError, UserDatabaseError) as exc:
         raise HTTPException(
@@ -70,7 +71,11 @@ async def list_entries(
             status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
         ) from exc
     except Exception as exc:
-        logger.exception("Unexpected error when listing entries: %s", exc)
+        logger.exception(
+            "Unexpected error when listing entries | params=%s | error=%s",
+            params.model_dump(exclude_none=True),
+            exc,
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred.",

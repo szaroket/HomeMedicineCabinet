@@ -44,6 +44,13 @@ class CabinetOrder(StrEnum):
     desc = "desc"
 
 
+class SufficiencyFilter(StrEnum):
+    """Sufficiency filter values for cabinet entry list."""
+
+    insufficient = "insufficient"
+    sufficient = "sufficient"
+
+
 class CabinetListParams(BaseModel):
     """Query parameters for GET /cabinet/entries."""
 
@@ -52,6 +59,7 @@ class CabinetListParams(BaseModel):
     status: CabinetStatus | None = None
     category: CabinetCategory | None = None
     below_minimum: bool | None = None
+    sufficiency: SufficiencyFilter | None = None
     search: NonEmptyStr | None = None
     order: CabinetOrder = CabinetOrder.asc
     page: int = Field(1, ge=1)

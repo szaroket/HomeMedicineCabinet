@@ -10,6 +10,7 @@ import {
   StarIcon,
   ChevronIcon,
 } from "@/features/cabinet/components/entry-icons";
+import { StatusBadge } from "@/features/cabinet/components/status-badge";
 import { CabinetCard } from "@/features/cabinet/components/cabinet-card";
 
 function EntryRow({ entry }: { entry: CabinetEntryOut }) {
@@ -20,10 +21,13 @@ function EntryRow({ entry }: { entry: CabinetEntryOut }) {
     statusInfo,
     belowMinimum,
     formattedExpiryDate,
+    usageView,
   } = useCabinetEntry(entry);
   const rowBg = belowMinimum
     ? "bg-amber-950/40 hover:bg-amber-950/60"
-    : "hover:bg-slate-800/50";
+    : entry.is_sufficient === false
+      ? "bg-red-950/40 hover:bg-red-950/60"
+      : "hover:bg-slate-800/50";
 
   return (
     <>
@@ -66,17 +70,79 @@ function EntryRow({ entry }: { entry: CabinetEntryOut }) {
           {entry.total_tablets != null ? entry.total_tablets : "—"}
         </td>
         <td className="px-4 py-3">{formattedExpiryDate}</td>
-        <td className={`px-4 py-3 font-medium ${statusInfo.className}`}>
-          {statusInfo.label}
+        <td className="px-4 py-3">
+          <StatusBadge status={statusInfo} />
         </td>
-        <td className="px-4 py-3 font-medium text-amber-400">
-          {belowMinimum ? OUT_OF_STOCK_LABEL : ""}
+        <td className="px-4 py-3">
+          <span className="inline-flex flex-wrap gap-1">
+            {belowMinimum && (
+              <span className="inline-flex items-center rounded-full bg-amber-950/60 px-2 py-0.5 text-xs font-medium text-amber-400">
+                {OUT_OF_STOCK_LABEL}
+              </span>
+            )}
+            {entry.is_sufficient === false && (
+              <span className="inline-flex items-center rounded-full bg-red-950/60 px-2 py-0.5 text-xs font-medium text-red-400">
+                Zabraknie
+              </span>
+            )}
+            {entry.is_sufficient === true && (
+              <span className="inline-flex items-center rounded-full bg-green-950/60 px-2 py-0.5 text-xs font-medium text-green-400">
+                Wystarczy
+              </span>
+            )}
+          </span>
         </td>
       </tr>
       {expanded && (
         <tr className="border-b border-slate-700 last:border-0 bg-slate-800/30">
           <td colSpan={6} className="px-6 py-3">
             <dl className="flex flex-wrap gap-x-8 gap-y-1 text-sm">
+              {entry.is_used && (
+                <>
+                  {usageView.schedule && (
+                    <div className="flex gap-2">
+                      <dt className="text-slate-400">Dawkowanie:</dt>
+                      <dd className="text-white">{usageView.schedule}</dd>
+                    </div>
+                  )}
+                  {usageView.startDate && (
+                    <div className="flex gap-2">
+                      <dt className="text-slate-400">Od:</dt>
+                      <dd className="text-white">{usageView.startDate}</dd>
+                    </div>
+                  )}
+                  {usageView.endDate && (
+                    <div className="flex gap-2">
+                      <dt className="text-slate-400">Do:</dt>
+                      <dd className="text-white">{usageView.endDate}</dd>
+                    </div>
+                  )}
+                  {usageView.finishDate != null && (
+                    <div className="flex gap-2">
+                      <dt className="text-slate-400">Szacowany koniec:</dt>
+                      <dd className="text-white">
+                        {usageView.finishDate}
+                        <span className="ml-1 text-xs text-slate-500">
+                          (na podstawie bieżącego stanu)
+                        </span>
+                      </dd>
+                    </div>
+                  )}
+                  {usageView.daysOfSupply != null &&
+                    usageView.daysUntilEnd != null && (
+                      <div className="flex gap-2">
+                        <dt className="text-slate-400">
+                          Zapas / dni do końca:
+                        </dt>
+                        <dd className="text-white">
+                          {usageView.daysOfSupply} dni /{" "}
+                          {usageView.daysUntilEnd} dni
+                        </dd>
+                      </div>
+                    )}
+                  <div className="w-full" />
+                </>
+              )}
               <div className="flex gap-2">
                 <dt className="text-slate-400">Dawka:</dt>
                 <dd className="text-white">{entry.strength ?? "—"}</dd>

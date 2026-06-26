@@ -12,6 +12,7 @@ import {
   STOCK_OPTIONS,
   type StatusFilter,
   type CategoryFilter,
+  type StockFilter,
 } from "@/features/cabinet/components/filter-options";
 
 type OrderDir = "asc" | "desc";
@@ -44,7 +45,7 @@ function parseStatus(raw: string | null): StatusFilter | undefined {
 }
 
 function parseCategory(raw: string | null): CategoryFilter | undefined {
-  if (raw === "important") return raw;
+  if (raw === "important" || raw === "used") return raw;
   return undefined;
 }
 
@@ -55,6 +56,17 @@ export function CabinetPage() {
   const status = parseStatus(searchParams.get("status"));
   const category = parseCategory(searchParams.get("category"));
   const belowMinimum = searchParams.get("below_minimum") === "true";
+  const sufficiency = searchParams.get("sufficiency") as
+    | "insufficient"
+    | "sufficient"
+    | null;
+  const stockFilter: StockFilter | "" = belowMinimum
+    ? "low"
+    : sufficiency === "insufficient"
+      ? "insufficient"
+      : sufficiency === "sufficient"
+        ? "sufficient"
+        : "";
   const order = parseOrder(searchParams.get("order"));
   const page = parsePage(searchParams.get("page"));
   const pageSize = parsePageSize(searchParams.get("page_size"));
@@ -98,7 +110,11 @@ export function CabinetPage() {
   }, [effectiveSearch, rawSearch, setSearchParams]);
 
   const hasFilters =
-    !!status || !!category || belowMinimum || effectiveSearch !== "";
+    !!status ||
+    !!category ||
+    belowMinimum ||
+    !!sufficiency ||
+    effectiveSearch !== "";
 
   const params: CabinetListParams = {
     order,
@@ -107,6 +123,7 @@ export function CabinetPage() {
     ...(status ? { status } : {}),
     ...(category ? { category } : {}),
     ...(belowMinimum ? { below_minimum: true } : {}),
+    ...(sufficiency ? { sufficiency } : {}),
     ...(effectiveSearch !== "" ? { search: effectiveSearch } : {}),
   };
 
@@ -125,6 +142,19 @@ export function CabinetPage() {
     });
   }
 
+  function setStockFilter(value: StockFilter | "") {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("below_minimum");
+      next.delete("sufficiency");
+      next.delete("page");
+      if (value === "low") next.set("below_minimum", "true");
+      if (value === "insufficient" || value === "sufficient")
+        next.set("sufficiency", value);
+      return next;
+    });
+  }
+
   function clearFilters() {
     setSearchInput("");
     // Clear only the filters (status/search) and reset pagination; sort order
@@ -135,6 +165,7 @@ export function CabinetPage() {
         next.delete("status");
         next.delete("category");
         next.delete("below_minimum");
+        next.delete("sufficiency");
         next.delete("search");
         next.delete("page");
         return next;
@@ -194,8 +225,9 @@ export function CabinetPage() {
           <FilterSheet
             status={status}
             category={category}
-            belowMinimum={belowMinimum}
+            stockFilter={stockFilter}
             setParam={setParam}
+            setStockFilter={setStockFilter}
             clearFilters={clearFilters}
             hasFilters={hasFilters}
           />
@@ -264,14 +296,10 @@ export function CabinetPage() {
           <div className="flex flex-col gap-1">
             <label className="text-xs text-slate-400">Zapasy</label>
             <select
-              value={belowMinimum ? "low" : ""}
-              onChange={(ev) => {
-                setParam(
-                  "below_minimum",
-                  ev.target.value === "low" ? "true" : null,
-                  true,
-                );
-              }}
+              value={stockFilter}
+              onChange={(ev) =>
+                setStockFilter(ev.target.value as StockFilter | "")
+              }
               className="rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {STOCK_OPTIONS.map((opt) => (

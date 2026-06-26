@@ -34,6 +34,85 @@ export function formatDate(dateStr: string): string {
   });
 }
 
+export function computeFinishDate(
+  startDateStr: string,
+  daysOfSupply: number,
+): string {
+  const start = new Date(startDateStr + "T00:00:00");
+  start.setDate(start.getDate() + daysOfSupply - 1);
+  return start.toLocaleDateString("pl-PL", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
+export interface UsageView {
+  finishDate: string | null;
+  daysOfSupply: number | null;
+  daysUntilEnd: number | null;
+  isSufficient: boolean | null;
+  schedule: string | null;
+  startDate: string | null;
+  endDate: string | null;
+}
+
+function buildUsageView(entry: CabinetEntryOut): UsageView {
+  if (!entry.is_used) {
+    return {
+      finishDate: null,
+      daysOfSupply: null,
+      daysUntilEnd: null,
+      isSufficient: null,
+      schedule: null,
+      startDate: null,
+      endDate: null,
+    };
+  }
+
+  const startDate = entry.dosage_start_date
+    ? formatDate(entry.dosage_start_date)
+    : null;
+  const endDate = entry.dosage_end_date
+    ? formatDate(entry.dosage_end_date)
+    : null;
+
+  if (!entry.is_tablet_based) {
+    return {
+      finishDate: null,
+      daysOfSupply: null,
+      daysUntilEnd: null,
+      isSufficient: null,
+      schedule: null,
+      startDate,
+      endDate,
+    };
+  }
+
+  const periodLabel = entry.dosage_period === "week" ? "tydzień" : "dzień";
+  const schedule =
+    entry.dosage_times != null && entry.dosage_amount != null
+      ? `${entry.dosage_times} × ${entry.dosage_amount} tabl. / ${periodLabel}`
+      : null;
+
+  const finishDate =
+    entry.days_of_supply != null &&
+    entry.dosage_end_date == null &&
+    entry.dosage_start_date != null
+      ? computeFinishDate(entry.dosage_start_date, entry.days_of_supply)
+      : null;
+
+  return {
+    finishDate,
+    daysOfSupply: entry.days_of_supply,
+    daysUntilEnd: entry.days_until_end,
+    isSufficient: entry.is_sufficient,
+    schedule,
+    startDate,
+    endDate,
+  };
+}
+
 export function useCabinetEntry(entry: CabinetEntryOut) {
   const [expanded, setExpanded] = useState(false);
   const { mutate: toggleImportant } = useToggleImportant();
@@ -59,5 +138,6 @@ export function useCabinetEntry(entry: CabinetEntryOut) {
     statusInfo,
     belowMinimum: entry.below_minimum,
     formattedExpiryDate: formatDate(entry.expiry_date),
+    usageView: buildUsageView(entry),
   };
 }

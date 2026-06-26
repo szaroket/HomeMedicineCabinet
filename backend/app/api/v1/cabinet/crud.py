@@ -4,7 +4,7 @@ import logging
 import uuid
 from datetime import date, timedelta
 
-from sqlalchemy import func, select, text
+from sqlalchemy import Float, Integer, case, cast, func, literal, select, text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlmodel import col
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -190,6 +190,7 @@ def _build_base_query(
     category: str | None = None,
     below_minimum: bool | None = None,
     min_package_count: int | None = None,
+    sufficiency: str | None = None,
 ):
     """Build the filtered join query (no ORDER BY / LIMIT / OFFSET).
 
@@ -201,6 +202,7 @@ def _build_base_query(
         tsquery (str | None): Optional safe prefix tsquery string for full-text search.
         category (str | None): Optional category filter ("important" filters to important entries).
         below_minimum (bool | None): When True, filter to important entries below the package minimum.
+        sufficiency (str | None): "insufficient" or "sufficient" — filters used tablet entries by whether days of supply is less than or at least days until end date.
         min_package_count (int | None): User's minimum package count; required when below_minimum is True.
 
     Returns:
@@ -244,6 +246,55 @@ def _build_base_query(
             col(CabinetEntry.is_important).is_(True),
             col(CabinetEntry.package_count) < min_package_count,
         )
+    if sufficiency in ("insufficient", "sufficient"):
+        # Mirrors compute_usage_view / days_of_supply logic in service.py.
+        # total_tablets is not a DB column — compute from package_count,
+        # partial_tablet_count, and MedicationRegistry.capacity (tablets per package).
+        # Mirrors service.py total_tablets():
+        #   if partial_tablet_count is not None: (pkg_count - 1) * tpp + partial
+        #   else: pkg_count * tpp
+        tpp_expr = cast(col(MedicationRegistry.capacity), Integer)
+        total_tablets_expr = cast(
+            case(
+                (
+                    col(CabinetEntry.partial_tablet_count).is_not(None),
+                    (col(CabinetEntry.package_count) - 1) * tpp_expr
+                    + col(CabinetEntry.partial_tablet_count),
+                ),
+                else_=col(CabinetEntry.package_count) * tpp_expr,
+            ),
+            Float,
+        )
+        period_days_expr = case(
+            (col(CabinetEntry.dosage_period) == "day", literal(1.0)),
+            else_=literal(7.0),
+        )
+        daily_rate_expr = (
+            cast(
+                col(CabinetEntry.dosage_times) * col(CabinetEntry.dosage_amount), Float
+            )
+            / period_days_expr
+        )
+        days_supply_expr = cast(
+            func.floor(total_tablets_expr / daily_rate_expr), Integer
+        )
+        # Reframe as date comparison to avoid date-minus-date type ambiguity.
+        # PostgreSQL adds integer days to date natively.
+        projected_finish_expr = literal(today) + days_supply_expr
+        end_date_col = col(CabinetEntry.dosage_end_date)
+        sufficiency_predicate = (
+            projected_finish_expr < end_date_col
+            if sufficiency == "insufficient"
+            else projected_finish_expr >= end_date_col
+        )
+        stmt = stmt.where(
+            col(CabinetEntry.is_used).is_(True),
+            end_date_col.is_not(None),
+            col(MedicationRegistry.capacity).is_not(None),
+            col(CabinetEntry.dosage_times).is_not(None),
+            col(CabinetEntry.dosage_amount).is_not(None),
+            sufficiency_predicate,
+        )
     return stmt
 
 
@@ -260,6 +311,7 @@ async def list_entries(
     category: str | None = None,
     below_minimum: bool | None = None,
     min_package_count: int | None = None,
+    sufficiency: str | None = None,
 ) -> tuple[list[tuple[CabinetEntry, MedicationRegistry]], int]:
     """Fetch a filtered, sorted, paginated page of cabinet entries plus total count.
 
@@ -275,6 +327,7 @@ async def list_entries(
         offset (int): Row offset for pagination.
         category (str | None): Optional category filter ("important" filters to important entries).
         below_minimum (bool | None): When True, filter to important entries below the package minimum.
+        sufficiency (str | None): "insufficient" or "sufficient" — filters used tablet entries by whether days of supply is less than or at least days until end date.
         min_package_count (int | None): User's minimum package count; required when below_minimum is True.
 
     Returns:
@@ -292,6 +345,7 @@ async def list_entries(
         category,
         below_minimum,
         min_package_count,
+        sufficiency,
     )
 
     name_col = func.lower(col(MedicationRegistry.name))
@@ -313,6 +367,7 @@ async def list_entries(
             category,
             below_minimum,
             min_package_count,
+            sufficiency,
         ).subquery()
     )
 

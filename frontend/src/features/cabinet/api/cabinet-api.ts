@@ -66,6 +66,15 @@ export interface CabinetEntryOut {
   specification_url: string | null;
   is_important: boolean;
   below_minimum: boolean;
+  is_used: boolean;
+  dosage_times: number | null;
+  dosage_period: "day" | "week" | null;
+  dosage_amount: number | null;
+  dosage_start_date: string | null;
+  dosage_end_date: string | null;
+  days_of_supply: number | null;
+  days_until_end: number | null;
+  is_sufficient: boolean | null;
 }
 
 export function searchProducts(search: string): Promise<ProductOut[]> {
@@ -117,8 +126,9 @@ export interface CabinetListParams {
   order?: "asc" | "desc";
   page?: number;
   page_size?: 20 | 50 | 100;
-  category?: "important";
+  category?: "important" | "used";
   below_minimum?: boolean;
+  sufficiency?: "insufficient" | "sufficient";
 }
 
 export interface CabinetPageOut {
@@ -140,6 +150,7 @@ export function listEntries(
     searchParams.set("page_size", String(params.page_size));
   if (params?.category) searchParams.set("category", params.category);
   if (params?.below_minimum) searchParams.set("below_minimum", "true");
+  if (params?.sufficiency) searchParams.set("sufficiency", params.sufficiency);
   const qs = searchParams.toString();
   return apiJson<CabinetPageOut>(`/cabinet/entries${qs ? `?${qs}` : ""}`);
 }

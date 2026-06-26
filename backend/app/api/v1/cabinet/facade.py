@@ -54,6 +54,7 @@ async def list_entries(
     page_size: int = 20,
     category: str | None = None,
     below_minimum: bool | None = None,
+    sufficiency: str | None = None,
 ) -> CabinetPageOut:
     """Return the current user's cabinet entries with computed status, filtered and paginated.
 
@@ -69,6 +70,7 @@ async def list_entries(
         page_size (int): Number of items per page.
         category (str | None): Optional category filter ("important" filters to important entries).
         below_minimum (bool | None): When True, filter to important entries below the package minimum.
+        sufficiency (str | None): "insufficient" or "sufficient" — filters used tablet entries by sufficiency verdict.
 
     Returns:
         CabinetPageOut: with items, total, page, and page_size.
@@ -86,6 +88,7 @@ async def list_entries(
         min_package_count=resolved.min_package_count,
         category=category,
         below_minimum=below_minimum,
+        sufficiency=sufficiency,
     )
 
 
