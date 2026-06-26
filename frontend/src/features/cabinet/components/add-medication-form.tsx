@@ -95,14 +95,6 @@ export function AddMedicationForm() {
         }
       : null;
 
-    if (values.is_used && !values.dosage_start_date) {
-      setError("dosage_start_date", {
-        type: "manual",
-        message: "Podaj datę rozpoczęcia",
-      });
-      return;
-    }
-
     setServerError(null);
     mutate(
       {

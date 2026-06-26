@@ -45,7 +45,10 @@ export function DosageFields({
                     min={1}
                     placeholder="np. 3"
                     className="rounded border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    {...register("dosage_times", { valueAsNumber: true })}
+                    {...register("dosage_times", {
+                      setValueAs: (value: string) =>
+                        value === "" || value == null ? null : Number(value),
+                    })}
                   />
                   {errors.dosage_times && (
                     <p className="text-xs text-red-400">
@@ -60,7 +63,10 @@ export function DosageFields({
                   </label>
                   <select
                     className="rounded border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    {...register("dosage_period")}
+                    {...register("dosage_period", {
+                      setValueAs: (value: string) =>
+                        value === "" ? null : value,
+                    })}
                   >
                     <option value="">Wybierz…</option>
                     <option value="day">dzień</option>
@@ -83,7 +89,10 @@ export function DosageFields({
                   min={1}
                   placeholder="np. 2"
                   className="rounded border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  {...register("dosage_amount", { valueAsNumber: true })}
+                  {...register("dosage_amount", {
+                    setValueAs: (value: string) =>
+                      value === "" || value == null ? null : Number(value),
+                  })}
                 />
                 {errors.dosage_amount && (
                   <p className="text-xs text-red-400">

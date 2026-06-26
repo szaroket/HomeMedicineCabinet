@@ -575,14 +575,14 @@ None — the dosage columns and the `dosage_period` CHECK constraint already exi
 
 #### Automated
 
-- [x] 2.1 Build passes (npm run build)
-- [x] 2.2 Lint passes (npm run lint)
-- [x] 2.3 Format check passes (prettier --check)
+- [x] 2.1 Build passes (npm run build) — 54a05f8
+- [x] 2.2 Lint passes (npm run lint) — 54a05f8
+- [x] 2.3 Format check passes (prettier --check) — 54a05f8
 
 #### Manual
 
-- [x] 2.4 Tablet variant reveals dosage fields; non-tablet hides them, dates only
-- [x] 2.5 Submitting tablet "used" without dosage shows validation error pre-request
+- [x] 2.4 Tablet variant reveals dosage fields; non-tablet hides them, dates only — 54a05f8
+- [x] 2.5 Submitting tablet "used" without dosage shows validation error pre-request — 54a05f8
 
 ### Phase 3: GET backend — finish/sufficiency calc + response + filter
 
