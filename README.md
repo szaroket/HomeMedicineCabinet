@@ -45,7 +45,7 @@ App runs at the URL Vite prints (default `http://localhost:5173`).
 - [`context/foundation/prd.md`](context/foundation/prd.md) — product requirements
 - [`context/foundation/tech-stack.md`](context/foundation/tech-stack.md) — tech stack
 - [`context/foundation/infrastructure.md`](context/foundation/infrastructure.md) — deployment platform
-- [`context\foundation\roadmap.md`](context\foundation\roadmap.md) — implementation roadmap
+- [`context/foundation/roadmap.md`](context\foundation\roadmap.md) — implementation roadmap
 - [`docs/reference/deployment.md`](docs/reference/deployment.md) — CI/CD setup and release procedure
 
 ## Requitements
