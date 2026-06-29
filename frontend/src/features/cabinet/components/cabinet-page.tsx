@@ -57,9 +57,7 @@ export function CabinetPage() {
   const category = parseCategory(searchParams.get("category"));
   const belowMinimum = searchParams.get("below_minimum") === "true";
   const sufficiency = searchParams.get("sufficiency") as
-    | "insufficient"
-    | "sufficient"
-    | null;
+    "insufficient" | "sufficient" | null;
   const stockFilter: StockFilter | "" = belowMinimum
     ? "low"
     : sufficiency === "insufficient"
