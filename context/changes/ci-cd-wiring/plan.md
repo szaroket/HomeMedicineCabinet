@@ -294,7 +294,7 @@ Correct the health-check path and document the deploy prerequisites so a first R
 
 #### Automated
 
-- [ ] 2.1 Workflow YAML valid (`pre-commit run check-yaml --all-files`)
+- [x] 2.1 Workflow YAML valid (`pre-commit run check-yaml --all-files`)
 - [ ] 2.2 CI triggers and `frontend-build`, `backend-typecheck`, and coverage step pass in Actions
 - [ ] 2.3 `frontend-e2e` job is skipped (not failed) in the Actions run
 
