@@ -653,9 +653,9 @@ None — the dosage columns and the `dosage_period` CHECK constraint already exi
 
 #### Automated
 
-- [ ] 6.1 Build + lint + format pass
+- [x] 6.1 Build + lint + format pass — e7c4b15
 
 #### Manual
 
-- [ ] 6.2 Set dosage from card → finish/sufficiency appears after save
-- [ ] 6.3 Edit updates display; unassign removes usage block and drops from filter
+- [x] 6.2 Set dosage from card → finish/sufficiency appears after save — e7c4b15
+- [x] 6.3 Edit updates display; unassign removes usage block and drops from filter — e7c4b15
