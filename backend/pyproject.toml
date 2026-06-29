@@ -40,3 +40,17 @@ convention = "google"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["app"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 60
+show_missing = true
+
+[tool.pyright]
+include = ["app"]
+exclude = ["migrations", "**/__pycache__"]
+pythonVersion = "3.13"
+typeCheckingMode = "basic"
