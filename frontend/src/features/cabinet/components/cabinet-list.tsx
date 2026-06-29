@@ -12,12 +12,15 @@ import {
 } from "@/features/cabinet/components/entry-icons";
 import { StatusBadge } from "@/features/cabinet/components/status-badge";
 import { CabinetCard } from "@/features/cabinet/components/cabinet-card";
+import { UsageEditForm } from "@/features/cabinet/components/usage-edit-form";
 
 function EntryRow({ entry }: { entry: CabinetEntryOut }) {
   const {
     expanded,
     toggleExpanded,
     toggleImportant,
+    showUsageEdit,
+    setShowUsageEdit,
     statusInfo,
     sufficiencyInfo,
     belowMinimum,
@@ -33,8 +36,8 @@ function EntryRow({ entry }: { entry: CabinetEntryOut }) {
   return (
     <>
       <tr
-        className={`border-b border-slate-700 last:border-0 cursor-pointer ${rowBg}`}
-        onClick={toggleExpanded}
+        className={`border-b border-slate-700 last:border-0 ${showUsageEdit ? "" : "cursor-pointer"} ${rowBg}`}
+        onClick={showUsageEdit ? undefined : toggleExpanded}
       >
         <td className="px-4 py-3">
           <span className="inline-flex items-center gap-1">
@@ -89,52 +92,73 @@ function EntryRow({ entry }: { entry: CabinetEntryOut }) {
         <tr className="border-b border-slate-700 last:border-0 bg-slate-800/30">
           <td colSpan={6} className="px-6 py-3">
             <dl className="flex flex-wrap gap-x-8 gap-y-1 text-sm">
-              {entry.is_used && (
-                <>
-                  {usageView.schedule && (
-                    <div className="flex gap-2">
-                      <dt className="text-slate-400">Dawkowanie:</dt>
-                      <dd className="text-white">{usageView.schedule}</dd>
-                    </div>
-                  )}
-                  {usageView.startDate && (
-                    <div className="flex gap-2">
-                      <dt className="text-slate-400">Od:</dt>
-                      <dd className="text-white">{usageView.startDate}</dd>
-                    </div>
-                  )}
-                  {usageView.endDate && (
-                    <div className="flex gap-2">
-                      <dt className="text-slate-400">Do:</dt>
-                      <dd className="text-white">{usageView.endDate}</dd>
-                    </div>
-                  )}
-                  {usageView.finishDate != null && (
-                    <div className="flex gap-2">
-                      <dt className="text-slate-400">Szacowany koniec:</dt>
-                      <dd className="text-white">
-                        {usageView.finishDate}
-                        <span className="ml-1 text-xs text-slate-500">
-                          (na podstawie bieżącego stanu)
-                        </span>
-                      </dd>
-                    </div>
-                  )}
-                  {usageView.daysOfSupply != null &&
-                    usageView.daysUntilEnd != null && (
+              <div className="w-full pb-2 mb-2 border-b border-slate-700">
+                {entry.is_used && (
+                  <div className="flex flex-wrap gap-x-8 gap-y-1 mb-2">
+                    {usageView.schedule && (
                       <div className="flex gap-2">
-                        <dt className="text-slate-400">
-                          Zapas / dni do końca:
-                        </dt>
+                        <dt className="text-slate-400">Dawkowanie:</dt>
+                        <dd className="text-white">{usageView.schedule}</dd>
+                      </div>
+                    )}
+                    {usageView.startDate && (
+                      <div className="flex gap-2">
+                        <dt className="text-slate-400">Od:</dt>
+                        <dd className="text-white">{usageView.startDate}</dd>
+                      </div>
+                    )}
+                    {usageView.endDate && (
+                      <div className="flex gap-2">
+                        <dt className="text-slate-400">Do:</dt>
+                        <dd className="text-white">{usageView.endDate}</dd>
+                      </div>
+                    )}
+                    {usageView.finishDate != null && (
+                      <div className="flex gap-2">
+                        <dt className="text-slate-400">Szacowany koniec:</dt>
                         <dd className="text-white">
-                          {usageView.daysOfSupply} dni /{" "}
-                          {usageView.daysUntilEnd} dni
+                          {usageView.finishDate}
+                          <span className="ml-1 text-xs text-slate-500">
+                            (na podstawie bieżącego stanu)
+                          </span>
                         </dd>
                       </div>
                     )}
-                  <div className="w-full" />
-                </>
-              )}
+                    {usageView.daysOfSupply != null &&
+                      usageView.daysUntilEnd != null && (
+                        <div className="flex gap-2">
+                          <dt className="text-slate-400">
+                            Zapas / dni do końca:
+                          </dt>
+                          <dd className="text-white">
+                            {usageView.daysOfSupply} dni /{" "}
+                            {usageView.daysUntilEnd} dni
+                          </dd>
+                        </div>
+                      )}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={(ev) => {
+                    ev.stopPropagation();
+                    setShowUsageEdit((prev) => !prev);
+                  }}
+                  className="text-xs text-blue-400 hover:text-blue-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                >
+                  {showUsageEdit
+                    ? "Ukryj formularz"
+                    : entry.is_used
+                      ? "Zmień dawkowanie"
+                      : "Ustaw dawkowanie"}
+                </button>
+                {showUsageEdit && (
+                  <UsageEditForm
+                    entry={entry}
+                    onClose={() => setShowUsageEdit(false)}
+                  />
+                )}
+              </div>
               <div className="flex gap-2">
                 <dt className="text-slate-400">Dawka:</dt>
                 <dd className="text-white">{entry.strength ?? "—"}</dd>

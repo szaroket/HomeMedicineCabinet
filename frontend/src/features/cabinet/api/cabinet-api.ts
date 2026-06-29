@@ -165,3 +165,14 @@ export function toggleImportant(
     body: JSON.stringify({ is_important }),
   });
 }
+
+export function setUsage(
+  id: string,
+  payload: UsageFieldsPayload,
+): Promise<CabinetEntryOut> {
+  return apiJson<CabinetEntryOut>(`/cabinet/entries/${id}/usage`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}

@@ -129,6 +129,7 @@ function buildUsageView(entry: CabinetEntryOut): UsageView {
 
 export function useCabinetEntry(entry: CabinetEntryOut) {
   const [expanded, setExpanded] = useState(false);
+  const [showUsageEdit, setShowUsageEdit] = useState(false);
   const { mutate: toggleImportant } = useToggleImportant();
 
   const statusInfo = STATUS_LABEL[entry.status] ?? {
@@ -156,6 +157,8 @@ export function useCabinetEntry(entry: CabinetEntryOut) {
     expanded,
     toggleExpanded,
     toggleImportant: toggleImportantFlag,
+    showUsageEdit,
+    setShowUsageEdit,
     statusInfo,
     sufficiencyInfo,
     belowMinimum: entry.below_minimum,
