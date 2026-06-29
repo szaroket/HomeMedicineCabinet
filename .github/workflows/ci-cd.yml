@@ -1,0 +1,201 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  release:
+    types: [published]
+
+jobs:
+  vulnerability-scan:
+    name: Vulnerability Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # SHA-pinned: 3rd-party action (supply-chain); GitHub-owned actions use major tags
+
+      - name: Python vulnerability check (pip-audit)
+        working-directory: backend
+        run: uvx pip-audit -r <(uv export --no-dev --format requirements-txt)
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci
+
+      - name: npm audit
+        working-directory: frontend
+        run: npm audit --audit-level=high
+
+  pre-commit:
+    name: Pre-commit Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # SHA-pinned: 3rd-party action (supply-chain); GitHub-owned actions use major tags
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run pre-commit on all files
+        uses: pre-commit/action@v3.0.1
+
+  backend-tests:
+    name: Backend Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # SHA-pinned: 3rd-party action (supply-chain); GitHub-owned actions use major tags
+
+      - name: Install backend deps
+        working-directory: backend
+        run: uv sync --all-groups
+
+      - name: Run tests with coverage
+        working-directory: backend
+        env:
+          DATABASE_URL: "postgresql+asyncpg://user:pass@localhost/testdb"
+          SUPABASE_URL: "https://placeholder.supabase.co"
+          SUPABASE_ANON_KEY: "placeholder"
+        run: uv run coverage run -m pytest --ignore=tests/db
+
+      - name: Check coverage threshold
+        working-directory: backend
+        run: uv run coverage report
+
+  frontend-build:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+  backend-typecheck:
+    name: Backend Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # SHA-pinned: 3rd-party action (supply-chain); GitHub-owned actions use major tags
+
+      - name: Install backend deps
+        working-directory: backend
+        run: uv sync --all-groups
+
+      - name: Run pyright
+        working-directory: backend
+        run: uv run pyright
+
+  # TODO: enable once frontend/e2e specs + playwright.config exist
+  frontend-e2e:
+    name: Frontend E2E Tests
+    runs-on: ubuntu-latest
+    if: false
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: frontend
+        run: npx playwright install --with-deps
+
+      - name: Start backend
+        working-directory: backend
+        run: uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+
+      - name: Start frontend
+        working-directory: frontend
+        run: npm run dev &
+
+      - name: Run Playwright tests
+        working-directory: frontend
+        run: npx playwright test
+
+  deploy:
+    name: Deploy to Render
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    needs:
+      - vulnerability-scan
+      - pre-commit
+      - backend-tests
+      - frontend-build
+      - backend-typecheck
+
+    steps:
+      - name: Deploy backend
+        run: curl --fail "$RENDER_DEPLOY_HOOK_BACKEND"
+        env:
+          RENDER_DEPLOY_HOOK_BACKEND: ${{ secrets.RENDER_DEPLOY_HOOK_BACKEND }}
+
+      - name: Deploy frontend
+        run: curl --fail "$RENDER_DEPLOY_HOOK_FRONTEND"
+        env:
+          RENDER_DEPLOY_HOOK_FRONTEND: ${{ secrets.RENDER_DEPLOY_HOOK_FRONTEND }}
