@@ -294,14 +294,14 @@ Correct the health-check path and document the deploy prerequisites so a first R
 
 #### Automated
 
-- [x] 2.1 Workflow YAML valid (`pre-commit run check-yaml --all-files`)
-- [ ] 2.2 CI triggers and `frontend-build`, `backend-typecheck`, and coverage step pass in Actions
-- [ ] 2.3 `frontend-e2e` job is skipped (not failed) in the Actions run
+- [x] 2.1 Workflow YAML valid (`pre-commit run check-yaml --all-files`) — 554eaa8
+- [x] 2.2 CI triggers and `frontend-build`, `backend-typecheck`, and coverage step pass in Actions
+- [x] 2.3 `frontend-e2e` job is skipped (not failed) in the Actions run
 
 #### Manual
 
-- [ ] 2.4 All non-E2E jobs green on a PR into `develop`
-- [ ] 2.5 E2E job shows as skipped with its TODO visible
+- [x] 2.4 All non-E2E jobs green on a PR into `develop`
+- [x] 2.5 E2E job shows as skipped with its TODO visible
 
 ### Phase 3: Add CD workflow
 
