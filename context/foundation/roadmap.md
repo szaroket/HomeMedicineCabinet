@@ -32,7 +32,7 @@ A single adult can't reliably track their home medication inventory — what the
 | F-03 | registry-import              | (foundation) Polish medicines XML dataset loaded into PostgreSQL and queryable for autocomplete                                                       | F-02             | FR-003, FR-011, FR-012            | done |
 | F-04 | ci-cd-wiring                 | (foundation) GitHub Actions auto-deploys backend and frontend to Render on merge to main                                                             | —                | NFR persist-across-sessions       | ready    |
 | S-01 | add-medication-from-registry | add a medication by searching the Polish registry autocomplete, choosing tablet count, entering package count and expiry date; entry appears in cabinet with correct status; duplicate entries merge per dedup rule | F-01, F-02, F-03 | US-01, FR-003, FR-010, FR-022 | done |
-| S-08 | mobile-responsive-cabinet    | view and use the cabinet add flow and list on a mobile-width screen without layout breakage; desktop experience is preserved unchanged                                                                              | S-01             | NFR (responsive design)       | proposed |
+| S-08 | mobile-responsive-cabinet    | view and use the cabinet add flow and list on a mobile-width screen without layout breakage; desktop experience is preserved unchanged                                                                              | S-01             | NFR (responsive design)       | done |
 | S-02 | cabinet-view-and-search      | view cabinet as a filterable, sortable, paginated list; search by name or active ingredient; see route of administration and leaflet/specification links on each entry | S-01 | US-03, FR-004, FR-006, FR-011, FR-012 | done |
 | S-04 | important-category           | mark a medication as "important", set the global minimum package count, and see an attention badge when stock falls below minimum or medication is expiring/expired | S-02 | FR-013, FR-014, FR-020 (partial) | done |
 | S-05 | dosage-tracking              | assign a tablet-based medication to the "used" category with a dosage schedule and optional end date; see the estimated finish date or sufficiency indicator; non-tablet medications marked used for date tracking only | S-02 | US-04, FR-015, FR-016, FR-017, FR-018 | done |
@@ -163,7 +163,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** The cabinet table is the primary breakage point — wide column sets collapse poorly at mobile widths. Scoping this slice to the add flow and list only (not the full rich list from S-02) keeps it small and shippable after S-01.
-- **Status:** proposed
+- **Status:** done
 
 ### S-02: Cabinet view and search
 
@@ -282,3 +282,4 @@ _(none — all questions resolved before roadmap finalisation)_
 - **S-02: user can view their cabinet as a filterable (by status and category), sortable (by name), and paginated list; search by medication name or active ingredient; each entry shows route of administration and links to the drug leaflet and specification sourced from the registry.** — Archived 2026-06-16 → `context/archive/2026-06-15-cabinet-view-and-search/`. Lesson: —.
 - **S-04: user can mark a cabinet entry as "important", set a global minimum package count, and see an attention badge on entries that fall below the minimum or are expiring/expired; the badge clears automatically when the condition resolves.** — Archived 2026-06-25 → `context/archive/2026-06-16-important-category/`. Lesson: —.
 - **S-05: user can assign a tablet-based medication to the "used" category with a dosage schedule and optional end date; see the estimated finish date or sufficiency indicator; non-tablet medications marked used for date tracking only** — Archived 2026-06-29 → `context/archive/2026-06-25-dosage-tracking/`. Lesson: —.
+- **S-08: user can view and use the cabinet add flow and medicine list on a mobile-width screen without layout breakage; the desktop experience is preserved unchanged** — Archived 2026-06-29 → `context/archive/2026-06-17-mobile-responsive-cabinet/`. Lesson: —.
