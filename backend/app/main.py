@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -48,11 +49,16 @@ def create_app() -> FastAPI:
     async def correlation_id_middleware(request: Request, call_next):
         cid = request.headers.get("X-Correlation-ID") or generate_correlation_id()
         token = correlation_id_var.set(cid)
-        logger.debug("→ %s %s", request.method, request.url.path)
+        start = time.perf_counter()
         response = await call_next(request)
+        duration_ms = round((time.perf_counter() - start) * 1000, 1)
         response.headers["X-Correlation-ID"] = cid
-        logger.debug(
-            "← %s %s %d", request.method, request.url.path, response.status_code
+        logger.info(
+            "%s %s %d %.1fms",
+            request.method,
+            request.url.path,
+            response.status_code,
+            duration_ms,
         )
         correlation_id_var.reset(token)
         return response

@@ -300,8 +300,8 @@ No data or schema migration. Deployed environments must set the environment/form
 
 #### Automated
 
-- [ ] 2.1 Linting passes
-- [ ] 2.2 Full backend suite passes (no middleware regressions)
+- [x] 2.1 Linting passes
+- [x] 2.2 Full backend suite passes (no middleware regressions)
 
 #### Manual
 

@@ -166,10 +166,11 @@ LOGGING_CONFIG: dict = {
             "propagate": False,
         },
         "uvicorn.error": {"propagate": True},
-        # Route through our handler so access lines use the same format/redaction
+        # Suppress uvicorn's own access lines; our middleware emits one per request
+        # with duration_ms, so we own access logging end-to-end.
         "uvicorn.access": {
-            "handlers": ["console"],
-            "level": "INFO",
+            "handlers": [],
+            "level": "WARNING",
             "propagate": False,
         },
         "watchfiles": {"level": "WARNING", "propagate": False},
