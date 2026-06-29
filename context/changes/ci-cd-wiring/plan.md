@@ -310,8 +310,8 @@ Correct the health-check path and document the deploy prerequisites so a first R
 
 #### Automated
 
-- [ ] 3.1 Workflow YAML valid (`pre-commit run check-yaml --all-files`)
-- [ ] 3.2 `cd.yml` `on:` contains only `release: published` (grep confirms)
+- [x] 3.1 Workflow YAML valid (`pre-commit run check-yaml --all-files`)
+- [x] 3.2 `cd.yml` `on:` contains only `release: published` (grep confirms)
 
 #### Manual
 

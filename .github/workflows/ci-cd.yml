@@ -1,10 +1,12 @@
-name: CI
+name: CI/CD
 
 on:
   push:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  release:
+    types: [published]
 
 jobs:
   vulnerability-scan:
@@ -175,3 +177,25 @@ jobs:
       - name: Run Playwright tests
         working-directory: frontend
         run: npx playwright test
+
+  deploy:
+    name: Deploy to Render
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    needs:
+      - vulnerability-scan
+      - pre-commit
+      - backend-tests
+      - frontend-build
+      - backend-typecheck
+
+    steps:
+      - name: Deploy backend
+        run: curl --fail "$RENDER_DEPLOY_HOOK_BACKEND"
+        env:
+          RENDER_DEPLOY_HOOK_BACKEND: ${{ secrets.RENDER_DEPLOY_HOOK_BACKEND }}
+
+      - name: Deploy frontend
+        run: curl --fail "$RENDER_DEPLOY_HOOK_FRONTEND"
+        env:
+          RENDER_DEPLOY_HOOK_FRONTEND: ${{ secrets.RENDER_DEPLOY_HOOK_FRONTEND }}
