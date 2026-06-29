@@ -529,6 +529,14 @@ card's expand toggle is not triggered (existing `ev.stopPropagation()` pattern).
 - Edit dosage → display updates; unassign → usage block disappears and the entry is no longer
   returned by the "W użyciu" filter.
 
+> **Addendum (post-impl review, 2026-06-29).** One item not enumerated above was
+> implemented and accepted during review:
+>
+> - **Table-view inline edit.** `cabinet-list.tsx` (desktop table view) also surfaces the
+>   inline `UsageEditForm` + edit toggle, not just the card — the table shares the same
+>   `useCabinetEntry` view the card uses (per the Phase 4 addendum), so it needs the same
+>   edit affordance for parity.
+
 ---
 
 ## Testing Strategy

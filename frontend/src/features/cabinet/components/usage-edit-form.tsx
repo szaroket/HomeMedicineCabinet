@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { CabinetEntryOut } from "@/features/cabinet/api/cabinet-api";
@@ -14,6 +15,7 @@ interface UsageEditFormProps {
 
 export function UsageEditForm({ entry, onClose }: UsageEditFormProps) {
   const { mutate: setUsage, isPending } = useSetUsage();
+  const [serverError, setServerError] = useState<string | null>(null);
 
   const {
     register,
@@ -46,7 +48,15 @@ export function UsageEditForm({ entry, onClose }: UsageEditFormProps) {
           dosage_end_date: values.dosage_end_date ?? null,
         }
       : { is_used: false as const };
-    setUsage({ id: entry.id, payload }, { onSuccess: onClose });
+    setServerError(null);
+    setUsage(
+      { id: entry.id, payload },
+      {
+        onSuccess: onClose,
+        onError: () =>
+          setServerError("Wystąpił błąd. Sprawdź dane i spróbuj ponownie."),
+      },
+    );
   }
 
   return (
@@ -180,6 +190,8 @@ export function UsageEditForm({ entry, onClose }: UsageEditFormProps) {
           </div>
         </>
       )}
+
+      {serverError && <p className="text-sm text-red-400">{serverError}</p>}
 
       <div className="flex gap-2">
         <button
