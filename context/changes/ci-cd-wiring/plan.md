@@ -317,7 +317,7 @@ Correct the health-check path and document the deploy prerequisites so a first R
 
 #### Manual
 
-- [ ] 3.3 `RENDER_DEPLOY_HOOK_BACKEND` / `RENDER_DEPLOY_HOOK_FRONTEND` set in GitHub secrets
+- [x] 3.3 `RENDER_DEPLOY_HOOK_BACKEND` / `RENDER_DEPLOY_HOOK_FRONTEND` set in GitHub secrets
 - [ ] 3.4 Publishing a test release triggers the `deploy` job in `ci-cd.yml`; both curl steps succeed and both services redeploy
 - [x] 3.5 A PR does not run the `deploy` job — a83be89
 
@@ -325,10 +325,10 @@ Correct the health-check path and document the deploy prerequisites so a first R
 
 #### Automated
 
-- [ ] 4.1 `render.yaml` parses and `healthCheckPath: /api/v1/health/` (check-yaml + grep)
-- [ ] 4.2 Both services have `autoDeploy: false` (grep shows two occurrences)
-- [ ] 4.3 Docs file exists (`ls docs/reference/deployment.md`)
-- [ ] 4.4 README points at the deployment doc (`grep -F "docs/reference/deployment.md" README.md`)
+- [x] 4.1 `render.yaml` parses and `healthCheckPath: /api/v1/health/` (check-yaml + grep)
+- [x] 4.2 Both services have `autoDeploy: false` (grep shows two occurrences)
+- [x] 4.3 Docs file exists (`ls docs/reference/deployment.md`)
+- [x] 4.4 README points at the deployment doc (`grep -F "docs/reference/deployment.md" README.md`)
 
 #### Manual
 
