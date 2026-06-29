@@ -1,7 +1,7 @@
 ---
 change_id: ci-cd-wiring
 title: Ci cd wiring
-status: implementing
+status: impl_reviewed
 created: 2026-06-29
 updated: 2026-06-29
 archived_at: null
