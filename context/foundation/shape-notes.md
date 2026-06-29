@@ -126,28 +126,28 @@ Existing apps fail because they rely on free-text entry, which produces inconsis
 ## User Stories
 
 ### US-01: Add a medication to the cabinet
-**Given** a logged-in user on the add medication screen  
-**When** they type a medication name, select from the autocomplete dropdown, choose a tablet count, enter a package count (≥ 1), and set an expiry date  
+**Given** a logged-in user on the add medication screen
+**When** they type a medication name, select from the autocomplete dropdown, choose a tablet count, enter a package count (≥ 1), and set an expiry date
 **Then** the medication appears in their cabinet with the correct status classification (valid / expiring / expired)
 
 ### US-02: Receive in-app notification for expiry
-**Given** a user has set an expiry threshold and has a medication expiring within that window  
-**When** they open the application  
+**Given** a user has set an expiry threshold and has a medication expiring within that window
+**When** they open the application
 **Then** the notification bell shows an unread count and the notification center lists the medication name and days remaining before expiry
 
 ### US-03: Check cabinet at the pharmacy
-**Given** a logged-in user on a mobile browser  
-**When** they search their cabinet by medication name or active ingredient  
+**Given** a logged-in user on a mobile browser
+**When** they search their cabinet by medication name or active ingredient
 **Then** matching entries are returned quickly enough to use while standing at the pharmacy counter
 
 ### US-04: Track an active medication course
-**Given** a logged-in user who has added a medication  
-**When** they assign it to the "used" category with frequency (3×/day), tablets per dose (1), and no end date  
+**Given** a logged-in user who has added a medication
+**When** they assign it to the "used" category with frequency (3×/day), tablets per dose (1), and no end date
 **Then** the cabinet entry displays the estimated finish date (no close-to-finish notification fires — notifications for run-out require an end date to be set)
 
 ### US-05: Important medication below minimum
-**Given** a user has marked a medication as "important" and set a global minimum of 2 packages  
-**When** the package count on that entry drops to 1  
+**Given** a user has marked a medication as "important" and set a global minimum of 2 packages
+**When** the package count on that entry drops to 1
 **Then** the entry displays an "out of stock" badge and an in-app notification appears in the notification center
 
 ## Business Logic
@@ -160,7 +160,7 @@ The system classifies each cabinet entry and proactively alerts the user before 
 
 **Notification triggers**: in-app notifications fire when (a) a medication enters the expiry threshold window, (b) an important medication's package count drops below the configured minimum, or (c) a used medication has an end date, its estimated finish date falls before that end date, and the finish date is within the close-to-finish threshold. Notifications appear in a persistent notification center (bell icon with unread count).
 
-**Inputs**: expiry date, package count, tablet count per package, user's expiry threshold (7–90 days), user's close-to-finish threshold (days before estimated run-out), global minimum package count for important medications, dosage data (times, period [per day / per week], dosage amount per intake, start date, optional end date).  
+**Inputs**: expiry date, package count, tablet count per package, user's expiry threshold (7–90 days), user's close-to-finish threshold (days before estimated run-out), global minimum package count for important medications, dosage data (times, period [per day / per week], dosage amount per intake, start date, optional end date).
 **Output**: status classification per entry (valid / expiring soon / expired); out-of-stock badge (important entries only); estimated finish date or sufficiency indicator (used entries); in-app notifications per the above triggers.
 
 ## Non-Functional Requirements
