@@ -325,10 +325,10 @@ Correct the health-check path and document the deploy prerequisites so a first R
 
 #### Automated
 
-- [x] 4.1 `render.yaml` parses and `healthCheckPath: /api/v1/health/` (check-yaml + grep)
-- [x] 4.2 Both services have `autoDeploy: false` (grep shows two occurrences)
-- [x] 4.3 Docs file exists (`ls docs/reference/deployment.md`)
-- [x] 4.4 README points at the deployment doc (`grep -F "docs/reference/deployment.md" README.md`)
+- [x] 4.1 `render.yaml` parses and `healthCheckPath: /api/v1/health/` (check-yaml + grep) — 3834757
+- [x] 4.2 Both services have `autoDeploy: false` (grep shows two occurrences) — 3834757
+- [x] 4.3 Docs file exists (`ls docs/reference/deployment.md`) — 3834757
+- [x] 4.4 README points at the deployment doc (`grep -F "docs/reference/deployment.md" README.md`) — 3834757
 
 #### Manual
 
