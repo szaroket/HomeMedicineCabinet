@@ -325,10 +325,10 @@ No data or schema migration. Deployed environments must set the environment/form
 
 #### Automated
 
-- [ ] 4.1 Linting passes
-- [ ] 4.2 Full backend suite passes
+- [x] 4.1 Linting passes
+- [x] 4.2 Full backend suite passes
 
 #### Manual
 
-- [ ] 4.3 registry_import emits central format with redaction
-- [ ] 4.4 alembic invocation logs at aligned level without errors
+- [x] 4.3 registry_import emits central format with redaction
+- [x] 4.4 alembic invocation logs at aligned level without errors
