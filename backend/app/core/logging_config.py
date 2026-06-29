@@ -4,13 +4,18 @@ import json
 import logging
 import logging.config
 import re
+import sys
 import uuid
 from contextvars import ContextVar
+
+from app.core.config import settings
 
 correlation_id_var: ContextVar[str] = ContextVar("correlation_id", default="-")
 
 _EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
 _TOKEN = re.compile(r"(?i)(bearer\s+)[A-Za-z0-9._\-]+")
+# Bare JWT (no "Bearer " prefix): eyJ-anchored, three base64url segments.
+_JWT = re.compile(r"eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+")
 _PASSWORD = re.compile(r"(?i)(password['\"]?\s*[:=]\s*)\S+")
 
 
@@ -45,6 +50,7 @@ class _RedactionFilter(logging.Filter):
         message = record.getMessage()
         message = _EMAIL.sub("[REDACTED]", message)
         message = _TOKEN.sub(r"\1[REDACTED]", message)
+        message = _JWT.sub("[REDACTED]", message)
         message = _PASSWORD.sub(r"\1[REDACTED]", message)
         record.msg = message
         record.args = None
@@ -67,15 +73,28 @@ class _ColoredConsoleFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         """Apply ANSI color to levelname before delegating to standard format.
 
+        Colors a temporary value rather than permanently mutating the shared
+        LogRecord (which would double-wrap if a second handler formats it), and
+        only emits ANSI codes when stdout is a TTY so piped/captured output stays
+        clean. The visible level text is padded to width 8 before coloring so the
+        ANSI bytes do not break the ``%(levelname)-8s`` column alignment.
+
         Args:
             record (logging.LogRecord): The log record being emitted.
 
         Returns:
             str: Formatted log line with colorized level.
         """
-        color = _LEVEL_COLORS.get(record.levelname, "")
-        record.levelname = f"{color}{record.levelname}{_RESET}"
-        return super().format(record)
+        original_levelname = record.levelname
+        color = _LEVEL_COLORS.get(original_levelname, "") if sys.stdout.isatty() else ""
+        padded_levelname = f"{original_levelname:<8}"
+        record.levelname = (
+            f"{color}{padded_levelname}{_RESET}" if color else padded_levelname
+        )
+        try:
+            return super().format(record)
+        finally:
+            record.levelname = original_levelname
 
 
 class _JsonFormatter(logging.Formatter):
@@ -164,8 +183,6 @@ def configure_logging() -> None:
     Reads log_level and log_format from Settings to make output env-driven.
     Call once at application startup before the first log statement.
     """
-    from app.core.config import settings
-
     config = dict(LOGGING_CONFIG)
     config["handlers"] = dict(LOGGING_CONFIG["handlers"])
     config["handlers"]["console"] = dict(LOGGING_CONFIG["handlers"]["console"])

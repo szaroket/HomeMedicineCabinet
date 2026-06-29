@@ -39,6 +39,12 @@ def _make_record(msg: str, args: tuple = ()) -> logging.LogRecord:
             ("Bearer eyJhbGciOiJSUzI1NiJ9.payload.sig",),
             "eyJhbGciOiJSUzI1NiJ9.payload.sig",
         ),
+        # bare JWT (no "Bearer " prefix) inline
+        (
+            "Decoded token eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIxMjMifQ.sig for user",
+            (),
+            "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIxMjMifQ.sig",
+        ),
         # password inline
         ("Request body: password=s3cr3t!", (), "s3cr3t!"),
         # password via %s args

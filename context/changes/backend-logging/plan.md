@@ -126,6 +126,8 @@ _PASSWORD = re.compile(r"(?i)(password['\"]?\s*[:=]\s*)\S+")
 
 **Implementation Note**: After this phase and all automated verification passes, pause for manual confirmation before Phase 2.
 
+**Addendum (2026-06-29, impl-review F1)**: Phase 1 also rerouted the `uvicorn.access` logger onto the central console handler (own handler, level INFO, `propagate: False`) so uvicorn's access lines pass through the same format + redaction. This was not in the original Phase 1 contract — kept because it puts access lines behind redaction, which the security goal wants. **Phase 2 must account for this**: when adding the access-logging middleware, ensure app middleware and `uvicorn.access` do not both emit a line per request (avoid duplicate access logging).
+
 ---
 
 ## Phase 2: Request/response access logging
@@ -284,15 +286,15 @@ No data or schema migration. Deployed environments must set the environment/form
 
 #### Automated
 
-- [x] 1.1 Linting passes (`ruff check` + `ruff format --check`)
-- [x] 1.2 Redaction unit test passes (`pytest tests/core/test_logging_config.py`)
-- [x] 1.3 Full backend suite passes (`uv run pytest`)
+- [x] 1.1 Linting passes (`ruff check` + `ruff format --check`) — bc6dcc5
+- [x] 1.2 Redaction unit test passes (`pytest tests/core/test_logging_config.py`) — bc6dcc5
+- [x] 1.3 Full backend suite passes (`uv run pytest`) — bc6dcc5
 
 #### Manual
 
-- [ ] 1.4 Local console output readable with correlation id
-- [ ] 1.5 Deployed selector produces JSON on stdout
-- [ ] 1.6 Email / Bearer token line emitted with secret scrubbed
+- [x] 1.4 Local console output readable with correlation id — bc6dcc5
+- [x] 1.5 Deployed selector produces JSON on stdout — bc6dcc5
+- [x] 1.6 Email / Bearer token line emitted with secret scrubbed — bc6dcc5
 
 ### Phase 2: Request/response access logging
 
