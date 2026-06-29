@@ -312,9 +312,9 @@ No data or schema migration. Deployed environments must set the environment/form
 
 #### Automated
 
-- [ ] 3.1 Linting passes
-- [ ] 3.2 Full backend suite passes
-- [ ] 3.3 `supabase_auth.py` no longer passes email to a log call
+- [x] 3.1 Linting passes
+- [x] 3.2 Full backend suite passes
+- [x] 3.3 `supabase_auth.py` no longer passes email to a log call
 
 #### Manual
 
