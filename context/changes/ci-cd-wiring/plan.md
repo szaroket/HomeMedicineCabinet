@@ -23,12 +23,12 @@ Finalize the F04 CI/CD feature. Two draft artifacts already exist on this branch
 ## Desired End State
 
 - `.github/workflows/ci.yml` is committed and, on every PR/push to `main`/`develop`, runs: vulnerability-scan, pre-commit, **frontend build**, **backend pyright**, and **backend tests with a coverage floor**; plus a `frontend-e2e` job that is present but skipped.
-- `.github/workflows/cd.yml` is committed and, on `release: published`, triggers Render deploys for both services using `secrets.RENDER_DEPLOY_HOOK_BACKEND` and `secrets.RENDER_DEPLOY_HOOK_FRONTEND`.
+- `.github/workflows/ci-cd.yml` carries a release-gated `deploy` job (guarded by `if: github.event_name == 'release'`, `needs:` the CI jobs) that, on `release: published`, triggers Render deploys for both services using `secrets.RENDER_DEPLOY_HOOK_BACKEND` and `secrets.RENDER_DEPLOY_HOOK_FRONTEND`. (See Phase 3 addendum — CD is merged into `ci-cd.yml`, not a separate `cd.yml`.)
 - `backend/pyproject.toml` has `[tool.coverage.run]`, `[tool.coverage.report]` (with `fail_under = 60`), and a `[tool.pyright]` block; `uv run coverage run -m pytest && uv run coverage report` and `uv run pyright` both pass locally.
 - `render.yaml` `healthCheckPath` is `/api/v1/health/` and both services have `autoDeploy: false`, so the only deploy path is the release-triggered Deploy Hook.
 - A deployment doc records the required GitHub secrets and the Render `sync:false` env vars.
 
-**Verification**: open a PR into `develop` → all CI jobs pass except the intentionally-skipped E2E job. Publishing a GitHub Release fires `cd.yml` and both Render services redeploy.
+**Verification**: open a PR into `develop` → all CI jobs pass except the intentionally-skipped E2E job. Publishing a GitHub Release fires the `deploy` job in `ci-cd.yml` and both Render services redeploy.
 
 ### Key Discoveries:
 
@@ -56,7 +56,7 @@ Build bottom-up so CI never goes red on its own new gates: first make the backen
 
 - **Coverage driver**: there is no `pytest-cov`; use the `coverage` CLI — `coverage run -m pytest` then `coverage report --fail-under=60` (or `fail_under` in config). Do not add a `--cov` pytest flag; it won't exist.
 - **pyright scope**: default pyright may scan migrations/tests and report noise. Scope `[tool.pyright]` to `include = ["app"]` (and exclude `migrations`) so the gate reflects application code, matching the ruff per-file-ignore posture for `migrations/*`.
-- **Deploy job must never run on PRs**: it lives in a separate `cd.yml` keyed solely on `on: release: { types: [published] }`. No `push`/`pull_request` triggers in that file.
+- **Deploy job must never run on PRs**: ~~it lives in a separate `cd.yml` keyed solely on `on: release: { types: [published] }`~~ — **superseded by Phase 3 addendum**: the `deploy` job lives in `ci-cd.yml` and is gated by `if: github.event_name == 'release'`, so it is skipped on every `push`/`pull_request`. The "never on PRs" invariant still holds.
 
 ## Phase 1: Backend gate config
 
@@ -188,15 +188,17 @@ on:
 #### Automated Verification:
 
 - Workflow YAML is valid: `pre-commit run check-yaml --all-files`
-- The `cd.yml` `on:` block contains only `release: published` (no `push`/`pull_request`): grep confirms.
+- The deploy job is guarded by `if: github.event_name == 'release'` so it is skipped on push/PR: grep confirms. (See Phase 3 addendum — CD lives in `ci-cd.yml`, not a separate `cd.yml`.)
 
 #### Manual Verification:
 
 - `RENDER_DEPLOY_HOOK_BACKEND` and `RENDER_DEPLOY_HOOK_FRONTEND` are set in GitHub repo secrets (from the Render dashboard).
-- Publishing a test release triggers `cd.yml`; both curl steps return success and both Render services show a new deploy.
-- Opening/merging a PR does **not** trigger `cd.yml`.
+- Publishing a test release triggers the `deploy` job in `ci-cd.yml`; both curl steps return success and both Render services show a new deploy.
+- Opening/merging a PR does **not** run the `deploy` job.
 
 **Implementation Note**: Live verification needs the Render hooks configured and a release published. After YAML checks pass, pause for human confirmation (and secret setup) before Phase 4.
+
+**Addendum (2026-06-29, Phase 3)**: CD was **not** split into a separate `cd.yml`. Instead, commit `a83be89` renamed `ci.yml` → `ci-cd.yml` and added the `deploy` job into that same workflow, gated by `if: github.event_name == 'release'` and `needs:` on all five CI jobs; `release: { types: [published] }` was added to the existing `on:` block alongside `push`/`pull_request`. This supersedes the "separate `cd.yml`" design in this phase's contract and the Critical Implementation Detail. Rationale: because `deploy` `needs:` the five CI jobs and the whole workflow re-runs on the release event, deploy is gated by a **fresh green CI run on the released commit** — a property the separate-file design lacked (it would have fired the Deploy Hook on release without re-running any gate). The PR-safety goal is preserved: the job-level `if` skips `deploy` on every push/PR. Downstream consequence: Phase 4 docs and the "Desired End State" should describe the single `ci-cd.yml` with a release-gated deploy job, not a separate `cd.yml`.
 
 ---
 
@@ -250,13 +252,13 @@ Correct the health-check path and document the deploy prerequisites so a first R
 
 ### Integration Tests:
 
-- CI itself is the integration test: a PR into `develop` exercises every job. A published release exercises `cd.yml`.
+- CI itself is the integration test: a PR into `develop` exercises every job. A published release exercises the `deploy` job in `ci-cd.yml`.
 
 ### Manual Testing Steps:
 
 1. Run Phase 1 commands locally; confirm coverage ≥ floor and pyright green.
 2. Push the branch; open a PR into `develop`; confirm all CI jobs pass and `frontend-e2e` is skipped.
-3. Set the two Render Deploy Hook secrets; publish a test release; confirm `cd.yml` runs and both services redeploy.
+3. Set the two Render Deploy Hook secrets; publish a test release; confirm the `deploy` job in `ci-cd.yml` runs and both services redeploy.
 4. Hit the deployed backend `/api/v1/health/`; confirm `{"status":"healthy"}` and a passing Render health check.
 
 ## Performance Considerations
@@ -272,7 +274,7 @@ Correct the health-check path and document the deploy prerequisites so a first R
 
 - Repo rules: `AGENTS.md` (build/test commands, PR gate, hard rules)
 - Health route: `backend/app/api/v1/router.py:9`, `backend/app/api/v1/health/router.py:3`
-- Draft artifacts: `.github/workflows/ci.yml`, `render.yaml`
+- Workflow + draft artifacts: `.github/workflows/ci-cd.yml` (renamed from `ci.yml`; carries CI jobs + release-gated `deploy`), `render.yaml`
 - Pre-commit config: `.pre-commit-config.yaml`
 
 ## Progress
@@ -310,14 +312,14 @@ Correct the health-check path and document the deploy prerequisites so a first R
 
 #### Automated
 
-- [x] 3.1 Workflow YAML valid (`pre-commit run check-yaml --all-files`)
-- [x] 3.2 `cd.yml` `on:` contains only `release: published` (grep confirms)
+- [x] 3.1 Workflow YAML valid (`pre-commit run check-yaml --all-files`) — a83be89
+- [x] 3.2 Deploy job guarded by `if: github.event_name == 'release'` (skipped on push/PR; grep confirms) — a83be89
 
 #### Manual
 
 - [ ] 3.3 `RENDER_DEPLOY_HOOK_BACKEND` / `RENDER_DEPLOY_HOOK_FRONTEND` set in GitHub secrets
-- [ ] 3.4 Publishing a test release triggers `cd.yml`; both curl steps succeed and both services redeploy
-- [ ] 3.5 A PR does not trigger `cd.yml`
+- [ ] 3.4 Publishing a test release triggers the `deploy` job in `ci-cd.yml`; both curl steps succeed and both services redeploy
+- [x] 3.5 A PR does not run the `deploy` job — a83be89
 
 ### Phase 4: Fix & document render.yaml
 
