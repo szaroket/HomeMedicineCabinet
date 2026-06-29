@@ -4,7 +4,7 @@ import logging
 import uuid
 from datetime import date, timedelta
 
-from sqlalchemy import func, select, text
+from sqlalchemy import Float, Integer, case, cast, func, literal, select, text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlmodel import col
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +13,7 @@ from app.api.v1.cabinet.models import CabinetEntry
 from app.api.v1.medicines.models import MedicationRegistry
 from app.db.connector import persist
 from app.utilities.errors import CabinetDatabaseError
+from app.utilities.types import ResolvedUsage
 
 logger = logging.getLogger("app.cabinet.crud")
 
@@ -82,6 +83,16 @@ async def find_entry(
     return result.scalar_one_or_none()
 
 
+def _apply_usage(entry: CabinetEntry, resolved_usage: ResolvedUsage) -> None:
+    """Write all usage/dosage fields from resolved_usage onto entry in place."""
+    entry.is_used = resolved_usage.is_used
+    entry.dosage_times = resolved_usage.dosage_times
+    entry.dosage_period = resolved_usage.dosage_period
+    entry.dosage_amount = resolved_usage.dosage_amount
+    entry.dosage_start_date = resolved_usage.dosage_start_date
+    entry.dosage_end_date = resolved_usage.dosage_end_date
+
+
 async def insert_entry(
     session: AsyncSession,
     user_id: uuid.UUID,
@@ -90,6 +101,7 @@ async def insert_entry(
     partial_tablet_count: int | None,
     expiry_date: date,
     is_important: bool = False,
+    resolved_usage: ResolvedUsage | None = None,
 ) -> CabinetEntry:
     """Insert a new cabinet entry and flush to obtain its ID.
 
@@ -101,6 +113,7 @@ async def insert_entry(
         partial_tablet_count (int | None): Tablets in the last (partial) package, or None.
         expiry_date (date): Expiry date for the entry.
         is_important (bool): Whether the entry is marked important.
+        resolved_usage (ResolvedUsage | None): Validated usage fields to persist, or None.
 
     Returns:
         CabinetEntry: The newly created CabinetEntry (committed).
@@ -119,6 +132,8 @@ async def insert_entry(
         expiry_date=expiry_date,
         is_important=is_important,
     )
+    if resolved_usage is not None:
+        _apply_usage(entry, resolved_usage)
     try:
         async with persist(session, entry):
             session.add(entry)
@@ -132,6 +147,119 @@ async def insert_entry(
     return entry
 
 
+async def update_entry_usage(
+    session: AsyncSession,
+    entry: CabinetEntry,
+    resolved_usage: ResolvedUsage,
+) -> CabinetEntry:
+    """Write usage/dosage columns onto an existing cabinet entry and persist it.
+
+    Args:
+        session (AsyncSession): Active async database session.
+        entry (CabinetEntry): The CabinetEntry to update.
+        resolved_usage (ResolvedUsage): Validated usage values; when is_used is False all
+            dosage/date columns are set to None.
+
+    Returns:
+        CabinetEntry: The updated CabinetEntry (committed).
+
+    Raises:
+        CabinetDatabaseError: If the flush or commit fails.
+    """
+    _apply_usage(entry, resolved_usage)
+    try:
+        async with persist(session, entry):
+            session.add(entry)
+    except SQLAlchemyError as exc:
+        logger.error(
+            "Failed to update usage for cabinet entry %s: %s",
+            entry.id,
+            exc,
+            exc_info=True,
+        )
+        raise CabinetDatabaseError() from exc
+    return entry
+
+
+def _sufficiency_clauses(today: date, sufficiency: str):
+    """Build WHERE clauses filtering used tablet entries by sufficiency verdict.
+
+    Mirrors the canonical Python calc in ``cabinet.service``: ``total_tablets``,
+    ``daily_consumption_rate``, ``days_of_supply_from_rate`` and the
+    ``is_sufficient`` verdict in ``compute_usage_view``. SQL cannot call that
+    per-row Python code, so the arithmetic is duplicated here; the two paths are
+    pinned together by the parity tests in ``tests/cabinet/test_crud.py``. Change
+    both together if the calc ever changes (Risk #6).
+
+    The guards reproduce ``compute_usage_view``'s None cases so a row matches
+    neither filter exactly when the Python calc yields ``is_sufficient is None``:
+
+    * ``dosage_end_date > today`` mirrors the ``until_end > 0`` gate — once the
+      window is closed (end date today or past) there is no verdict.
+    * Dividing by ``NULLIF(daily_rate, 0)`` mirrors ``days_of_supply_from_rate``
+      returning None for ``daily_rate <= 0``: a zero rate yields a NULL supply,
+      so the verdict is NULL and the row matches neither filter — and there is no
+      divide-by-zero regardless of WHERE evaluation order.
+
+    Args:
+        today (date): Reference date for the supply projection.
+        sufficiency (str): "insufficient" or "sufficient".
+
+    Returns:
+        list: SQLAlchemy boolean clauses to AND into the query's WHERE.
+    """
+    # total_tablets is not a DB column — compute from package_count,
+    # partial_tablet_count, and MedicationRegistry.capacity (tablets per package),
+    # matching service.total_tablets():
+    #   if partial_tablet_count is not None: (pkg_count - 1) * tpp + partial
+    #   else: pkg_count * tpp
+    tpp_expr = cast(col(MedicationRegistry.capacity), Integer)
+    total_tablets_expr = cast(
+        case(
+            (
+                col(CabinetEntry.partial_tablet_count).is_not(None),
+                (col(CabinetEntry.package_count) - 1) * tpp_expr
+                + col(CabinetEntry.partial_tablet_count),
+            ),
+            else_=col(CabinetEntry.package_count) * tpp_expr,
+        ),
+        Float,
+    )
+    period_days_expr = case(
+        (col(CabinetEntry.dosage_period) == "day", literal(1.0)),
+        else_=literal(7.0),
+    )
+    daily_rate_expr = (
+        cast(col(CabinetEntry.dosage_times) * col(CabinetEntry.dosage_amount), Float)
+        / period_days_expr
+    )
+    # NULLIF(rate, 0) -> NULL supply on a zero rate (mirrors the Python None-guard
+    # and removes the divide-by-zero F4 flagged), independent of clause order.
+    days_supply_expr = cast(
+        func.floor(total_tablets_expr / func.nullif(daily_rate_expr, literal(0.0))),
+        Integer,
+    )
+    # Reframe as a date comparison to avoid date-minus-date type ambiguity.
+    # PostgreSQL adds integer days to a date natively.
+    projected_finish_expr = literal(today) + days_supply_expr
+    end_date_col = col(CabinetEntry.dosage_end_date)
+    verdict = (
+        projected_finish_expr < end_date_col
+        if sufficiency == "insufficient"
+        else projected_finish_expr >= end_date_col
+    )
+    return [
+        col(CabinetEntry.is_used).is_(True),
+        end_date_col.is_not(None),
+        # F2: closed window (until_end <= 0) yields no verdict
+        end_date_col > literal(today),
+        col(MedicationRegistry.capacity).is_not(None),
+        col(CabinetEntry.dosage_times).is_not(None),
+        col(CabinetEntry.dosage_amount).is_not(None),
+        verdict,
+    ]
+
+
 def _build_base_query(
     user_id: uuid.UUID,
     today: date,
@@ -141,6 +269,7 @@ def _build_base_query(
     category: str | None = None,
     below_minimum: bool | None = None,
     min_package_count: int | None = None,
+    sufficiency: str | None = None,
 ):
     """Build the filtered join query (no ORDER BY / LIMIT / OFFSET).
 
@@ -152,6 +281,7 @@ def _build_base_query(
         tsquery (str | None): Optional safe prefix tsquery string for full-text search.
         category (str | None): Optional category filter ("important" filters to important entries).
         below_minimum (bool | None): When True, filter to important entries below the package minimum.
+        sufficiency (str | None): "insufficient" or "sufficient" — filters used tablet entries by whether days of supply is less than or at least days until end date.
         min_package_count (int | None): User's minimum package count; required when below_minimum is True.
 
     Returns:
@@ -184,6 +314,8 @@ def _build_base_query(
         )
     if category == "important":
         stmt = stmt.where(col(CabinetEntry.is_important).is_(True))
+    elif category == "used":
+        stmt = stmt.where(col(CabinetEntry.is_used).is_(True))
     if below_minimum and min_package_count is not None:
         # Must stay in sync with cabinet.service.is_below_minimum, which encodes the
         # same rule (important AND package_count < minimum) for the per-row badge.
@@ -193,6 +325,8 @@ def _build_base_query(
             col(CabinetEntry.is_important).is_(True),
             col(CabinetEntry.package_count) < min_package_count,
         )
+    if sufficiency in ("insufficient", "sufficient"):
+        stmt = stmt.where(*_sufficiency_clauses(today, sufficiency))
     return stmt
 
 
@@ -209,6 +343,7 @@ async def list_entries(
     category: str | None = None,
     below_minimum: bool | None = None,
     min_package_count: int | None = None,
+    sufficiency: str | None = None,
 ) -> tuple[list[tuple[CabinetEntry, MedicationRegistry]], int]:
     """Fetch a filtered, sorted, paginated page of cabinet entries plus total count.
 
@@ -224,6 +359,7 @@ async def list_entries(
         offset (int): Row offset for pagination.
         category (str | None): Optional category filter ("important" filters to important entries).
         below_minimum (bool | None): When True, filter to important entries below the package minimum.
+        sufficiency (str | None): "insufficient" or "sufficient" — filters used tablet entries by whether days of supply is less than or at least days until end date.
         min_package_count (int | None): User's minimum package count; required when below_minimum is True.
 
     Returns:
@@ -241,6 +377,7 @@ async def list_entries(
         category,
         below_minimum,
         min_package_count,
+        sufficiency,
     )
 
     name_col = func.lower(col(MedicationRegistry.name))
@@ -262,6 +399,7 @@ async def list_entries(
             category,
             below_minimum,
             min_package_count,
+            sufficiency,
         ).subquery()
     )
 
@@ -368,6 +506,7 @@ async def update_entry_counts(
     package_count: int,
     partial_tablet_count: int | None,
     is_important: bool | None = None,
+    resolved_usage: ResolvedUsage | None = None,
 ) -> CabinetEntry:
     """Update the package and partial-tablet counts of an existing entry.
 
@@ -377,6 +516,9 @@ async def update_entry_counts(
         package_count (int): New package count.
         partial_tablet_count (int | None): New partial tablet count, or None.
         is_important (bool | None): When provided, also update the importance flag.
+        resolved_usage (ResolvedUsage | None): When provided, also write the usage/dosage
+            columns in the same transaction so counts and usage commit atomically (used by
+            the dedup merge path).
 
     Returns:
         CabinetEntry: The updated CabinetEntry (committed).
@@ -388,6 +530,8 @@ async def update_entry_counts(
     entry.partial_tablet_count = partial_tablet_count
     if is_important is not None:
         entry.is_important = is_important
+    if resolved_usage is not None:
+        _apply_usage(entry, resolved_usage)
     try:
         async with persist(session, entry):
             session.add(entry)

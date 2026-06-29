@@ -23,6 +23,7 @@ from app.utilities.errors import (
     CabinetError,
     CabinetInvariantError,
     EntryNotFoundError,
+    InvalidDosageError,
     InvalidPartialTabletCountError,
     MedicationNotFoundError,
     UserDatabaseError,
@@ -189,6 +190,20 @@ class TestAddEntryErrorMapping:
             "app.api.v1.cabinet.router.cabinet_service.add_entry",
             new_callable=AsyncMock,
             side_effect=InvalidPartialTabletCountError(),
+        )
+
+        response = await authed_client.post("/api/v1/cabinet/entries", json=_VALID_BODY)
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+    @pytest.mark.asyncio
+    async def test_invalid_dosage_returns_422(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_service.add_entry",
+            new_callable=AsyncMock,
+            side_effect=InvalidDosageError(),
         )
 
         response = await authed_client.post("/api/v1/cabinet/entries", json=_VALID_BODY)
@@ -491,13 +506,6 @@ class TestListEntriesImportanceFields:
         assert mock_facade.call_args.kwargs["category"] == "important"
 
     @pytest.mark.asyncio
-    async def test_invalid_category_returns_422(self, authed_client: AsyncClient):
-        response = await authed_client.get(
-            "/api/v1/cabinet/entries", params={"category": "used"}
-        )
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-
-    @pytest.mark.asyncio
     async def test_below_minimum_true_forwarded_to_facade(
         self, authed_client: AsyncClient, mocker: MockerFixture
     ):
@@ -632,3 +640,180 @@ class TestSetEntryImportanceErrorMapping:
             json={"is_important": True},
         )
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+class TestListEntriesCategoryFilter:
+    @pytest.mark.asyncio
+    async def test_category_used_accepted_and_forwarded(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mock_facade = mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.list_entries",
+            new_callable=AsyncMock,
+            return_value=_make_page_out([_make_cabinet_entry_out(is_used=True)]),
+        )
+
+        response = await authed_client.get(
+            "/api/v1/cabinet/entries", params={"category": "used"}
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        call_kwargs = mock_facade.call_args.kwargs
+        assert call_kwargs["category"] == "used"
+        assert response.json()["items"][0]["is_used"] is True
+
+    @pytest.mark.asyncio
+    async def test_invalid_category_returns_422(self, authed_client: AsyncClient):
+        response = await authed_client.get(
+            "/api/v1/cabinet/entries", params={"category": "unknown"}
+        )
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+
+_USAGE_BODY = {
+    "is_used": True,
+    "dosage_times": 3,
+    "dosage_period": "day",
+    "dosage_amount": 2,
+    "dosage_start_date": "2026-06-25",
+    "dosage_end_date": None,
+}
+
+_UNASSIGN_BODY = {"is_used": False}
+
+
+class TestSetEntryUsageSuccess:
+    @pytest.mark.asyncio
+    async def test_set_usage_returns_200_with_is_used_true(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.set_entry_usage",
+            new_callable=AsyncMock,
+            return_value=_make_cabinet_entry_out(is_used=True),
+        )
+
+        response = await authed_client.patch(
+            f"/api/v1/cabinet/entries/{_ENTRY_ID}/usage",
+            json=_USAGE_BODY,
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["is_used"] is True
+
+    @pytest.mark.asyncio
+    async def test_unassign_returns_200_with_is_used_false(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.set_entry_usage",
+            new_callable=AsyncMock,
+            return_value=_make_cabinet_entry_out(is_used=False),
+        )
+
+        response = await authed_client.patch(
+            f"/api/v1/cabinet/entries/{_ENTRY_ID}/usage",
+            json=_UNASSIGN_BODY,
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["is_used"] is False
+
+
+class TestSetEntryUsageErrorMapping:
+    @pytest.mark.asyncio
+    async def test_entry_not_found_returns_404(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.set_entry_usage",
+            new_callable=AsyncMock,
+            side_effect=EntryNotFoundError(),
+        )
+
+        response = await authed_client.patch(
+            f"/api/v1/cabinet/entries/{_ENTRY_ID}/usage",
+            json=_UNASSIGN_BODY,
+        )
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    @pytest.mark.asyncio
+    async def test_invalid_dosage_returns_422(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.set_entry_usage",
+            new_callable=AsyncMock,
+            side_effect=InvalidDosageError("bad dosage"),
+        )
+
+        response = await authed_client.patch(
+            f"/api/v1/cabinet/entries/{_ENTRY_ID}/usage",
+            json=_USAGE_BODY,
+        )
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+    @pytest.mark.asyncio
+    async def test_medication_not_found_returns_404(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.set_entry_usage",
+            new_callable=AsyncMock,
+            side_effect=MedicationNotFoundError(),
+        )
+
+        response = await authed_client.patch(
+            f"/api/v1/cabinet/entries/{_ENTRY_ID}/usage",
+            json=_USAGE_BODY,
+        )
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    @pytest.mark.asyncio
+    async def test_database_error_returns_503(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.set_entry_usage",
+            new_callable=AsyncMock,
+            side_effect=CabinetDatabaseError(),
+        )
+
+        response = await authed_client.patch(
+            f"/api/v1/cabinet/entries/{_ENTRY_ID}/usage",
+            json=_USAGE_BODY,
+        )
+
+        assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+
+    @pytest.mark.asyncio
+    async def test_missing_token_returns_401(self, client: AsyncClient):
+        response = await client.patch(
+            f"/api/v1/cabinet/entries/{_ENTRY_ID}/usage",
+            json=_USAGE_BODY,
+        )
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("dosage_times", 25),
+            ("dosage_times", 0),
+            ("dosage_amount", 101),
+            ("dosage_amount", 0),
+        ],
+        ids=["times_over_max", "times_zero", "amount_over_max", "amount_zero"],
+    )
+    async def test_out_of_range_dosage_field_returns_422(
+        self, authed_client: AsyncClient, field: str, value: int
+    ):
+        body = {**_USAGE_BODY, field: value}
+        response = await authed_client.patch(
+            f"/api/v1/cabinet/entries/{_ENTRY_ID}/usage",
+            json=body,
+        )
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT

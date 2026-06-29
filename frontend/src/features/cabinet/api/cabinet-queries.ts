@@ -10,11 +10,13 @@ import {
   addEntry,
   listEntries,
   toggleImportant,
+  setUsage,
 } from "@/features/cabinet/api/cabinet-api";
 import type {
   ProductOut,
   AddEntryPayload,
   CabinetListParams,
+  UsageFieldsPayload,
 } from "@/features/cabinet/api/cabinet-api";
 
 export const cabinetKeys = {
@@ -74,6 +76,22 @@ export function useToggleImportant() {
   return useMutation({
     mutationFn: ({ id, is_important }: { id: string; is_important: boolean }) =>
       toggleImportant(id, is_important),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: cabinetKeys.entriesAll() });
+    },
+  });
+}
+
+export function useSetUsage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: UsageFieldsPayload;
+    }) => setUsage(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: cabinetKeys.entriesAll() });
     },

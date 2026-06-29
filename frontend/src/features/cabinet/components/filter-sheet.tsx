@@ -5,13 +5,15 @@ import {
   STOCK_OPTIONS,
   type StatusFilter,
   type CategoryFilter,
+  type StockFilter,
 } from "@/features/cabinet/components/filter-options";
 
 interface FilterSheetProps {
   status: StatusFilter | undefined;
   category: CategoryFilter | undefined;
-  belowMinimum: boolean;
+  stockFilter: StockFilter | "";
   setParam: (key: string, value: string | null, resetPage?: boolean) => void;
+  setStockFilter: (value: StockFilter | "") => void;
   clearFilters: () => void;
   hasFilters: boolean;
 }
@@ -58,8 +60,9 @@ function FilterGroup({ label, options, selected, onSelect }: FilterGroupProps) {
 export function FilterSheet({
   status,
   category,
-  belowMinimum,
+  stockFilter,
   setParam,
+  setStockFilter,
   clearFilters,
   hasFilters,
 }: FilterSheetProps) {
@@ -75,7 +78,7 @@ export function FilterSheet({
   }, [isOpen]);
 
   const activeCount =
-    (status ? 1 : 0) + (category ? 1 : 0) + (belowMinimum ? 1 : 0);
+    (status ? 1 : 0) + (category ? 1 : 0) + (stockFilter ? 1 : 0);
 
   return (
     <>
@@ -130,14 +133,8 @@ export function FilterSheet({
               <FilterGroup
                 label="Zapasy"
                 options={STOCK_OPTIONS}
-                selected={belowMinimum ? "low" : ""}
-                onSelect={(value) =>
-                  setParam(
-                    "below_minimum",
-                    value === "low" ? "true" : null,
-                    true,
-                  )
-                }
+                selected={stockFilter}
+                onSelect={(value) => setStockFilter(value as StockFilter | "")}
               />
 
               <button

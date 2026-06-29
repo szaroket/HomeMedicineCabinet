@@ -16,6 +16,7 @@ from app.api.v1.cabinet.schemas import (
     CabinetListParams,
     CabinetPageOut,
     SetImportantRequest,
+    UsageFields,
 )
 from app.api.v1.auth.types import CurrentUser
 from app.core.jwt_security import get_current_user
@@ -25,6 +26,7 @@ from app.utilities.errors import (
     CabinetError,
     CabinetInvariantError,
     EntryNotFoundError,
+    InvalidDosageError,
     InvalidPackageCountError,
     InvalidPartialTabletCountError,
     MedicationNotFoundError,
@@ -59,6 +61,7 @@ async def list_entries(
             page_size=params.page_size,
             category=params.category,
             below_minimum=params.below_minimum,
+            sufficiency=params.sufficiency,
         )
     except (CabinetDatabaseError, UserDatabaseError) as exc:
         raise HTTPException(
@@ -69,7 +72,11 @@ async def list_entries(
             status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
         ) from exc
     except Exception as exc:
-        logger.exception("Unexpected error when listing entries: %s", exc)
+        logger.exception(
+            "Unexpected error when listing entries | params=%s | error=%s",
+            params.model_dump(exclude_none=True),
+            exc,
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred.",
@@ -99,12 +106,17 @@ async def add_entry(
             partial_tablet_count=data.partial_tablet_count,
             expiry_date=data.expiry_date,
             is_important=data.is_important,
+            usage=data.usage,
         )
     except MedicationNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=e.message
         ) from e
-    except (InvalidPackageCountError, InvalidPartialTabletCountError) as e:
+    except (
+        InvalidPackageCountError,
+        InvalidPartialTabletCountError,
+        InvalidDosageError,
+    ) as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=e.message
         ) from e
@@ -160,6 +172,52 @@ async def set_entry_importance(
         ) from exc
     except Exception as exc:
         logger.exception("Unexpected error when toggling entry importance: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred.",
+        ) from exc
+
+
+@router.patch(
+    "/entries/{entry_id}/usage",
+    response_model=CabinetEntryOut,
+)
+async def set_entry_usage(
+    entry_id: uuid.UUID,
+    data: UsageFields,
+    current_user: CurrentUser = Security(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> CabinetEntryOut:
+    """Set, update, or clear the usage/dosage schedule on a cabinet entry owned by the current user."""
+    try:
+        return await cabinet_facade.set_entry_usage(
+            session=session,
+            user_id=current_user.id,
+            entry_id=entry_id,
+            usage=data,
+        )
+    except EntryNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=exc.message
+        ) from exc
+    except InvalidDosageError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=exc.message
+        ) from exc
+    except MedicationNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=exc.message
+        ) from exc
+    except (CabinetDatabaseError, UserDatabaseError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=exc.message
+        ) from exc
+    except CabinetError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
+        ) from exc
+    except Exception as exc:
+        logger.exception("Unexpected error when setting entry usage: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred.",

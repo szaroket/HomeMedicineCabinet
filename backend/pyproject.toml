@@ -15,6 +15,7 @@ dependencies = [
     "pyjwt[crypto]>=2.13.0",
     "coverage>=7.14.1",
     "psycopg2>=2.9.12",
+    "pyright>=1.1.410",
 ]
 
 [dependency-groups]
