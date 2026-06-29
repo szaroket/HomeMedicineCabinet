@@ -55,6 +55,7 @@ Verify: `uv run pytest` green (incl. the redaction test); running the dev server
 - No full per-domain entry/exit logging audit — standardize levels and fill obvious gaps only.
 - No frontend logging changes.
 - No change to the risk strategy or quality-gate definitions (that is `/10x-test-plan`).
+- **Deferred (follow-up):** routing `scripts/registry_import` through `configure_logging()` + redaction (Phase 4 Change #1) — skipped per user decision; the script keeps its own `basicConfig`. Logs no PII, so low risk. See Phase 4 addendum.
 
 ## Implementation Approach
 
@@ -241,6 +242,8 @@ Bring the standalone tooling onto the same central configuration so logging is u
 
 **Implementation Note**: Final phase — confirm full manual verification before closing the change.
 
+**Addendum (2026-06-29, impl-review-phase-4 F1)**: Phase 4 Change #1 (route `registry_import` through `configure_logging()` + redaction) was **intentionally deferred per user decision** (commit 656bdd7). `scripts/registry_import/__main__.py:122` still calls `logging.basicConfig(level=INFO, format="%(message)s")` — it does not inherit the central format/redaction. Security risk is low: the script logs medicine sample rows, source URLs, and counts — no email/token/password. Progress 4.3 is flipped back to `[ ]`; the routing work is listed under "What We're NOT Doing" as a follow-up. Phase 4 Change #2 (alembic) was completed. See F2 below: the alembic change aligned `[formatter_generic]` to the app console layout rather than re-leveling `[loggers]`/`[handlers]`; levels (root=WARNING, sqlalchemy=WARNING, alembic=INFO) were left intentionally as sensible defaults.
+
 ---
 
 ## Testing Strategy
@@ -330,5 +333,5 @@ No data or schema migration. Deployed environments must set the environment/form
 
 #### Manual
 
-- [x] 4.3 registry_import emits central format with redaction — 656bdd7
+- [ ] 4.3 registry_import emits central format with redaction — deferred per user decision (see Phase 4 addendum)
 - [x] 4.4 alembic invocation logs at aligned level without errors — 656bdd7
