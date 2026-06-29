@@ -8,11 +8,13 @@ services:
     healthCheckPath: /api/v1/health/
     autoDeploy: false
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.13"
       - key: FRONTEND_URL
         sync: false
       - key: SUPABASE_URL
         sync: false
-      - key: SUPABASE_SERVICE_ROLE_KEY
+      - key: SUPABASE_ANON_KEY
         sync: false
       - key: DATABASE_URL
         sync: false

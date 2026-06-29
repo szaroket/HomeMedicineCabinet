@@ -40,7 +40,7 @@ These variables must be set in the Render dashboard for each service. They are d
 |---|---|
 | `FRONTEND_URL` | The public URL of the deployed frontend (e.g. `https://home-medicine-cabinet.onrender.com`) |
 | `SUPABASE_URL` | Supabase project URL (Settings → API), e.g. `https://xxxx.supabase.co` |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service-role key (Settings → API → service_role) |
+| `SUPABASE_ANON_KEY` | Supabase anon/public API key (Settings → API → anon public) |
 | `DATABASE_URL` | Postgres connection string using the **asyncpg** driver, e.g. `postgresql+asyncpg://postgres:<password>@<host>:5432/postgres` |
 
 ### Frontend (`home-medicine-cabinet-frontend`)
@@ -75,5 +75,5 @@ Because the Render Deploy Hook is fire-and-forget and deploys the **tracked bran
 To enforce CI gates on PRs, enable required status checks in **GitHub → Settings → Branches → Branch protection rules** for `main` and `develop`:
 
 - Require status checks to pass before merging.
-- Select: `vulnerability-scan`, `pre-commit`, `frontend-build`, `backend-typecheck`, `backend-tests`.
+- Select these checks (listed by their display names): `Vulnerability Scan`, `Pre-commit Checks`, `Frontend Build`, `Backend Type Check`, `Backend Unit Tests`.
 - Enable "Require branches to be up to date before merging."

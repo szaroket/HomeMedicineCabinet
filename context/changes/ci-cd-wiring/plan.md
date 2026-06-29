@@ -37,7 +37,7 @@ Finalize the F04 CI/CD feature. Two draft artifacts already exist on this branch
 - `pyright` already a dep (`backend/pyproject.toml:18,27`); a recent commit fixed type issues but nothing gates regressions.
 - Existing CI uses `astral-sh/setup-uv@v4`, `actions/setup-python@v5`, `actions/setup-node@v4` (node 22), `uv sync --all-groups`, and `pre-commit/action@v3.0.1` — reuse these exact versions/patterns for consistency.
   - **Addendum (2026-06-29, Phase 2)**: superseded — actions were deliberately bumped to current majors (`checkout@v7`, `setup-python@v6`, `setup-node@v6`; `setup-uv` SHA-pinned) in commit `16757c5`. Verified green on Actions runs `28390866751`/`28391109360`.
-- `render.yaml` env vars are all `sync:false` (must be set in Render dashboard): `FRONTEND_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL` (backend) and `VITE_API_URL` (frontend).
+- `render.yaml` env vars are all `sync:false` (must be set in Render dashboard): `FRONTEND_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `DATABASE_URL` (backend) and `VITE_API_URL` (frontend).
 
 ## What We're NOT Doing
 
@@ -224,7 +224,7 @@ Correct the health-check path and document the deploy prerequisites so a first R
 
 **Intent**: Record what must be configured outside the repo for CI/CD to function, so the wiring is reproducible.
 
-**Contract**: Document (a) GitHub secrets `RENDER_DEPLOY_HOOK_BACKEND` / `RENDER_DEPLOY_HOOK_FRONTEND` and where to obtain them in Render; (b) the `sync:false` Render env vars per service — backend: `FRONTEND_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`; frontend: `VITE_API_URL`; (c) the **release procedure** (deploy trigger): merge the change to `main` → create a new tag at `main` HEAD → publish a GitHub Release (with release notes) from that tag. Include the operating assumption that makes this safe: the Render Deploy Hook is fire-and-forget and deploys the **tracked branch's HEAD** (Render tracks `main`), carrying no commit/tag reference — so releases **must** be cut from the tip of `main` immediately after merge, so the deployed artifact matches the released commit; (d) a note to enable required status checks in GitHub branch protection for `main`/`develop`. All prose in English (docs), app UI text rule does not apply to internal docs.
+**Contract**: Document (a) GitHub secrets `RENDER_DEPLOY_HOOK_BACKEND` / `RENDER_DEPLOY_HOOK_FRONTEND` and where to obtain them in Render; (b) the `sync:false` Render env vars per service — backend: `FRONTEND_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `DATABASE_URL`; frontend: `VITE_API_URL`; (c) the **release procedure** (deploy trigger): merge the change to `main` → create a new tag at `main` HEAD → publish a GitHub Release (with release notes) from that tag. Include the operating assumption that makes this safe: the Render Deploy Hook is fire-and-forget and deploys the **tracked branch's HEAD** (Render tracks `main`), carrying no commit/tag reference — so releases **must** be cut from the tip of `main` immediately after merge, so the deployed artifact matches the released commit; (d) a note to enable required status checks in GitHub branch protection for `main`/`develop`. All prose in English (docs), app UI text rule does not apply to internal docs.
 
 ### Success Criteria:
 
@@ -269,6 +269,7 @@ Correct the health-check path and document the deploy prerequisites so a first R
 
 - The draft `ci.yml` and `render.yaml` are currently untracked; this change is their first commit. No existing pipeline to migrate from.
 - Branch protection / required status checks are a one-time GitHub UI step documented in Phase 4, not automated here.
+- `backend/pyproject.toml` `requires-python` was tightened `>=3.12` → `>=3.13` to align with `[tool.pyright] pythonVersion = "3.13"` and CI's Python 3.13. Render's Python runtime is pinned to match via `PYTHON_VERSION: "3.13"` in `render.yaml`, so `uv sync --frozen` builds against the same interpreter.
 
 ## References
 
