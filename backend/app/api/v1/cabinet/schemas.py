@@ -15,9 +15,9 @@ class UsageFields(BaseModel):
     """Usage/dosage fields shared by the POST and PATCH write paths."""
 
     is_used: bool = False
-    dosage_times: int | None = Field(None, ge=1, le=24)
+    dosage_times: int | None = Field(default=None, ge=1, le=24)
     dosage_period: DosagePeriod | None = None
-    dosage_amount: int | None = Field(None, ge=1, le=100)
+    dosage_amount: int | None = Field(default=None, ge=1, le=100)
     dosage_start_date: date | None = None
     dosage_end_date: date | None = None
 
