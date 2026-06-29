@@ -59,8 +59,8 @@ Because the Render Deploy Hook is fire-and-forget and deploys the **tracked bran
 2. Create a new version tag at `main` HEAD:
    ```bash
    git fetch origin main
-   git tag v<major>.<minor>.<patch> origin/main
-   git push origin v<major>.<minor>.<patch>
+   git tag <major>.<minor>.<patch> origin/main
+   git push origin <major>.<minor>.<patch>
    ```
 3. Go to **GitHub → Releases → Draft a new release**.
 4. Select the tag you just pushed.
