@@ -10,25 +10,38 @@ from pytest_mock import MockerFixture
 from sqlalchemy.exc import IntegrityError
 
 from app.api.v1.cabinet.models import CabinetEntry
-from app.api.v1.cabinet.schemas import AddEntryResult, CabinetPageOut
+from app.api.v1.cabinet.schemas import (
+    AddEntryResult,
+    CabinetPageOut,
+    UsageFields,
+)
 from app.api.v1.cabinet.service import (
     Status,
     TabletPool,
+    UsageView,
     add_entry,
     classify_status,
+    compute_usage_view,
+    daily_consumption_rate,
+    days_of_supply_from_rate,
     is_below_minimum,
     list_entries,
     merge_non_tablet_entry,
     merge_tablet_entry,
     normalize_tablet_pool,
+    set_entry_usage,
     total_tablets,
+    validate_usage,
 )
 from app.api.v1.medicines.models import MedicationRegistry
 from app.utilities.errors import (
     CabinetInvariantError,
+    EntryNotFoundError,
+    InvalidDosageError,
     InvalidPartialTabletCountError,
     MedicationNotFoundError,
 )
+from app.utilities.types import DosagePeriod
 
 # ---------------------------------------------------------------------------
 # total_tablets
@@ -277,6 +290,12 @@ def _make_entry(
     package_count: int = 1,
     partial: int | None = None,
     is_important: bool = False,
+    is_used: bool = False,
+    dosage_times: int | None = None,
+    dosage_period: str | None = None,
+    dosage_amount: int | None = None,
+    dosage_start_date: date | None = None,
+    dosage_end_date: date | None = None,
 ) -> MagicMock:
     entry = MagicMock(spec=CabinetEntry)
     entry.id = uuid4()
@@ -286,6 +305,12 @@ def _make_entry(
     entry.partial_tablet_count = partial
     entry.expiry_date = _EXPIRY
     entry.is_important = is_important
+    entry.is_used = is_used
+    entry.dosage_times = dosage_times
+    entry.dosage_period = dosage_period
+    entry.dosage_amount = dosage_amount
+    entry.dosage_start_date = dosage_start_date
+    entry.dosage_end_date = dosage_end_date
     return entry
 
 
@@ -414,6 +439,7 @@ class TestAddEntryMerge:
 
         assert result.merged is True
         assert result.entry.package_count == 5
+        assert result.merge_summary is not None
         assert result.merge_summary.previous_package_count == 3
 
     @pytest.mark.parametrize(
@@ -854,3 +880,648 @@ class TestListEntries:
 
         assert result.items[0].is_important is True
         assert result.items[0].below_minimum is False
+
+
+# ---------------------------------------------------------------------------
+# validate_usage
+# ---------------------------------------------------------------------------
+
+_TODAY = date(2026, 6, 25)
+
+
+class TestValidateUsageNotUsed:
+    def test_is_used_false_all_none_returns_cleared_resolved_usage(self):
+        result = validate_usage(
+            is_tablet_based=True,
+            is_used=False,
+            dosage_times=None,
+            dosage_period=None,
+            dosage_amount=None,
+            dosage_start_date=None,
+            dosage_end_date=None,
+            today=_TODAY,
+        )
+        assert result.is_used is False
+        assert result.dosage_times is None
+        assert result.dosage_period is None
+        assert result.dosage_amount is None
+        assert result.dosage_start_date is None
+        assert result.dosage_end_date is None
+
+    @pytest.mark.parametrize(
+        "extra_kwargs",
+        [
+            {"dosage_times": 2},
+            {"dosage_period": DosagePeriod.day},
+            {"dosage_amount": 1},
+            {"dosage_start_date": _TODAY},
+            {"dosage_end_date": _TODAY},
+        ],
+        ids=["times", "period", "amount", "start", "end"],
+    )
+    def test_is_used_false_with_any_field_raises(self, extra_kwargs):
+        with pytest.raises(InvalidDosageError):
+            validate_usage(
+                is_tablet_based=True,
+                is_used=False,
+                dosage_times=extra_kwargs.get("dosage_times"),
+                dosage_period=extra_kwargs.get("dosage_period"),
+                dosage_amount=extra_kwargs.get("dosage_amount"),
+                dosage_start_date=extra_kwargs.get("dosage_start_date"),
+                dosage_end_date=extra_kwargs.get("dosage_end_date"),
+                today=_TODAY,
+            )
+
+
+class TestValidateUsageTablet:
+    def test_valid_tablet_usage_returns_resolved_usage(self):
+        result = validate_usage(
+            is_tablet_based=True,
+            is_used=True,
+            dosage_times=3,
+            dosage_period=DosagePeriod.day,
+            dosage_amount=2,
+            dosage_start_date=None,
+            dosage_end_date=None,
+            today=_TODAY,
+        )
+        assert result.is_used is True
+        assert result.dosage_times == 3
+        assert result.dosage_period == DosagePeriod.day
+        assert result.dosage_amount == 2
+        assert result.dosage_start_date == _TODAY  # defaulted to today
+        assert result.dosage_end_date is None
+
+    def test_explicit_start_date_is_preserved(self):
+        start = date(2026, 7, 1)
+        result = validate_usage(
+            is_tablet_based=True,
+            is_used=True,
+            dosage_times=1,
+            dosage_period=DosagePeriod.week,
+            dosage_amount=1,
+            dosage_start_date=start,
+            dosage_end_date=None,
+            today=_TODAY,
+        )
+        assert result.dosage_start_date == start
+
+    def test_end_date_after_start_is_accepted(self):
+        result = validate_usage(
+            is_tablet_based=True,
+            is_used=True,
+            dosage_times=2,
+            dosage_period=DosagePeriod.day,
+            dosage_amount=1,
+            dosage_start_date=_TODAY,
+            dosage_end_date=_TODAY + timedelta(days=30),
+            today=_TODAY,
+        )
+        assert result.dosage_end_date == _TODAY + timedelta(days=30)
+
+    @pytest.mark.parametrize(
+        ("dosage_times", "dosage_period", "dosage_amount"),
+        [
+            (None, DosagePeriod.day, 1),
+            (2, None, 1),
+            (2, DosagePeriod.day, None),
+        ],
+        ids=["missing_times", "missing_period", "missing_amount"],
+    )
+    def test_tablet_missing_dosage_field_raises(
+        self, dosage_times, dosage_period, dosage_amount
+    ):
+        with pytest.raises(InvalidDosageError):
+            validate_usage(
+                is_tablet_based=True,
+                is_used=True,
+                dosage_times=dosage_times,
+                dosage_period=dosage_period,
+                dosage_amount=dosage_amount,
+                dosage_start_date=None,
+                dosage_end_date=None,
+                today=_TODAY,
+            )
+
+    def test_tablet_end_before_start_raises(self):
+        with pytest.raises(InvalidDosageError):
+            validate_usage(
+                is_tablet_based=True,
+                is_used=True,
+                dosage_times=2,
+                dosage_period=DosagePeriod.day,
+                dosage_amount=1,
+                dosage_start_date=_TODAY,
+                dosage_end_date=_TODAY - timedelta(days=1),
+                today=_TODAY,
+            )
+
+
+class TestValidateUsageNonTablet:
+    def test_non_tablet_with_dates_only_accepted(self):
+        result = validate_usage(
+            is_tablet_based=False,
+            is_used=True,
+            dosage_times=None,
+            dosage_period=None,
+            dosage_amount=None,
+            dosage_start_date=_TODAY,
+            dosage_end_date=_TODAY + timedelta(days=10),
+            today=_TODAY,
+        )
+        assert result.is_used is True
+        assert result.dosage_times is None
+        assert result.dosage_period is None
+        assert result.dosage_amount is None
+        assert result.dosage_start_date == _TODAY
+        assert result.dosage_end_date == _TODAY + timedelta(days=10)
+
+    @pytest.mark.parametrize(
+        "extra_kwargs",
+        [
+            {"dosage_times": 2},
+            {"dosage_period": DosagePeriod.day},
+            {"dosage_amount": 1},
+        ],
+        ids=["times", "period", "amount"],
+    )
+    def test_non_tablet_with_dosage_field_raises(self, extra_kwargs):
+        with pytest.raises(InvalidDosageError):
+            validate_usage(
+                is_tablet_based=False,
+                is_used=True,
+                dosage_times=extra_kwargs.get("dosage_times"),
+                dosage_period=extra_kwargs.get("dosage_period"),
+                dosage_amount=extra_kwargs.get("dosage_amount"),
+                dosage_start_date=None,
+                dosage_end_date=None,
+                today=_TODAY,
+            )
+
+    def test_non_tablet_end_before_start_raises(self):
+        with pytest.raises(InvalidDosageError):
+            validate_usage(
+                is_tablet_based=False,
+                is_used=True,
+                dosage_times=None,
+                dosage_period=None,
+                dosage_amount=None,
+                dosage_start_date=_TODAY,
+                dosage_end_date=_TODAY - timedelta(days=1),
+                today=_TODAY,
+            )
+
+
+# ---------------------------------------------------------------------------
+# add_entry with usage
+# ---------------------------------------------------------------------------
+
+
+class TestAddEntryWithUsage:
+    async def test_usage_passed_to_insert_entry(
+        self, mock_session: AsyncMock, mock_crud
+    ):
+        variant = _make_variant()
+        entry = _make_entry(
+            package_count=1,
+            is_used=True,
+            dosage_times=3,
+            dosage_period="day",
+            dosage_amount=2,
+            dosage_start_date=_TODAY,
+        )
+        mock_crud.get_registry_by_id = AsyncMock(return_value=variant)
+        mock_crud.find_entry = AsyncMock(return_value=None)
+        mock_crud.insert_entry = AsyncMock(return_value=entry)
+
+        result = await add_entry(
+            session=mock_session,
+            user_id=_USER_ID,
+            medication_registry_id=_REGISTRY_ID,
+            package_count=1,
+            partial_tablet_count=None,
+            expiry_date=_EXPIRY,
+            usage=UsageFields(
+                is_used=True,
+                dosage_times=3,
+                dosage_period=DosagePeriod.day,
+                dosage_amount=2,
+            ),
+        )
+
+        assert result.merged is False
+        assert result.entry.is_used is True
+        assert result.entry.dosage_times == 3
+        assert result.entry.dosage_amount == 2
+        call_kwargs = mock_crud.insert_entry.call_args.kwargs
+        assert call_kwargs["resolved_usage"] is not None
+        assert call_kwargs["resolved_usage"].is_used is True
+
+    async def test_restock_without_usage_preserves_existing_schedule(
+        self, mock_session: AsyncMock, mock_crud
+    ):
+        variant = _make_variant()
+        existing = _make_entry(
+            package_count=1,
+            is_used=True,
+            dosage_times=2,
+            dosage_period="day",
+            dosage_amount=1,
+            dosage_start_date=_TODAY,
+        )
+        updated = _make_entry(
+            package_count=2,
+            is_used=True,
+            dosage_times=2,
+            dosage_period="day",
+            dosage_amount=1,
+            dosage_start_date=_TODAY,
+        )
+        mock_crud.get_registry_by_id = AsyncMock(return_value=variant)
+        mock_crud.find_entry = AsyncMock(return_value=existing)
+        mock_crud.update_entry_counts = AsyncMock(return_value=updated)
+
+        result = await add_entry(
+            session=mock_session,
+            user_id=_USER_ID,
+            medication_registry_id=_REGISTRY_ID,
+            package_count=1,
+            partial_tablet_count=None,
+            expiry_date=_EXPIRY,
+            usage=None,  # restock — no usage block
+        )
+
+        assert result.merged is True
+        # update_entry_usage should NOT be called (no usage block provided)
+        mock_crud.update_entry_usage.assert_not_called()
+
+    async def test_merge_with_usage_persists_usage_atomically(
+        self, mock_session: AsyncMock, mock_crud
+    ):
+        variant = _make_variant()
+        existing = _make_entry(package_count=1)
+        updated = _make_entry(
+            package_count=2,
+            is_used=True,
+            dosage_times=1,
+            dosage_period="day",
+            dosage_amount=1,
+            dosage_start_date=_TODAY,
+        )
+        mock_crud.get_registry_by_id = AsyncMock(return_value=variant)
+        mock_crud.find_entry = AsyncMock(return_value=existing)
+        mock_crud.update_entry_counts = AsyncMock(return_value=updated)
+
+        await add_entry(
+            session=mock_session,
+            user_id=_USER_ID,
+            medication_registry_id=_REGISTRY_ID,
+            package_count=1,
+            partial_tablet_count=None,
+            expiry_date=_EXPIRY,
+            usage=UsageFields(
+                is_used=True,
+                dosage_times=1,
+                dosage_period=DosagePeriod.day,
+                dosage_amount=1,
+            ),
+        )
+
+        # Usage is folded into the single update_entry_counts transaction, not a
+        # separate update_entry_usage commit, so the merge stays atomic (impl review F1).
+        mock_crud.update_entry_usage.assert_not_called()
+        mock_crud.update_entry_counts.assert_called_once()
+        call_kwargs = mock_crud.update_entry_counts.call_args.kwargs
+        assert call_kwargs["resolved_usage"].is_used is True
+
+    async def test_invalid_dosage_raises_invalid_dosage_error(
+        self, mock_session: AsyncMock, mock_crud
+    ):
+        variant = _make_variant()
+        mock_crud.get_registry_by_id = AsyncMock(return_value=variant)
+
+        with pytest.raises(InvalidDosageError):
+            await add_entry(
+                session=mock_session,
+                user_id=_USER_ID,
+                medication_registry_id=_REGISTRY_ID,
+                package_count=1,
+                partial_tablet_count=None,
+                expiry_date=_EXPIRY,
+                usage=UsageFields(
+                    is_used=True,
+                    # missing dosage_times / dosage_period / dosage_amount for tablet
+                ),
+            )
+
+
+# ---------------------------------------------------------------------------
+# daily_consumption_rate
+# ---------------------------------------------------------------------------
+
+
+class TestDailyConsumptionRate:
+    @pytest.mark.parametrize(
+        ("dosage_times", "dosage_amount", "dosage_period", "expected"),
+        [
+            (1, 1, DosagePeriod.day, 1.0),
+            (3, 2, DosagePeriod.day, 6.0),
+            (2, 3, DosagePeriod.week, 6 / 7),
+            (1, 7, DosagePeriod.week, 1.0),
+        ],
+    )
+    def test_daily_consumption_rate(
+        self, dosage_times, dosage_amount, dosage_period, expected
+    ):
+        result = daily_consumption_rate(
+            dosage_times=dosage_times,
+            dosage_amount=dosage_amount,
+            dosage_period=dosage_period,
+        )
+        assert abs(result - expected) < 1e-9
+
+
+# ---------------------------------------------------------------------------
+# days_of_supply_from_rate
+# ---------------------------------------------------------------------------
+
+
+class TestDaysOfSupplyFromRate:
+    @pytest.mark.parametrize(
+        ("total_tablets_count", "daily_rate", "expected"),
+        [
+            (10, 3.0, 3),  # floor: 10/3 = 3.33 → 3
+            (20, 2.0, 10),
+            (7, 1.0, 7),
+            (0, 2.0, 0),
+            (10, 0.0, None),  # zero rate guard
+            (10, -1.0, None),  # negative rate guard
+        ],
+    )
+    def test_days_of_supply_from_rate(self, total_tablets_count, daily_rate, expected):
+        result = days_of_supply_from_rate(
+            total_tablets_count=total_tablets_count,
+            daily_rate=daily_rate,
+        )
+        assert result == expected
+
+
+# ---------------------------------------------------------------------------
+# compute_usage_view
+# ---------------------------------------------------------------------------
+
+
+def _make_used_entry(
+    package_count: int = 2,
+    partial_tablet_count: int | None = None,
+    is_used: bool = True,
+    dosage_times: int | None = 3,
+    dosage_amount: int | None = 2,
+    dosage_period: str | None = DosagePeriod.day,
+    dosage_start_date: date | None = None,
+    dosage_end_date: date | None = None,
+) -> CabinetEntry:
+    entry = CabinetEntry(
+        id=_ENTRY_ID,
+        user_id=_USER_ID,
+        medication_registry_id=_REGISTRY_ID,
+        package_count=package_count,
+        partial_tablet_count=partial_tablet_count,
+        expiry_date=_EXPIRY,
+    )
+    entry.is_used = is_used
+    entry.dosage_times = dosage_times
+    entry.dosage_amount = dosage_amount
+    entry.dosage_period = dosage_period
+    entry.dosage_start_date = dosage_start_date
+    entry.dosage_end_date = dosage_end_date
+    return entry
+
+
+_TODAY = date(2026, 6, 26)
+
+
+class TestComputeUsageView:
+    def test_not_used_returns_all_none(self):
+        entry = _make_used_entry(
+            is_used=False, dosage_times=None, dosage_amount=None, dosage_period=None
+        )
+        result = compute_usage_view(entry=entry, tablets_per_package=20, today=_TODAY)
+        assert result == UsageView(
+            days_of_supply=None, days_until_end=None, is_sufficient=None
+        )
+
+    def test_no_tablets_per_package_returns_all_none(self):
+        entry = _make_used_entry()
+        result = compute_usage_view(entry=entry, tablets_per_package=None, today=_TODAY)
+        assert result == UsageView(
+            days_of_supply=None, days_until_end=None, is_sufficient=None
+        )
+
+    def test_non_tablet_used_entry_returns_all_none(self):
+        entry = _make_used_entry(
+            dosage_times=None, dosage_amount=None, dosage_period=None
+        )
+        result = compute_usage_view(entry=entry, tablets_per_package=None, today=_TODAY)
+        assert result == UsageView(
+            days_of_supply=None, days_until_end=None, is_sufficient=None
+        )
+
+    def test_per_day_no_end_date(self):
+        # 2 packages × 20 tpp = 40 tablets; rate = 3×2/day = 6; supply = floor(40/6) = 6
+        entry = _make_used_entry(
+            package_count=2,
+            dosage_times=3,
+            dosage_amount=2,
+            dosage_period=DosagePeriod.day,
+        )
+        result = compute_usage_view(entry=entry, tablets_per_package=20, today=_TODAY)
+        assert result.days_of_supply == 6
+        assert result.days_until_end is None
+        assert result.is_sufficient is None
+
+    def test_per_week_rate(self):
+        # 1 package × 14 tpp = 14 tablets; rate = 2×1/week = 2/7; supply = floor(14/(2/7)) = floor(49) = 49
+        entry = _make_used_entry(
+            package_count=1,
+            dosage_times=2,
+            dosage_amount=1,
+            dosage_period=DosagePeriod.week,
+        )
+        result = compute_usage_view(entry=entry, tablets_per_package=14, today=_TODAY)
+        assert result.days_of_supply == 49
+        assert result.days_until_end is None
+
+    def test_partial_package_included(self):
+        # 2 packages, 5 partial → (2-1)*20+5 = 25 tablets; rate=3*2/day=6; supply=floor(25/6)=4
+        entry = _make_used_entry(
+            package_count=2,
+            partial_tablet_count=5,
+            dosage_times=3,
+            dosage_amount=2,
+            dosage_period=DosagePeriod.day,
+        )
+        result = compute_usage_view(entry=entry, tablets_per_package=20, today=_TODAY)
+        assert result.days_of_supply == 4
+
+    def test_floor_boundary(self):
+        # 10 tablets / 3 per day = 3.33 → floor = 3
+        entry = _make_used_entry(
+            package_count=1,
+            dosage_times=3,
+            dosage_amount=1,
+            dosage_period=DosagePeriod.day,
+        )
+        result = compute_usage_view(entry=entry, tablets_per_package=10, today=_TODAY)
+        assert result.days_of_supply == 3
+
+    def test_sufficient_with_future_end_date(self):
+        # 40 tablets / 2 per day = 20 days supply; end in 10 days → sufficient
+        end = _TODAY + timedelta(days=10)
+        entry = _make_used_entry(
+            package_count=2,
+            dosage_times=2,
+            dosage_amount=1,
+            dosage_period=DosagePeriod.day,
+            dosage_end_date=end,
+        )
+        result = compute_usage_view(entry=entry, tablets_per_package=20, today=_TODAY)
+        assert result.days_of_supply == 20
+        assert result.days_until_end == 10
+        assert result.is_sufficient is True
+
+    def test_short_with_future_end_date(self):
+        # 6 tablets / 2 per day = 3 days supply; end in 10 days → short
+        end = _TODAY + timedelta(days=10)
+        entry = _make_used_entry(
+            package_count=1,
+            dosage_times=2,
+            dosage_amount=1,
+            dosage_period=DosagePeriod.day,
+            dosage_end_date=end,
+        )
+        result = compute_usage_view(entry=entry, tablets_per_package=6, today=_TODAY)
+        assert result.days_of_supply == 3
+        assert result.days_until_end == 10
+        assert result.is_sufficient is False
+
+    def test_end_date_in_past(self):
+        past = _TODAY - timedelta(days=3)
+        entry = _make_used_entry(
+            package_count=2,
+            dosage_times=1,
+            dosage_amount=1,
+            dosage_period=DosagePeriod.day,
+            dosage_end_date=past,
+        )
+        result = compute_usage_view(entry=entry, tablets_per_package=20, today=_TODAY)
+        assert result.days_until_end == -3
+        # Window already closed (days_until_end <= 0): no sufficiency verdict.
+        assert result.is_sufficient is None
+
+
+# ---------------------------------------------------------------------------
+# set_entry_usage
+# ---------------------------------------------------------------------------
+
+
+class TestSetEntryUsage:
+    async def test_sets_usage_on_existing_entry(
+        self, mock_session: AsyncMock, mock_crud
+    ):
+        variant = _make_variant()
+        entry = _make_entry(package_count=2)
+        updated = _make_entry(
+            package_count=2,
+            is_used=True,
+            dosage_times=3,
+            dosage_period="day",
+            dosage_amount=2,
+            dosage_start_date=_TODAY,
+        )
+        mock_crud.find_entry_by_id = AsyncMock(return_value=entry)
+        mock_crud.get_registry_by_id = AsyncMock(return_value=variant)
+        mock_crud.update_entry_usage = AsyncMock(return_value=updated)
+
+        result = await set_entry_usage(
+            session=mock_session,
+            user_id=_USER_ID,
+            entry_id=_ENTRY_ID,
+            usage=UsageFields(
+                is_used=True,
+                dosage_times=3,
+                dosage_period=DosagePeriod.day,
+                dosage_amount=2,
+            ),
+            expiry_threshold_days=30,
+        )
+
+        assert result.is_used is True
+        assert result.dosage_times == 3
+        assert result.dosage_amount == 2
+        mock_crud.update_entry_usage.assert_called_once()
+
+    async def test_unassign_clears_dosage_columns(
+        self, mock_session: AsyncMock, mock_crud
+    ):
+        variant = _make_variant()
+        entry = _make_entry(
+            package_count=1,
+            is_used=True,
+            dosage_times=2,
+            dosage_period="day",
+            dosage_amount=1,
+            dosage_start_date=_TODAY,
+        )
+        cleared = _make_entry(package_count=1, is_used=False)
+        mock_crud.find_entry_by_id = AsyncMock(return_value=entry)
+        mock_crud.get_registry_by_id = AsyncMock(return_value=variant)
+        mock_crud.update_entry_usage = AsyncMock(return_value=cleared)
+
+        result = await set_entry_usage(
+            session=mock_session,
+            user_id=_USER_ID,
+            entry_id=_ENTRY_ID,
+            usage=UsageFields(is_used=False),
+            expiry_threshold_days=30,
+        )
+
+        assert result.is_used is False
+        call_kwargs = mock_crud.update_entry_usage.call_args.kwargs
+        assert call_kwargs["resolved_usage"].is_used is False
+        assert call_kwargs["resolved_usage"].dosage_times is None
+        assert call_kwargs["resolved_usage"].dosage_amount is None
+
+    async def test_entry_not_found_raises_entry_not_found_error(
+        self, mock_session: AsyncMock, mock_crud
+    ):
+        mock_crud.find_entry_by_id = AsyncMock(return_value=None)
+
+        with pytest.raises(EntryNotFoundError):
+            await set_entry_usage(
+                session=mock_session,
+                user_id=_USER_ID,
+                entry_id=_ENTRY_ID,
+                usage=UsageFields(is_used=False),
+                expiry_threshold_days=30,
+            )
+
+    async def test_invalid_dosage_raises_invalid_dosage_error(
+        self, mock_session: AsyncMock, mock_crud
+    ):
+        variant = _make_variant()
+        entry = _make_entry()
+        mock_crud.find_entry_by_id = AsyncMock(return_value=entry)
+        mock_crud.get_registry_by_id = AsyncMock(return_value=variant)
+
+        with pytest.raises(InvalidDosageError):
+            await set_entry_usage(
+                session=mock_session,
+                user_id=_USER_ID,
+                entry_id=_ENTRY_ID,
+                usage=UsageFields(
+                    is_used=True,
+                    # missing dosage_times/period/amount for tablet variant
+                ),
+                expiry_threshold_days=30,
+            )

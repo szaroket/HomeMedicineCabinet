@@ -6,6 +6,7 @@ import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt import PyJWKClient
+from jwt.algorithms import AllowedPublicKeys
 
 from app.api.v1.auth.types import CurrentUser
 from app.core.config import settings
@@ -14,14 +15,14 @@ _jwks = PyJWKClient(settings.jwks_url)
 _bearer = HTTPBearer()
 
 
-def _get_signing_key(token: str) -> object:
+def _get_signing_key(token: str) -> AllowedPublicKeys:
     """Resolve the RSA/EC signing key for the given JWT from the JWKS endpoint.
 
     Args:
         token (str): The raw JWT string.
 
     Returns:
-        object: The public signing key object.
+        AllowedPublicKeys: The public signing key object.
 
     Raises:
         HTTPException: 503 if the JWKS endpoint is unreachable; 401 if the key
@@ -41,12 +42,12 @@ def _get_signing_key(token: str) -> object:
         ) from e
 
 
-def _decode_jwt(token: str, key: object) -> dict:
+def _decode_jwt(token: str, key: AllowedPublicKeys) -> dict:
     """Decode and validate a JWT against the project's issuer/audience settings.
 
     Args:
         token (str): The raw JWT string.
-        key (object): The signing key returned by `_get_signing_key`.
+        key (AllowedPublicKeys): The signing key returned by `_get_signing_key`.
 
     Returns:
         dict: The verified claims payload as a dictionary.

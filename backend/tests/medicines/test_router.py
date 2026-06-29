@@ -83,6 +83,7 @@ class TestSearchProductsEndpoint:
         await authed_client.get(self.PRODUCTS_URL, params={"search": "apap"})
 
         # service called as search_products(session, query, limit)
+        assert mock_search.await_args is not None
         assert mock_search.await_args.args[1] == "apap"
         assert mock_search.await_args.args[2] == 20
 
@@ -209,6 +210,7 @@ class TestListVariantsEndpoint:
         await authed_client.get(self.VARIANTS_URL, params={"name": "Apap"})
 
         # strength and form should be None when not supplied
+        assert mock_svc.await_args is not None
         assert mock_svc.await_args.args[2] is None  # strength
         assert mock_svc.await_args.args[3] is None  # form
 

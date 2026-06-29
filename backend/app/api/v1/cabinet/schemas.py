@@ -8,13 +8,25 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.utilities.types import NonEmptyStr
+from app.utilities.types import DosagePeriod, NonEmptyStr
+
+
+class UsageFields(BaseModel):
+    """Usage/dosage fields shared by the POST and PATCH write paths."""
+
+    is_used: bool = False
+    dosage_times: int | None = Field(default=None, ge=1, le=24)
+    dosage_period: DosagePeriod | None = None
+    dosage_amount: int | None = Field(default=None, ge=1, le=100)
+    dosage_start_date: date | None = None
+    dosage_end_date: date | None = None
 
 
 class CabinetCategory(StrEnum):
     """Cabinet entry category filter values."""
 
     important = "important"
+    used = "used"
 
 
 class CabinetStatus(StrEnum):
@@ -32,6 +44,13 @@ class CabinetOrder(StrEnum):
     desc = "desc"
 
 
+class SufficiencyFilter(StrEnum):
+    """Sufficiency filter values for cabinet entry list."""
+
+    insufficient = "insufficient"
+    sufficient = "sufficient"
+
+
 class CabinetListParams(BaseModel):
     """Query parameters for GET /cabinet/entries."""
 
@@ -40,6 +59,7 @@ class CabinetListParams(BaseModel):
     status: CabinetStatus | None = None
     category: CabinetCategory | None = None
     below_minimum: bool | None = None
+    sufficiency: SufficiencyFilter | None = None
     search: NonEmptyStr | None = None
     order: CabinetOrder = CabinetOrder.asc
     page: int = Field(1, ge=1)
@@ -72,6 +92,7 @@ class AddEntryRequest(BaseModel):
     expiry_date: date
     partial_tablet_count: int | None = None
     is_important: bool = False
+    usage: UsageFields | None = None
 
     @field_validator("package_count")
     @classmethod
@@ -129,6 +150,12 @@ class AddEntryOut(BaseModel):
     expiry_date: date
     total_tablets: int | None
     is_important: bool
+    is_used: bool = False
+    dosage_times: int | None = None
+    dosage_period: DosagePeriod | None = None
+    dosage_amount: int | None = None
+    dosage_start_date: date | None = None
+    dosage_end_date: date | None = None
 
 
 class CabinetEntryOut(BaseModel):
@@ -152,6 +179,15 @@ class CabinetEntryOut(BaseModel):
     route_of_administration: str | None
     leaflet_url: str | None
     specification_url: str | None
+    is_used: bool = False
+    dosage_times: int | None = None
+    dosage_period: DosagePeriod | None = None
+    dosage_amount: int | None = None
+    dosage_start_date: date | None = None
+    dosage_end_date: date | None = None
+    days_of_supply: int | None = None
+    days_until_end: int | None = None
+    is_sufficient: bool | None = None
 
 
 class SetImportantRequest(BaseModel):

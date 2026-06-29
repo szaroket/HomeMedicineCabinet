@@ -8,6 +8,7 @@ import {
   StarIcon,
   ChevronIcon,
 } from "@/features/cabinet/components/entry-icons";
+import { UsageEditForm } from "@/features/cabinet/components/usage-edit-form";
 
 interface CabinetCardProps {
   entry: CabinetEntryOut;
@@ -18,17 +19,27 @@ export function CabinetCard({ entry }: CabinetCardProps) {
     expanded,
     toggleExpanded,
     toggleImportant,
+    showUsageEdit,
+    setShowUsageEdit,
     statusInfo,
+    sufficiencyInfo,
     belowMinimum,
     formattedExpiryDate,
+    usageView,
   } = useCabinetEntry(entry);
 
   return (
     <div
-      className={`rounded border border-slate-700 p-3 cursor-pointer ${
-        belowMinimum ? "bg-amber-950/40" : "bg-slate-800/30"
+      className={`rounded border border-slate-700 p-3 ${
+        showUsageEdit ? "" : "cursor-pointer"
+      } ${
+        belowMinimum
+          ? "bg-amber-950/40"
+          : entry.is_sufficient === false
+            ? "bg-red-950/40"
+            : "bg-slate-800/30"
       }`}
-      onClick={toggleExpanded}
+      onClick={showUsageEdit ? undefined : toggleExpanded}
     >
       <div className="flex items-center justify-between gap-2">
         <span className="inline-flex items-center gap-2 min-w-0">
@@ -68,6 +79,7 @@ export function CabinetCard({ entry }: CabinetCardProps) {
             {OUT_OF_STOCK_LABEL}
           </span>
         )}
+        {sufficiencyInfo && <StatusBadge status={sufficiencyInfo} />}
       </div>
 
       <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-300">
@@ -87,6 +99,71 @@ export function CabinetCard({ entry }: CabinetCardProps) {
 
       {expanded && (
         <dl className="mt-3 flex flex-wrap gap-x-8 gap-y-1 border-t border-slate-700 pt-3 text-sm">
+          <div className="w-full pb-2 border-b border-slate-700 mb-1">
+            {entry.is_used && (
+              <div className="flex flex-col gap-1">
+                {usageView.schedule && (
+                  <div className="flex gap-2">
+                    <dt className="text-slate-400">Dawkowanie:</dt>
+                    <dd className="text-white">{usageView.schedule}</dd>
+                  </div>
+                )}
+                {usageView.startDate && (
+                  <div className="flex gap-2">
+                    <dt className="text-slate-400">Od:</dt>
+                    <dd className="text-white">{usageView.startDate}</dd>
+                  </div>
+                )}
+                {usageView.endDate && (
+                  <div className="flex gap-2">
+                    <dt className="text-slate-400">Do:</dt>
+                    <dd className="text-white">{usageView.endDate}</dd>
+                  </div>
+                )}
+                {usageView.finishDate != null && (
+                  <div className="flex gap-2">
+                    <dt className="text-slate-400">Szacowany koniec:</dt>
+                    <dd className="text-white">
+                      {usageView.finishDate}
+                      <span className="ml-1 text-xs text-slate-500">
+                        (na podstawie bieżącego stanu)
+                      </span>
+                    </dd>
+                  </div>
+                )}
+                {usageView.daysOfSupply != null &&
+                  usageView.daysUntilEnd != null && (
+                    <div className="flex gap-2">
+                      <dt className="text-slate-400">Zapas / dni do końca:</dt>
+                      <dd className="text-white">
+                        {usageView.daysOfSupply} dni / {usageView.daysUntilEnd}{" "}
+                        dni
+                      </dd>
+                    </div>
+                  )}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={(ev) => {
+                ev.stopPropagation();
+                setShowUsageEdit((prev) => !prev);
+              }}
+              className="mt-2 text-xs text-blue-400 hover:text-blue-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+            >
+              {showUsageEdit
+                ? "Ukryj formularz"
+                : entry.is_used
+                  ? "Zmień dawkowanie"
+                  : "Ustaw dawkowanie"}
+            </button>
+            {showUsageEdit && (
+              <UsageEditForm
+                entry={entry}
+                onClose={() => setShowUsageEdit(false)}
+              />
+            )}
+          </div>
           <div className="flex gap-2">
             <dt className="text-slate-400">Dawka:</dt>
             <dd className="text-white">{entry.strength ?? "—"}</dd>

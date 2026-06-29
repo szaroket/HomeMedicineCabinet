@@ -37,13 +37,12 @@ async def register(
     result = supabase_auth.sign_up(data.email, data.password)
 
     if result.user is None:
-        logger.warning("sign_up returned no user for %s — duplicate email", data.email)
+        logger.warning("sign_up returned no user — duplicate email")
         raise DuplicateEmailError()
 
     if result.session is None:
         logger.error(
-            "sign_up returned no session for %s — enable auto-confirm in Supabase Auth settings",
-            data.email,
+            "sign_up returned no session — enable auto-confirm in Supabase Auth settings",
         )
         raise RegistrationError()
 
@@ -77,7 +76,7 @@ async def login(session: AsyncSession, data: LoginRequest) -> tuple[AuthResponse
     result = supabase_auth.sign_in_with_password(data.email, data.password)
 
     if result.user is None or result.session is None:
-        logger.warning("sign_in returned no user/session for %s", data.email)
+        logger.warning("sign_in returned no user/session")
         raise InvalidCredentialsError()
 
     user_id = UUID(str(result.user.id))

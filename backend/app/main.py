@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -27,7 +28,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="Home Medicine Cabinet API", version="0.4.0", lifespan=lifespan)
+    app = FastAPI(title="Home Medicine Cabinet API", version="0.5.0", lifespan=lifespan)
 
     _frontend_url = os.getenv("FRONTEND_URL")
     _allowed_origins = (
@@ -48,14 +49,24 @@ def create_app() -> FastAPI:
     async def correlation_id_middleware(request: Request, call_next):
         cid = request.headers.get("X-Correlation-ID") or generate_correlation_id()
         token = correlation_id_var.set(cid)
-        logger.debug("→ %s %s", request.method, request.url.path)
-        response = await call_next(request)
-        response.headers["X-Correlation-ID"] = cid
-        logger.debug(
-            "← %s %s %d", request.method, request.url.path, response.status_code
-        )
-        correlation_id_var.reset(token)
-        return response
+        start = time.perf_counter()
+        response = None
+        try:
+            response = await call_next(request)
+            return response
+        finally:
+            duration_ms = round((time.perf_counter() - start) * 1000, 1)
+            status_code = response.status_code if response is not None else 500
+            if response is not None:
+                response.headers["X-Correlation-ID"] = cid
+            logger.info(
+                "%s %s %d %.1fms",
+                request.method,
+                request.url.path,
+                status_code,
+                duration_ms,
+            )
+            correlation_id_var.reset(token)
 
     app.include_router(v1_router)
 

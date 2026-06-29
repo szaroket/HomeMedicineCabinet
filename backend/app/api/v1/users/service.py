@@ -1,5 +1,6 @@
 """Users service: business logic and orchestration."""
 
+import logging
 import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +13,8 @@ from app.utilities.const import (
     DEFAULT_EXPIRY_THRESHOLD_DAYS,
     DEFAULT_MIN_PACKAGE_COUNT,
 )
+
+logger = logging.getLogger("app.users.service")
 
 
 async def get_user_preferences(
@@ -63,6 +66,11 @@ async def update_preferences(
             min_package_count=min_package_count,
         )
         prefs = await crud.insert_preferences(session=session, prefs=new_prefs)
+    logger.info(
+        "Updated preferences for user %s: min_package_count=%d",
+        user_id,
+        prefs.min_package_count,
+    )
     return UserPreferencesOut(
         expiry_threshold_days=prefs.expiry_threshold_days,
         close_to_finish_threshold_days=prefs.close_to_finish_threshold_days,

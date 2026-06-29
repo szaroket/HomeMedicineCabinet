@@ -1,11 +1,22 @@
 """Logging configuration: UTC timestamps, correlation IDs, structured format."""
 
+import json
 import logging
 import logging.config
+import re
+import sys
 import uuid
 from contextvars import ContextVar
 
+from app.core.config import settings
+
 correlation_id_var: ContextVar[str] = ContextVar("correlation_id", default="-")
+
+_EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
+_TOKEN = re.compile(r"(?i)(bearer\s+)[A-Za-z0-9._\-]+")
+# Bare JWT (no "Bearer " prefix): eyJ-anchored, three base64url segments.
+_JWT = re.compile(r"eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+")
+_PASSWORD = re.compile(r"(?i)(password['\"]?\s*[:=]\s*)\S+")
 
 
 class _CorrelationIdFilter(logging.Filter):
@@ -24,8 +35,94 @@ class _CorrelationIdFilter(logging.Filter):
         return True
 
 
-_FORMAT = (
-    "[%(asctime)s][%(correlation_id)s][%(levelname)-8s] "
+class _RedactionFilter(logging.Filter):
+    """Scrub PII and secrets from every emitted log record."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        """Render the full message and replace secrets with [REDACTED].
+
+        Args:
+            record (logging.LogRecord): The log record being emitted.
+
+        Returns:
+            bool: Always True — this filter never suppresses records.
+        """
+        message = record.getMessage()
+        message = _EMAIL.sub("[REDACTED]", message)
+        message = _TOKEN.sub(r"\1[REDACTED]", message)
+        message = _JWT.sub("[REDACTED]", message)
+        message = _PASSWORD.sub(r"\1[REDACTED]", message)
+        record.msg = message
+        record.args = None
+        return True
+
+
+_LEVEL_COLORS = {
+    "DEBUG": "\033[36m",
+    "INFO": "\033[32m",
+    "WARNING": "\033[33m",
+    "ERROR": "\033[31m",
+    "CRITICAL": "\033[1;31m",
+}
+_RESET = "\033[0m"
+
+
+class _ColoredConsoleFormatter(logging.Formatter):
+    """Console formatter that colorizes the log level name."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        """Apply ANSI color to levelname before delegating to standard format.
+
+        Colors a temporary value rather than permanently mutating the shared
+        LogRecord (which would double-wrap if a second handler formats it), and
+        only emits ANSI codes when stdout is a TTY so piped/captured output stays
+        clean. The visible level text is padded to width 8 before coloring so the
+        ANSI bytes do not break the ``%(levelname)-8s`` column alignment.
+
+        Args:
+            record (logging.LogRecord): The log record being emitted.
+
+        Returns:
+            str: Formatted log line with colorized level.
+        """
+        original_levelname = record.levelname
+        color = _LEVEL_COLORS.get(original_levelname, "") if sys.stdout.isatty() else ""
+        padded_levelname = f"{original_levelname:<8}"
+        record.levelname = (
+            f"{color}{padded_levelname}{_RESET}" if color else padded_levelname
+        )
+        try:
+            return super().format(record)
+        finally:
+            record.levelname = original_levelname
+
+
+class _JsonFormatter(logging.Formatter):
+    """Emit each log record as a single-line JSON object."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        """Serialize the record to JSON.
+
+        Args:
+            record (logging.LogRecord): The log record being emitted.
+
+        Returns:
+            str: A JSON string representation of the record.
+        """
+        payload = {
+            "timestamp": self.formatTime(record, "%Y-%m-%dT%H:%M:%SZ"),
+            "level": record.levelname,
+            "correlation_id": getattr(record, "correlation_id", "-"),
+            "logger": f"{record.module}:{record.funcName}:{record.lineno}",
+            "message": record.getMessage(),
+        }
+        if record.exc_info:
+            payload["exc_info"] = self.formatException(record.exc_info)
+        return json.dumps(payload)
+
+
+_CONSOLE_FORMAT = (
+    "[%(asctime)s][%(correlation_id)-8s][%(levelname)-8s] "
     "%(module)s:%(funcName)s:%(lineno)d | %(message)s"
 )
 
@@ -36,19 +133,26 @@ LOGGING_CONFIG: dict = {
         "correlation_id": {
             "()": _CorrelationIdFilter,
         },
+        "redaction": {
+            "()": _RedactionFilter,
+        },
     },
     "formatters": {
-        "standard": {
-            "format": _FORMAT,
+        "console": {
+            "()": _ColoredConsoleFormatter,
+            "format": _CONSOLE_FORMAT,
             "datefmt": "%Y-%m-%d %H:%M:%S",
             "defaults": {"correlation_id": "-"},
+        },
+        "json": {
+            "()": _JsonFormatter,
         },
     },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-            "formatter": "standard",
-            "filters": ["correlation_id"],
+            "formatter": "console",
+            "filters": ["correlation_id", "redaction"],
         },
     },
     "root": {
@@ -62,7 +166,13 @@ LOGGING_CONFIG: dict = {
             "propagate": False,
         },
         "uvicorn.error": {"propagate": True},
-        "uvicorn.access": {"propagate": True},
+        # Suppress uvicorn's own access lines; our middleware emits one per request
+        # with duration_ms, so we own access logging end-to-end.
+        "uvicorn.access": {
+            "handlers": [],
+            "level": "WARNING",
+            "propagate": False,
+        },
         "watchfiles": {"level": "WARNING", "propagate": False},
     },
 }
@@ -71,9 +181,22 @@ LOGGING_CONFIG: dict = {
 def configure_logging() -> None:
     """Apply the logging configuration and force UTC timestamps.
 
+    Reads log_level and log_format from Settings to make output env-driven.
     Call once at application startup before the first log statement.
     """
-    logging.config.dictConfig(LOGGING_CONFIG)
+    config = dict(LOGGING_CONFIG)
+    config["handlers"] = dict(LOGGING_CONFIG["handlers"])
+    config["handlers"]["console"] = dict(LOGGING_CONFIG["handlers"]["console"])
+    config["handlers"]["console"]["formatter"] = settings.log_format
+
+    config["root"] = dict(LOGGING_CONFIG["root"])
+    config["root"]["level"] = settings.log_level
+
+    config["loggers"] = dict(LOGGING_CONFIG["loggers"])
+    config["loggers"]["app"] = dict(LOGGING_CONFIG["loggers"].get("app", {}))
+    config["loggers"]["app"]["level"] = settings.log_level
+
+    logging.config.dictConfig(config)
     # Force all formatters to emit UTC rather than local time
     logging.Formatter.converter = __import__("time").gmtime
 

@@ -191,6 +191,67 @@ class TestBuildBaseQueryBelowMinimum:
         assert ("package_count <" in sql) is expect_clause
 
 
+class TestBuildBaseQuerySufficiency:
+    """Pin the SQL sufficiency filter to the Python calc in cabinet.service.
+
+    The set-based filter duplicates ``compute_usage_view`` / ``days_of_supply``
+    arithmetic because SQL cannot call the per-row Python code (Risk #6). These
+    tests pin the two paths together: the SQL must reproduce the same None-case
+    guards so a row matches a filter exactly when the Python verdict is non-None.
+    Change here together with ``cabinet.service`` if the calc ever changes.
+    """
+
+    def _sql(self, sufficiency: str | None) -> str:
+        stmt = _build_base_query(
+            user_id=_USER_ID,
+            today=_EXPIRY,
+            threshold=30,
+            status=None,
+            tsquery=None,
+            sufficiency=sufficiency,
+        )
+        return str(stmt)
+
+    @pytest.mark.parametrize("sufficiency", ["insufficient", "sufficient"])
+    def test_closed_window_excluded(self, sufficiency: str):
+        # Mirrors compute_usage_view's until_end > 0 gate: an entry whose window
+        # is already closed (end date today or past) yields is_sufficient=None,
+        # so it must match neither filter. Without this guard the SQL "sufficient"
+        # filter returns rows that render no badge (finding F2).
+        assert "dosage_end_date > " in self._sql(sufficiency)
+
+    @pytest.mark.parametrize("sufficiency", ["insufficient", "sufficient"])
+    def test_zero_rate_guarded(self, sufficiency: str):
+        # Mirrors days_of_supply_from_rate returning None for daily_rate <= 0:
+        # NULLIF(rate, 0) yields a NULL verdict (no match) instead of a DB
+        # divide-by-zero, regardless of WHERE evaluation order (finding F4).
+        assert "nullif(" in self._sql(sufficiency)
+
+    @pytest.mark.parametrize("sufficiency", ["insufficient", "sufficient"])
+    def test_used_tablet_entries_only(self, sufficiency: str):
+        sql = self._sql(sufficiency)
+        assert "is_used IS true" in sql
+        assert "capacity IS NOT NULL" in sql
+
+    def test_insufficient_projects_finish_before_end(self):
+        # days_of_supply runs out before the window ends -> short.
+        assert "AS INTEGER) < cabinet_entries.dosage_end_date" in self._sql(
+            "insufficient"
+        )
+
+    def test_sufficient_projects_finish_at_or_after_end(self):
+        # supply lasts to/through the window end -> sufficient.
+        assert "AS INTEGER) >= cabinet_entries.dosage_end_date" in self._sql(
+            "sufficient"
+        )
+
+    @pytest.mark.parametrize("sufficiency", [None, "all", ""])
+    def test_no_sufficiency_clause_when_inactive(self, sufficiency: str | None):
+        sql = self._sql(sufficiency)
+        assert "nullif(" not in sql
+        assert "dosage_end_date > " not in sql
+
+
 class TestUpdateEntryCounts:
     def _make_entry(self) -> CabinetEntry:
         entry = CabinetEntry(

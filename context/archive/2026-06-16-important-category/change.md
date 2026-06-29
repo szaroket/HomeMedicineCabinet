@@ -1,11 +1,11 @@
 ---
 change_id: important-category
 title: Important category
-status: impl_reviewed
+status: archived
 created: 2026-06-16
-updated: 2026-06-16
+updated: 2026-06-25
 reviewed_at: 2026-06-16
-archived_at: null
+archived_at: 2026-06-25T16:43:11Z
 ---
 
 ## Notes
