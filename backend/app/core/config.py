@@ -1,5 +1,7 @@
 """Application configuration loaded from environment variables."""
 
+from typing import Literal
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -16,6 +18,9 @@ class Settings(BaseSettings):
         auth_cookie_path (str): Path scope for the refresh-token cookie.
         auth_cookie_secure (bool): Whether the refresh cookie carries the `Secure`
             flag. Defaults to True (HTTPS-only); set False for localhost HTTP dev.
+        log_level (str): Root log level (e.g. DEBUG, INFO, WARNING). Defaults to INFO.
+        log_format (Literal["console", "json"]): Log output format. Use "console" for
+            local development and "json" for deployed environments.
     """
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
@@ -30,6 +35,9 @@ class Settings(BaseSettings):
     auth_cookie_name: str = "refresh_token"
     auth_cookie_path: str = "/api/v1/auth"
     auth_cookie_secure: bool = True
+
+    log_level: str = "INFO"
+    log_format: Literal["console", "json"] = "console"
 
     @property
     def jwt_issuer(self) -> str:
