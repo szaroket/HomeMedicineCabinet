@@ -23,7 +23,7 @@ jobs:
 
       - name: Python vulnerability check (pip-audit)
         working-directory: backend
-        run: uvx pip-audit --require-hashes=false -r <(uv export --no-dev --format requirements-txt)
+        run: uvx pip-audit -r <(uv export --no-dev --format requirements-txt)
 
       - name: Set up Node
         uses: actions/setup-node@v4
