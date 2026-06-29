@@ -312,14 +312,14 @@ No data or schema migration. Deployed environments must set the environment/form
 
 #### Automated
 
-- [x] 3.1 Linting passes
-- [x] 3.2 Full backend suite passes
-- [x] 3.3 `supabase_auth.py` no longer passes email to a log call
+- [x] 3.1 Linting passes — 13ce1da
+- [x] 3.2 Full backend suite passes — 13ce1da
+- [x] 3.3 `supabase_auth.py` no longer passes email to a log call — 13ce1da
 
 #### Manual
 
-- [ ] 3.4 Failed sign-in logs a warning with no email present
-- [ ] 3.5 Service-layer logs consistent across domains
+- [x] 3.4 Failed sign-in logs a warning with no email present — 13ce1da
+- [x] 3.5 Service-layer logs consistent across domains — 13ce1da
 
 ### Phase 4: Scripts + alembic alignment
 
