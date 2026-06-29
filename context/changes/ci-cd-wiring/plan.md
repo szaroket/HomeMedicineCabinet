@@ -280,15 +280,15 @@ Correct the health-check path and document the deploy prerequisites so a first R
 
 #### Automated
 
-- [x] 1.1 Coverage runs and meets the floor (`uv run coverage run -m pytest && uv run coverage report`)
-- [x] 1.2 Type-check passes (`uv run pyright`)
-- [x] 1.3 Lint/format still clean (`uv run ruff check . && uv run ruff format --check .`)
-- [x] 1.4 TOML valid (`pre-commit run check-toml --all-files`)
+- [x] 1.1 Coverage runs and meets the floor (`uv run coverage run -m pytest && uv run coverage report`) — ca1ce29
+- [x] 1.2 Type-check passes (`uv run pyright`) — ca1ce29
+- [x] 1.3 Lint/format still clean (`uv run ruff check . && uv run ruff format --check .`) — ca1ce29
+- [x] 1.4 TOML valid (`pre-commit run check-toml --all-files`) — ca1ce29
 
 #### Manual
 
-- [x] 1.5 Coverage floor cleared by current suite without new tests (or floor lowered to current value)
-- [x] 1.6 Strictest passing pyright `typeCheckingMode` chosen
+- [x] 1.5 Coverage floor cleared by current suite without new tests (or floor lowered to current value) — ca1ce29
+- [x] 1.6 Strictest passing pyright `typeCheckingMode` chosen — ca1ce29
 
 ### Phase 2: Expand CI workflow
 
