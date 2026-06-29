@@ -1,10 +1,14 @@
 """Medicines business logic."""
 
+import logging
+
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.v1.medicines import crud
 from app.api.v1.medicines.schemas import ProductOut, VariantOut
 from app.utilities.common import build_tsquery
+
+logger = logging.getLogger("app.medicines.service")
 
 _DEFAULT_LIMIT = 20
 _MAX_LIMIT = 50
@@ -28,10 +32,13 @@ async def search_products(
     """
     tsquery = build_tsquery(query)
     if tsquery is None:
+        logger.debug("Product search skipped: query too short")
         return []
     limit = max(1, min(limit, _MAX_LIMIT))
     rows = await crud.search_products(session, tsquery, limit)
-    return [ProductOut.model_validate(row) for row in rows]
+    products = [ProductOut.model_validate(row) for row in rows]
+    logger.info("Product search returned %d result(s)", len(products))
+    return products
 
 
 async def list_variants(
@@ -53,4 +60,6 @@ async def list_variants(
         by capacity ascending.
     """
     rows = await crud.list_variants(session, name, strength, pharmaceutical_form)
-    return [VariantOut.model_validate(row) for row in rows]
+    variants = [VariantOut.model_validate(row) for row in rows]
+    logger.info("Listed %d variant(s) for product %r", len(variants), name)
+    return variants

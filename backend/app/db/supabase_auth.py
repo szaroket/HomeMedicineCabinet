@@ -98,7 +98,7 @@ def sign_in_with_password(email: str, password: str) -> "AuthResponse":
             {"email": email, "password": password}
         )
     except AuthApiError as e:
-        logger.warning("Supabase sign_in failed for %s: %s", email, e)
+        logger.warning("Supabase sign_in failed (code=%s): %s", e.code, e)
         if e.status == 429:
             raise RateLimitError() from e
         raise InvalidCredentialsError() from e

@@ -824,7 +824,7 @@ async def add_entry(
             today=today,
         )
 
-    return await _dedup_or_insert(
+    result = await _dedup_or_insert(
         session=session,
         user_id=user_id,
         medication_registry_id=medication_registry_id,
@@ -836,6 +836,15 @@ async def add_entry(
         is_important=is_important,
         resolved_usage=resolved_usage,
     )
+    action = "merged" if result.merged else "added"
+    logger.info(
+        "Cabinet entry %s for user %s: entry_id=%s medication=%s",
+        action,
+        user_id,
+        result.entry.id,
+        medication_registry_id,
+    )
+    return result
 
 
 async def set_entry_importance(
