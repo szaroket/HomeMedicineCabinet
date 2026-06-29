@@ -36,6 +36,7 @@ Finalize the F04 CI/CD feature. Two draft artifacts already exist on this branch
 - Coverage tool is the `coverage` CLI, not `pytest-cov` — `backend/pyproject.toml:16`.
 - `pyright` already a dep (`backend/pyproject.toml:18,27`); a recent commit fixed type issues but nothing gates regressions.
 - Existing CI uses `astral-sh/setup-uv@v4`, `actions/setup-python@v5`, `actions/setup-node@v4` (node 22), `uv sync --all-groups`, and `pre-commit/action@v3.0.1` — reuse these exact versions/patterns for consistency.
+  - **Addendum (2026-06-29, Phase 2)**: superseded — actions were deliberately bumped to current majors (`checkout@v7`, `setup-python@v6`, `setup-node@v6`; `setup-uv` SHA-pinned) in commit `16757c5`. Verified green on Actions runs `28390866751`/`28391109360`.
 - `render.yaml` env vars are all `sync:false` (must be set in Render dashboard): `FRONTEND_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL` (backend) and `VITE_API_URL` (frontend).
 
 ## What We're NOT Doing
@@ -153,6 +154,8 @@ Extend the existing `ci.yml` with a frontend build job, a backend pyright job, a
 - The E2E job shows as skipped with its TODO visible.
 
 **Implementation Note**: Verifying CI requires pushing to GitHub and observing the Actions run. After automated checks pass and the run is green, pause for human confirmation before Phase 3.
+
+**Addendum (2026-06-29)**: Phase 2 also absorbed plumbing needed to make CI green, beyond the four contracts above: (a) security dependency bumps in `backend/pyproject.toml` (added `cryptography`, `python-multipart`, `starlette`; raised `pydantic-settings`) to satisfy the pre-existing `vulnerability-scan` job; (b) dummy `DATABASE_URL` (asyncpg scheme) and `SUPABASE_*` env vars plus `--ignore=tests/db` in the `backend-tests` job, so unit tests run without a live DB. The `--ignore` drops only live-DB integration tests; coverage remains 86% and the env vars match `app/core/config.py`.
 
 ---
 
