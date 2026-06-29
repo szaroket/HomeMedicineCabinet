@@ -50,18 +50,23 @@ def create_app() -> FastAPI:
         cid = request.headers.get("X-Correlation-ID") or generate_correlation_id()
         token = correlation_id_var.set(cid)
         start = time.perf_counter()
-        response = await call_next(request)
-        duration_ms = round((time.perf_counter() - start) * 1000, 1)
-        response.headers["X-Correlation-ID"] = cid
-        logger.info(
-            "%s %s %d %.1fms",
-            request.method,
-            request.url.path,
-            response.status_code,
-            duration_ms,
-        )
-        correlation_id_var.reset(token)
-        return response
+        response = None
+        try:
+            response = await call_next(request)
+            return response
+        finally:
+            duration_ms = round((time.perf_counter() - start) * 1000, 1)
+            status_code = response.status_code if response is not None else 500
+            if response is not None:
+                response.headers["X-Correlation-ID"] = cid
+            logger.info(
+                "%s %s %d %.1fms",
+                request.method,
+                request.url.path,
+                status_code,
+                duration_ms,
+            )
+            correlation_id_var.reset(token)
 
     app.include_router(v1_router)
 

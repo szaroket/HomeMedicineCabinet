@@ -300,13 +300,13 @@ No data or schema migration. Deployed environments must set the environment/form
 
 #### Automated
 
-- [x] 2.1 Linting passes
-- [x] 2.2 Full backend suite passes (no middleware regressions)
+- [x] 2.1 Linting passes — 818de58
+- [x] 2.2 Full backend suite passes (no middleware regressions) — 818de58
 
 #### Manual
 
-- [ ] 2.3 One INFO access line per request with method/path/status/duration_ms
-- [ ] 2.4 X-Correlation-ID header present and matches logged id
+- [x] 2.3 One INFO access line per request with method/path/status/duration_ms — 818de58
+- [x] 2.4 X-Correlation-ID header present and matches logged id — 818de58
 
 ### Phase 3: Apply across the app + fix PII leak
 
