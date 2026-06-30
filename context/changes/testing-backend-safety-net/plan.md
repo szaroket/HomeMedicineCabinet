@@ -47,8 +47,13 @@ proves them.
   `MedicationRegistry` row makes `to_tsquery` work with no import step.
 - **Environment constraint L-001:** TLS DB connections abort from the agent Bash
   tool (`OPENSSL_Uplink … no OPENSSL_Applink`). A **local testcontainer over plain
-  TCP** sidesteps this entirely (no TLS) and is runnable both by the agent and in
-  CI later. Do **not** weaken SSL to "fix" it.
+  TCP** removes TLS from the app's own asyncpg connections. **Correction (Phase 3
+  review):** this does *not* make the tier runnable from the agent Bash tool — the
+  `alembic upgrade head` subprocess (`run_migrations` fixture) inherits the Git
+  Bash/MSYS environment and still aborts with the applink error even against the
+  plain-TCP container, and every integration test depends on it. The tier runs from
+  native PowerShell locally (and CI later), not the agent. Do **not** weaken SSL to
+  "fix" it.
 - **The service commits.** `crud` write paths use `connector.persist()` which calls
   `session.commit()`. Transaction-rollback isolation therefore requires the
   join-an-external-transaction recipe (nested SAVEPOINT + restart listener), not a
@@ -120,12 +125,16 @@ Phases 3–5 depend on Phase 2's container fixture. Phase 1 is independent.
   The whole DB tier hinges on a Docker daemon being reachable from the execution
   environment, and no testcontainers/compose setup exists today. Before building any
   fixtures, the **first** Phase-2 action is to confirm `docker info` succeeds from the
-  agent Bash tool. If it does, Phases 2–5 self-verify normally. If Docker is **not**
-  reachable from the agent, mirror L-001's execution model: run the integration tier
-  from native PowerShell or hand the exact commands to the user to run, and treat their
-  output as the verification signal. (This is purely an *execution-environment*
-  fallback — not an SSL issue: `connector.py:21` / `migrations/env.py:29` force no SSL
-  context, so plain-TCP localhost already sidesteps L-001's applink crash.)
+  agent Bash tool. If Docker is **not** reachable from the agent, mirror L-001's
+  execution model: run the integration tier from native PowerShell or hand the exact
+  commands to the user to run, and treat their output as the verification signal.
+  (**Correction (Phase 3 review):** the PowerShell fallback turned out to be required
+  regardless of Docker reachability — the `alembic upgrade head` subprocess inherits
+  the Git Bash/MSYS environment and aborts with the L-001 applink error even against
+  the plain-TCP container, so the Docker-backed criteria and pyright run from
+  PowerShell, not the agent Bash tool. The no-SSL forcing in `connector.py:21` /
+  `migrations/env.py:29` removes TLS from the app's asyncpg connections but does not
+  cover the migration subprocess.)
 - **Transaction-rollback with a committing service (Phase 3).** The service calls
   `session.commit()` via `connector.persist()`. To keep each test isolated, use the
   SQLAlchemy "join an external transaction" recipe: open a connection, begin an outer
@@ -143,8 +152,10 @@ Phases 3–5 depend on Phase 2's container fixture. Phase 1 is independent.
   ordering; the per-test transaction rollback guarantees this as long as no fixture
   leaks committed state outside the SAVEPOINT.
 - **Schema bring-up is per-session, once.** Run `alembic upgrade head` against the
-  container URL a single time in a session-scoped fixture (it is plain TCP → L-001
-  does not apply). Per-test isolation is the SAVEPOINT rollback, not re-migration.
+  container URL a single time in a session-scoped fixture (plain TCP — but see the
+  Phase 3 review correction: this subprocess still hits L-001 under the agent's MSYS
+  environment, so the tier runs from PowerShell). Per-test isolation is the SAVEPOINT
+  rollback, not re-migration.
 - **Async event-loop lifecycle (Phase 2 ↔ Phase 3 seam).** The session-scoped
   `AsyncEngine` is consumed by function-scoped per-test sessions, but the repo runs
   `asyncio_mode = "auto"` (pyproject.toml:45) with no loop-scope override. Under
@@ -263,8 +274,10 @@ and yields an async engine bound to it; the container is torn down at session en
   the container URL, **`poolclass=NullPool`** to avoid cross-loop connection reuse —
   see "Async event-loop lifecycle" above) for the per-test session fixture (Phase 3)
   to consume.
-- Plain TCP → L-001 does not apply; this fixture is runnable from the agent Bash tool
-  and (later) CI.
+- Plain TCP removes TLS from the app's asyncpg connections. **Correction (Phase 3
+  review):** the `run_migrations` subprocess still hits the L-001 applink abort under
+  the agent's Git Bash/MSYS environment, so this fixture (and the tier it backs) runs
+  from native PowerShell locally — and CI later — not the agent Bash tool.
 
 #### 3. CI excludes the integration tier
 
@@ -313,8 +326,10 @@ files each kind in the right place.
   containers after the run).
 - Confirm `alembic upgrade head` (not `create_all`) built the schema — the generated
   `search_vector` column and GIN index are present.
-- Confirm L-001 does not trigger: the container path runs from the agent Bash tool
-  without the OpenSSL applink abort (plain TCP).
+- Confirm the execution path: the container's *asyncpg* connections are plain TCP (no
+  applink abort), but the `alembic upgrade head` subprocess still triggers L-001 under
+  the agent's MSYS environment — so the integration tier is verified from native
+  PowerShell, not the agent Bash tool (Phase 3 review correction).
 
 **Implementation Note**: After automated verification passes, pause for manual
 confirmation before Phase 3.
