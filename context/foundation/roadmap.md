@@ -3,7 +3,7 @@ project: "Home Medicine Cabinet"
 version: 1
 status: draft
 created: 2026-06-03
-updated: 2026-06-29
+updated: 2026-06-30
 prd_version: 1
 main_goal: low-complexity
 top_blocker: skills
@@ -40,7 +40,7 @@ A single adult can't reliably track their home medication inventory — what the
 | S-06 | notifications-and-badges     | see a notification bell with unread count; notification center lists expiry alerts, below-minimum important stock, and used medications at risk of running out; configure expiry and close-to-finish thresholds in settings; dismiss individual notifications | S-03, S-05 | US-02, US-05, FR-007, FR-008, FR-019, FR-020 | proposed |
 | S-07 | dashboard                    | land on a dashboard showing summary counts (total / valid / expiring soon / expired / out-of-stock) with clickable links to the cabinet list pre-filtered to each status | S-06 | FR-009 | proposed |
 | F-01b | auth-polish                 | (foundation) confirm-password field on the registration form so users cannot submit a typo in their password | F-01 | FR-001 | proposed |
-| F-05 | backend-logging              | (foundation) structured logging across the FastAPI backend — central config, request/response middleware, consistent levels, meaningful logs at service/crud boundaries, no secrets/PII logged | F-01, F-02 | NFR (observability — baseline gap) | proposed |
+| F-05 | backend-logging              | (foundation) structured logging across the FastAPI backend — central config, request/response middleware, consistent levels, meaningful logs at service/crud boundaries, no secrets/PII logged | F-01, F-02 | NFR (observability — baseline gap) | done |
 
 ## Streams
 
@@ -137,7 +137,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
   - Log format target: structured JSON (machine-parseable, Render-friendly) vs. human-readable console. Default to JSON in deployed environments and console in local dev, switchable via config. — Owner: developer. Block: no (implementation choice).
   - Whether to adopt a library (`structlog`) or wrap stdlib `logging`. Block: no — resolve during `/10x-plan`.
 - **Risk:** Low. The main pitfall is leaking secrets/PII (auth tokens, emails) into logs — the plan must define a redaction/allow-list rule and verify it in tests. Introducing logging via the existing `create_app()` middleware seam keeps the change centralised and avoids scattering logging concerns across domains.
-- **Status:** proposed
+- **Status:** done
 
 ## Slices
 
@@ -283,3 +283,4 @@ _(none — all questions resolved before roadmap finalisation)_
 - **S-04: user can mark a cabinet entry as "important", set a global minimum package count, and see an attention badge on entries that fall below the minimum or are expiring/expired; the badge clears automatically when the condition resolves.** — Archived 2026-06-25 → `context/archive/2026-06-16-important-category/`. Lesson: —.
 - **S-05: user can assign a tablet-based medication to the "used" category with a dosage schedule and optional end date; see the estimated finish date or sufficiency indicator; non-tablet medications marked used for date tracking only** — Archived 2026-06-29 → `context/archive/2026-06-25-dosage-tracking/`. Lesson: —.
 - **S-08: user can view and use the cabinet add flow and medicine list on a mobile-width screen without layout breakage; the desktop experience is preserved unchanged** — Archived 2026-06-29 → `context/archive/2026-06-17-mobile-responsive-cabinet/`. Lesson: —.
+- **F-05: (foundation) structured logging across the FastAPI backend — central config, request/response middleware, consistent levels, meaningful logs at service/crud boundaries, no secrets/PII logged** — Archived 2026-06-30 → `context/archive/2026-06-29-backend-logging/`. Lesson: —.
