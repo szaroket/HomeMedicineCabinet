@@ -680,16 +680,16 @@ phase taught (e.g. the SAVEPOINT isolation gotcha).
 
 #### Automated
 
-- [x] 4.1 Read/membership tests pass (list_entries + filters)
-- [x] 4.2 Full integration tier green and order-independent
-- [x] 4.3 CI invocation still green and DB-free
-- [x] 4.4 Linting passes (`ruff check tests/integration`)
-- [x] 4.5 Type checking passes (`pyright`)
+- [x] 4.1 Read/membership tests pass (list_entries + filters) — 2abc53f
+- [x] 4.2 Full integration tier green and order-independent — 2abc53f
+- [x] 4.3 CI invocation still green and DB-free — 2abc53f
+- [x] 4.4 Linting passes (`ruff check tests/integration`) — 2abc53f
+- [x] 4.5 Type checking passes (`pyright`) — 2abc53f
 
 #### Manual
 
-- [x] 4.6 Deleting a WHERE clause turns a membership test red
-- [x] 4.7 `to_tsquery` search matches the seeded `search_vector`
+- [x] 4.6 Deleting a WHERE clause turns a membership test red — 2abc53f
+- [x] 4.7 `to_tsquery` search matches the seeded `search_vector` — 2abc53f
 
 ### Phase 5: Risk #5 + #6 residual integration (ownership / usage)
 
