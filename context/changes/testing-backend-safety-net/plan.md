@@ -480,6 +480,17 @@ returned id set equals the expected set:
   `search & status`) asserting AND semantics (FR-004), not single-filter happy-path.
 Assert exact id-set membership, never count-only (Risk #4 anti-patterns).
 
+#### 3. Addendum (Phase 4 review): write-path merge-on-duplicate test
+
+**Correction (Phase 4 review):** the commit also added
+`backend/tests/integration/cabinet/test_add_entry.py`, covering the
+`POST /cabinet/entries` merge-on-duplicate path (FR-010 dedup). This is integration
+coverage of Risk #3 (merge math) on a write seam, not Risk #1 or #4, and merge-on-add
+isn't assigned to any DB phase. The test is correct and valuable (same-session seam,
+rollback isolation, asserts `merged=true` + summed `package_count` + no duplicate row),
+so it is kept here rather than moved. Recorded so Phase 5 review treats it as expected
+scope.
+
 ### Success Criteria:
 
 #### Automated Verification:
