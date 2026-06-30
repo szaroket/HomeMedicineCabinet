@@ -116,6 +116,16 @@ Phases 3–5 depend on Phase 2's container fixture. Phase 1 is independent.
 
 ## Critical Implementation Details
 
+- **Docker reachability is the load-bearing Phase-2 unknown — pre-check it first.**
+  The whole DB tier hinges on a Docker daemon being reachable from the execution
+  environment, and no testcontainers/compose setup exists today. Before building any
+  fixtures, the **first** Phase-2 action is to confirm `docker info` succeeds from the
+  agent Bash tool. If it does, Phases 2–5 self-verify normally. If Docker is **not**
+  reachable from the agent, mirror L-001's execution model: run the integration tier
+  from native PowerShell or hand the exact commands to the user to run, and treat their
+  output as the verification signal. (This is purely an *execution-environment*
+  fallback — not an SSL issue: `connector.py:21` / `migrations/env.py:29` force no SSL
+  context, so plain-TCP localhost already sidesteps L-001's applink crash.)
 - **Transaction-rollback with a committing service (Phase 3).** The service calls
   `session.commit()` via `connector.persist()`. To keep each test isolated, use the
   SQLAlchemy "join an external transaction" recipe: open a connection, begin an outer
@@ -135,6 +145,20 @@ Phases 3–5 depend on Phase 2's container fixture. Phase 1 is independent.
 - **Schema bring-up is per-session, once.** Run `alembic upgrade head` against the
   container URL a single time in a session-scoped fixture (it is plain TCP → L-001
   does not apply). Per-test isolation is the SAVEPOINT rollback, not re-migration.
+- **Async event-loop lifecycle (Phase 2 ↔ Phase 3 seam).** The session-scoped
+  `AsyncEngine` is consumed by function-scoped per-test sessions, but the repo runs
+  `asyncio_mode = "auto"` (pyproject.toml:45) with no loop-scope override. Under
+  pytest-asyncio ≥0.24 each async test gets its own event loop; the default
+  `AsyncAdaptedQueuePool` would cache an asyncpg connection opened in one loop and
+  reuse it in the next, raising `RuntimeError: ... Future attached to a different loop`
+  / "Event loop is closed". Pin the lifecycle explicitly: create the session-scoped
+  engine with `poolclass=NullPool` (no cross-loop connection reuse) — the lower-risk
+  default for a disposable container, since isolation is the SAVEPOINT, not the
+  connection, so per-test connect cost is negligible. Alternatively (or additionally)
+  set `asyncio_default_fixture_loop_scope = "session"` and mark the session-scoped
+  async fixtures `loop_scope="session"`. Settle NullPool vs session-loop-scope when
+  writing the Phase 3 SAVEPOINT fixture (it depends on how that fixture holds its
+  single connection).
 
 ## Phase 1: FR-010 merge-math unit tests (Risk #3)
 
@@ -164,6 +188,9 @@ variants. Catch a regression that mis-sums or mis-normalizes the tablet pool.
 - Oracle values are computed by hand from FR-010 worked examples, never copied from
   the functions under test (Risk #3 anti-pattern). Use `pytest.mark.parametrize`;
   named args for 3+-argument calls (test-style convention).
+- **L-006**: this is the file L-006 was raised on — merge any new imports into the
+  existing top-of-file import block; do **not** append a mid-file import block or
+  silence it with `# noqa: E402`.
 
 ### Success Criteria:
 
@@ -223,7 +250,9 @@ and yields an async engine bound to it; the container is torn down at session en
   `migrations/env.py` complicates programmatic invocation, run `alembic upgrade head`
   as a subprocess with `DATABASE_URL` pointed at the container.
 - Yields a session-scoped `AsyncEngine` (created with `create_async_engine` against
-  the container URL) for the per-test session fixture (Phase 3) to consume.
+  the container URL, **`poolclass=NullPool`** to avoid cross-loop connection reuse —
+  see "Async event-loop lifecycle" above) for the per-test session fixture (Phase 3)
+  to consume.
 - Plain TCP → L-001 does not apply; this fixture is runnable from the agent Bash tool
   and (later) CI.
 
@@ -246,12 +275,20 @@ run it locally, and that it is excluded from CI for now.
 **Contract**: A short README in `tests/integration/` (Docker prerequisite, run
 command, isolation model); a 1–2 line pointer added to the test-plan cookbook so the
 location convention (`tests/integration/` for integration, `tests/db/` for low-level)
-is discoverable.
+is discoverable. **Disambiguate the "integration" name clash** in the §6.2/§6.5 edit:
+test-plan §6.2 already labels the mocked-session HTTP tests "integration tests" at
+`tests/<domain>/test_router.py`. Spell out the two distinct tiers — "DB-backed
+integration (`tests/integration/`, real Postgres)" vs the existing hermetic
+HTTP-contract tests (`tests/<domain>/`, mocked session) — so a future contributor
+files each kind in the right place.
 
 ### Success Criteria:
 
 #### Automated Verification:
 
+- **Docker reachable first**: `docker info` succeeds from the agent Bash tool. If it
+  fails, switch to the L-001 execution fallback (run from native PowerShell / hand
+  commands to the user) before proceeding — do not build fixtures on an unverified daemon.
 - Deps resolve: `cd backend && uv sync --all-groups`
 - Container starts and schema is present (temporary probe test or a one-off check):
   a session against the container can `SELECT` and the
@@ -587,16 +624,17 @@ phase taught (e.g. the SAVEPOINT isolation gotcha).
 
 #### Automated
 
-- [ ] 2.1 Deps resolve (`uv sync --all-groups`)
-- [ ] 2.2 Container starts; `search_vector` column + GIN index present
-- [ ] 2.3 CI invocation green and DB-free (`--ignore=tests/db --ignore=tests/integration`)
-- [ ] 2.4 Linting passes (`ruff check tests/integration`)
+- [ ] 2.1 Docker reachable (`docker info`) from the agent, or L-001 PowerShell fallback engaged
+- [ ] 2.2 Deps resolve (`uv sync --all-groups`)
+- [ ] 2.3 Container starts; `search_vector` column + GIN index present
+- [ ] 2.4 CI invocation green and DB-free (`--ignore=tests/db --ignore=tests/integration`)
+- [ ] 2.5 Linting passes (`ruff check tests/integration`)
 
 #### Manual
 
-- [ ] 2.5 Container provisions and tears down cleanly (no leftovers)
-- [ ] 2.6 Schema built via `alembic upgrade head`, not `create_all`
-- [ ] 2.7 No L-001 applink abort on the container path (plain TCP)
+- [ ] 2.6 Container provisions and tears down cleanly (no leftovers)
+- [ ] 2.7 Schema built via `alembic upgrade head`, not `create_all`
+- [ ] 2.8 No L-001 applink abort on the container path (plain TCP)
 
 ### Phase 3: Integration harness fixtures
 

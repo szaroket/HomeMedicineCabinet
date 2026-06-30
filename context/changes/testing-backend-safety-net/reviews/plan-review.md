@@ -4,8 +4,8 @@
 - **Plan**: context/changes/testing-backend-safety-net/plan.md
 - **Mode**: Deep
 - **Date**: 2026-06-30
-- **Verdict**: REVISE
-- **Findings**: 0 critical · 2 warnings · 2 observations
+- **Verdict**: REVISE → SOUND (all 4 findings fixed in plan, 2026-06-30)
+- **Findings**: 0 critical · 2 warnings · 2 observations (all FIXED)
 
 ## Verdicts
 
@@ -52,7 +52,7 @@ mapped in the `MedicationRegistry` SQLModel model → plain ORM insert lets Post
   - Tradeoff: One config decision made explicit now rather than discovered mid-Phase-3.
   - Confidence: HIGH — function-loop vs session-engine mismatch is a documented, reproducible pytest-asyncio failure mode.
   - Blind spot: NullPool vs session-loop-scope choice depends on how the SAVEPOINT fixture holds its single connection — settle when writing Phase 3.
-- **Decision**: PENDING
+- **Decision**: FIXED — added "Async event-loop lifecycle" bullet to Critical Implementation Details + `poolclass=NullPool` to the Phase 2 engine contract.
 
 ### F2 — Docker-from-agent is the load-bearing execution assumption, no fallback
 
@@ -73,7 +73,7 @@ mapped in the `MedicationRegistry` SQLModel model → plain ORM insert lets Post
   - Tradeoff: Slightly more ceremony in Phase 2; none if Docker is present.
   - Confidence: HIGH — the dependency is real; only its availability is unknown.
   - Blind spot: Actual agent Docker availability is untested in this review.
-- **Decision**: PENDING
+- **Decision**: FIXED — added a `docker info` pre-check + L-001 PowerShell/user-run fallback as the first Phase 2 step (Critical Implementation Details + Phase 2 Automated 2.1).
 
 ### F3 — Phase 1 extends the exact file L-006 was raised on; no imports-at-top note
 
@@ -85,7 +85,7 @@ mapped in the `MedicationRegistry` SQLModel model → plain ORM insert lets Post
   `# noqa: E402`. Phase 1 extends the same file with new parametrized tests (likely new imports) but doesn't reference L-006.
 - **Fix**: Add a one-line Phase 1 note: merge any new imports into the existing top-of-file import block (L-006) — no
   mid-file import block, no `# noqa: E402`.
-- **Decision**: PENDING
+- **Decision**: FIXED — added the L-006 imports-at-top note to Phase 1 contract.
 
 ### F4 — "integration" terminology collides with the existing cookbook definition
 
@@ -99,4 +99,4 @@ mapped in the `MedicationRegistry` SQLModel model → plain ORM insert lets Post
   `tests/integration/` or a real-DB test under `tests/<domain>/`.
 - **Fix**: In the Phase 2 §6.2/§6.5 cookbook edit, disambiguate explicitly — e.g. "DB-backed integration
   (`tests/integration/`, real Postgres)" vs the existing hermetic HTTP-contract tests (`tests/<domain>/`, mocked session).
-- **Decision**: PENDING
+- **Decision**: FIXED — added the DB-backed vs mocked-HTTP disambiguation to the Phase 2 docs contract.
