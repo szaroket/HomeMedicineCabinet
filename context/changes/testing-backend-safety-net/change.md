@@ -1,7 +1,7 @@
 ---
 change_id: testing-backend-safety-net
 title: Backend business-logic + CRUD safety net (test-plan Phase 1)
-status: impl_reviewed
+status: implemented
 created: 2026-06-16
 updated: 2026-06-30
 archived_at: null

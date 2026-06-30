@@ -706,14 +706,14 @@ phase taught (e.g. the SAVEPOINT isolation gotcha).
 
 #### Automated
 
-- [x] 5.1 Ownership + usage tests pass
-- [x] 5.2 Full integration tier green and order-independent
-- [x] 5.3 CI invocation still green and DB-free
-- [x] 5.4 Linting passes (`ruff check tests/integration`)
-- [x] 5.5 Type checking passes (`pyright`)
+- [x] 5.1 Ownership + usage tests pass — 997738b
+- [x] 5.2 Full integration tier green and order-independent — 997738b
+- [x] 5.3 CI invocation still green and DB-free — 997738b
+- [x] 5.4 Linting passes (`ruff check tests/integration`) — 997738b
+- [x] 5.5 Type checking passes (`pyright`) — 997738b
 
 #### Manual
 
-- [x] 5.6 Dropping the `user_id` predicate turns an ownership test red
-- [x] 5.7 Tweaking `_sufficiency_clauses` turns a parity assertion red
-- [x] 5.8 Cookbook lines appended to test-plan §6.6
+- [x] 5.6 Dropping the `user_id` predicate turns an ownership test red — 997738b
+- [x] 5.7 Tweaking `_sufficiency_clauses` turns a parity assertion red — 997738b
+- [x] 5.8 Cookbook lines appended to test-plan §6.6 — 997738b
