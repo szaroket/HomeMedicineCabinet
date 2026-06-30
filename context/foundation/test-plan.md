@@ -181,6 +181,11 @@ Two distinct tiers both called "integration" — file each kind in the right pla
 
 (Filled in as phases land — `/10x-implement` appends 2–3 lines capturing anything surprising a phase taught.)
 
+**Phase 5 (Risk #5 + #6, 2026-06-30):**
+- **Unique-constraint trap in parity tests.** When seeding multiple entries for the same user + registry, passing an explicit `expiry_date` to every call overrides the factory counter and triggers `uq_cabinet_entries_user_med_expiry`. Omit the override and let the counter handle it, or use a distinct registry per group.
+- **Boundary case required for `>=` vs `>` parity.** A sufficiency parity test with only "clearly sufficient" entries (supply >> until_end) cannot catch a `>=` → `>` mutation. Seed at least one boundary entry where `supply == until_end` exactly; without it the mutation silently passes.
+- **Wrong `tablets_per_package` breaks the oracle.** The Python `compute_usage_view` oracle must receive the capacity of the entry's *actual* registry. Using a hardcoded tpp when entries span multiple registries produces a wrong prediction and causes the parity assertion to fail on the wrong filter.
+
 ## 7. What We Deliberately Don't Test
 
 Exclusions agreed during the rollout (Phase 2 interview, Q5). Future
