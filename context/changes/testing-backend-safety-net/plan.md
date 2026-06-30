@@ -167,6 +167,16 @@ Phases 3–5 depend on Phase 2's container fixture. Phase 1 is independent.
 Pure-function unit coverage for the dedup/merge arithmetic, with the oracle taken
 from FR-010 (not from reading the implementation). No database.
 
+> **Provenance note (impl-review-phase-1, 2026-06-30)**: The four merge-math test
+> classes (`TestTotalTablets`, `TestNormalizeTabletPool`, `TestMergeTabletEntry`,
+> `TestMergeNonTabletEntry`) were not authored by this phase — they were introduced
+> earlier in commit `fe03838` (add-medication-from-registry, 2026-06-09), three weeks
+> before this plan. Phase 1's work was an **audit**: confirming the pre-existing
+> coverage satisfies the FR-010 contract below and that its oracle is independent of
+> the implementation (Manual 1.5). The Phase 1 commit `fa65324` is docs-only; it adds
+> no test code. Treat the "Changes Required" below as the contract the audit verified,
+> not as net-new work this phase produced.
+
 ### Changes Required:
 
 #### 1. Merge-math unit tests
@@ -611,14 +621,14 @@ phase taught (e.g. the SAVEPOINT isolation gotcha).
 
 #### Automated
 
-- [x] 1.1 Unit tests pass (`pytest tests/cabinet/test_service.py`)
-- [x] 1.2 CI-path suite green (`pytest --ignore=tests/db --ignore=tests/integration`)
-- [x] 1.3 Linting passes (`ruff check tests/cabinet/test_service.py`)
-- [x] 1.4 Type checking passes (`pyright`)
+- [x] 1.1 Unit tests pass (`pytest tests/cabinet/test_service.py`) — fa65324
+- [x] 1.2 CI-path suite green (`pytest --ignore=tests/db --ignore=tests/integration`) — fa65324
+- [x] 1.3 Linting passes (`ruff check tests/cabinet/test_service.py`) — fa65324
+- [x] 1.4 Type checking passes (`pyright`) — fa65324
 
 #### Manual
 
-- [x] 1.5 Spot-check 2–3 expected values against FR-010 (oracle independence)
+- [x] 1.5 Spot-check 2–3 expected values against FR-010 (oracle independence) — fa65324
 
 ### Phase 2: Test environment preparation
 
