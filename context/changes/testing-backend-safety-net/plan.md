@@ -634,17 +634,17 @@ phase taught (e.g. the SAVEPOINT isolation gotcha).
 
 #### Automated
 
-- [ ] 2.1 Docker reachable (`docker info`) from the agent, or L-001 PowerShell fallback engaged
-- [ ] 2.2 Deps resolve (`uv sync --all-groups`)
-- [ ] 2.3 Container starts; `search_vector` column + GIN index present
-- [ ] 2.4 CI invocation green and DB-free (`--ignore=tests/db --ignore=tests/integration`)
-- [ ] 2.5 Linting passes (`ruff check tests/integration`)
+- [x] 2.1 Docker reachable (`docker info`) from the agent, or L-001 PowerShell fallback engaged
+- [x] 2.2 Deps resolve (`uv sync --all-groups`)
+- [x] 2.3 Container starts; `search_vector` column + GIN index present
+- [x] 2.4 CI invocation green and DB-free (`--ignore=tests/db --ignore=tests/integration`)
+- [x] 2.5 Linting passes (`ruff check tests/integration`)
 
 #### Manual
 
-- [ ] 2.6 Container provisions and tears down cleanly (no leftovers)
-- [ ] 2.7 Schema built via `alembic upgrade head`, not `create_all`
-- [ ] 2.8 No L-001 applink abort on the container path (plain TCP)
+- [x] 2.6 Container provisions and tears down cleanly (no leftovers)
+- [x] 2.7 Schema built via `alembic upgrade head`, not `create_all`
+- [x] 2.8 No L-001 applink abort on the container path (plain TCP)
 
 ### Phase 3: Integration harness fixtures
 

@@ -94,7 +94,7 @@ jobs:
           DATABASE_URL: "postgresql+asyncpg://user:pass@localhost/testdb"
           SUPABASE_URL: "https://placeholder.supabase.co"
           SUPABASE_ANON_KEY: "placeholder"
-        run: uv run coverage run -m pytest --ignore=tests/db
+        run: uv run coverage run -m pytest --ignore=tests/db --ignore=tests/integration
 
       - name: Check coverage threshold
         working-directory: backend
