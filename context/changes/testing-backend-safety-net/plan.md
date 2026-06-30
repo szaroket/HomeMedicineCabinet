@@ -650,16 +650,16 @@ phase taught (e.g. the SAVEPOINT isolation gotcha).
 
 #### Automated
 
-- [ ] 3.1 Harness smoke passes (`pytest tests/integration/test_harness_smoke.py`)
-- [ ] 3.2 Isolation holds under random order across repeated runs
-- [ ] 3.3 CI invocation still green and DB-free
-- [ ] 3.4 Linting passes (`ruff check tests/integration`)
-- [ ] 3.5 Type checking passes (`pyright`)
+- [x] 3.1 Harness smoke passes (`pytest tests/integration/test_harness_smoke.py`)
+- [x] 3.2 Isolation holds under random order across repeated runs
+- [x] 3.3 CI invocation still green and DB-free
+- [x] 3.4 Linting passes (`ruff check tests/integration`)
+- [x] 3.5 Type checking passes (`pyright`)
 
 #### Manual
 
-- [ ] 3.6 Same-session seam works; rows gone after teardown
-- [ ] 3.7 `act_as` switches identity within a single test
+- [x] 3.6 Same-session seam works; rows gone after teardown
+- [x] 3.7 `act_as` switches identity within a single test
 
 ### Phase 4: Risk #1 + #4 integration (read / membership)
 
