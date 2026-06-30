@@ -3,7 +3,7 @@
 import os
 import subprocess
 import uuid
-from collections.abc import AsyncIterator, Callable, Iterator
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
 from datetime import date, datetime, timezone
 from decimal import Decimal
 
@@ -108,8 +108,12 @@ async def db_session(db_conn: AsyncConnection) -> AsyncIterator[AsyncSession]:
     def _restart_savepoint(sync_session, transaction):  # noqa: ANN001
         # Re-open the SAVEPOINT after the service's inner commit() ends it,
         # so subsequent flushes in the same test have an active SAVEPOINT.
-        if transaction.nested and not transaction._parent.nested:
-            sync_session.begin_nested()
+        # SQLAlchemy 2.0 "join an external transaction" recipe: gate on public
+        # connection state instead of the private transaction._parent attribute.
+        if db_conn.closed:
+            return
+        if not db_conn.in_nested_transaction():
+            db_conn.sync_connection.begin_nested()
 
     yield session
     await session.close()
@@ -134,7 +138,7 @@ async def authed_db_client(
 
         client, act_as = authed_db_client
         act_as(seeded_user)
-        response = await client.get("/api/v1/cabinet")
+        response = await client.get("/api/v1/cabinet/entries")
     """
     active_user: CurrentUser | None = None
 
@@ -173,7 +177,7 @@ async def authed_db_client(
 @pytest_asyncio.fixture
 async def seed_user(
     db_session: AsyncSession,
-) -> Callable[..., "AsyncIterator[tuple[User, CurrentUser]]"]:
+) -> Callable[..., Awaitable[tuple[User, CurrentUser]]]:
     """Factory: insert a User row and return (User, CurrentUser).
 
     Args:
@@ -196,13 +200,13 @@ async def seed_user(
         current_user = CurrentUser(id=user.id, email=user.email)
         return user, current_user
 
-    return _seed  # type: ignore[return-value]
+    return _seed
 
 
 @pytest_asyncio.fixture
 async def seed_user_preferences(
     db_session: AsyncSession,
-) -> Callable[..., "AsyncIterator[UserPreferences]"]:
+) -> Callable[..., Awaitable[UserPreferences]]:
     """Factory: insert a UserPreferences row for the given user.
 
     Args:
@@ -229,13 +233,13 @@ async def seed_user_preferences(
         await db_session.refresh(prefs)
         return prefs
 
-    return _seed  # type: ignore[return-value]
+    return _seed
 
 
 @pytest_asyncio.fixture
 async def seed_registry(
     db_session: AsyncSession,
-) -> Callable[..., "AsyncIterator[MedicationRegistry]"]:
+) -> Callable[..., Awaitable[MedicationRegistry]]:
     """Factory: insert a MedicationRegistry row (feeds search_vector via Postgres trigger).
 
     Args:
@@ -268,13 +272,13 @@ async def seed_registry(
         await db_session.refresh(registry)
         return registry
 
-    return _seed  # type: ignore[return-value]
+    return _seed
 
 
 @pytest_asyncio.fixture
 async def seed_entry(
     db_session: AsyncSession,
-) -> Callable[..., "AsyncIterator[CabinetEntry]"]:
+) -> Callable[..., Awaitable[CabinetEntry]]:
     """Factory: insert a CabinetEntry row for the given user and registry.
 
     Varies expiry_date by default to avoid hitting the unique constraint
@@ -318,4 +322,4 @@ async def seed_entry(
         await db_session.refresh(entry)
         return entry
 
-    return _seed  # type: ignore[return-value]
+    return _seed
