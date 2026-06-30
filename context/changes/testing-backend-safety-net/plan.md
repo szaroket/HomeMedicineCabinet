@@ -611,14 +611,14 @@ phase taught (e.g. the SAVEPOINT isolation gotcha).
 
 #### Automated
 
-- [ ] 1.1 Unit tests pass (`pytest tests/cabinet/test_service.py`)
-- [ ] 1.2 CI-path suite green (`pytest --ignore=tests/db --ignore=tests/integration`)
-- [ ] 1.3 Linting passes (`ruff check tests/cabinet/test_service.py`)
-- [ ] 1.4 Type checking passes (`pyright`)
+- [x] 1.1 Unit tests pass (`pytest tests/cabinet/test_service.py`)
+- [x] 1.2 CI-path suite green (`pytest --ignore=tests/db --ignore=tests/integration`)
+- [x] 1.3 Linting passes (`ruff check tests/cabinet/test_service.py`)
+- [x] 1.4 Type checking passes (`pyright`)
 
 #### Manual
 
-- [ ] 1.5 Spot-check 2–3 expected values against FR-010 (oracle independence)
+- [x] 1.5 Spot-check 2–3 expected values against FR-010 (oracle independence)
 
 ### Phase 2: Test environment preparation
 
