@@ -323,3 +323,22 @@ async def seed_entry(
         return entry
 
     return _seed
+
+
+# ---------------------------------------------------------------------------
+# Midnight guard
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def today() -> Iterator[date]:
+    """Capture today's date once; skip the test if midnight rolled during the run.
+
+    Guards against the one-in-86400 flake where seeding and the HTTP request
+    land on different calendar days, making status-filter assertions unreliable.
+    Re-run the test when this happens.
+    """
+    captured = date.today()
+    yield captured
+    if date.today() != captured:
+        pytest.skip("midnight rolled over during test — re-run")
