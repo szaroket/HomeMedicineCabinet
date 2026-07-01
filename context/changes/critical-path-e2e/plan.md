@@ -489,21 +489,21 @@ user data.
 
 #### Manual
 
-- [ ] 1.5 An actual run (Phase 2 `--project=setup` or a smoke test) visibly starts both backend and frontend and does not hang (`--list` does not boot webServers)
-- [ ] 1.6 Both health/dev URLs manually reachable while the command runs
+- [x] 1.5 An actual run (Phase 2 `--project=setup` or a smoke test) visibly starts both backend and frontend and does not hang (`--list` does not boot webServers)
+- [x] 1.6 Both health/dev URLs manually reachable while the command runs
 
 ### Phase 2: Auth Setup via `storageState`
 
 #### Automated
 
-- [ ] 2.1 Setup project runs standalone and produces the storage-state file: `cd frontend && npx playwright test --project=setup`
-- [ ] 2.2 Type checking passes: `cd frontend && npm run build`
-- [ ] 2.3 Linting passes: `cd frontend && npm run lint`
+- [x] 2.1 Setup project runs standalone and produces the storage-state file: `cd frontend && npx playwright test --project=setup`
+- [x] 2.2 Type checking passes: `cd frontend && npm run build`
+- [x] 2.3 Linting passes: `cd frontend && npm run lint`
 
 #### Manual
 
-- [ ] 2.4 `frontend/e2e/.auth/user.json` exists with an `auth_token`-shaped entry
-- [ ] 2.5 Manual UI registration confirms redirect target and form field names match `auth.setup.ts`
+- [x] 2.4 `frontend/e2e/.auth/user.json` exists with an `auth_token`-shaped entry
+- [x] 2.5 Manual UI registration confirms redirect target and form field names match `auth.setup.ts` (switched to login — the passing setup confirms the login form fields "Adres e-mail"/"Hasło", button "Zaloguj się", and the `/` redirect all match)
 
 ### Phase 3: Journey A Seed Test
 

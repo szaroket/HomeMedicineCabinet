@@ -22,9 +22,17 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   projects: [
+    // Runs auth.setup.ts first: registers a throwaway user and saves the
+    // session to e2e/.auth/user.json (see Phase 2 of the plan).
+    { name: 'setup', testMatch: /auth\.setup\.ts/ },
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        // Reuse the session captured by the setup project — no UI login per test.
+        storageState: 'e2e/.auth/user.json',
+      },
+      dependencies: ['setup'],
     },
   ],
   webServer: [
