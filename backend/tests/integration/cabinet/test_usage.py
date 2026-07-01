@@ -140,10 +140,12 @@ async def test_sufficiency_filter_parity_with_compute_usage_view(
 ) -> None:
     """SQL _sufficiency_clauses filter agrees with per-row Python compute_usage_view.
 
-    Seeds entries that span all verdict categories: sufficient, insufficient,
-    no-verdict (closed window), no-verdict (unused), no-verdict (zero rate guard),
-    per-week period, and partial-pack. For each category the returned id-set from
-    the HTTP filter must equal what compute_usage_view predicts.
+    Seeds entries that span the API-reachable verdict categories: sufficient,
+    insufficient, no-verdict (closed window), no-verdict (unused), per-week
+    period, and partial-pack. For each category the returned id-set from the
+    HTTP filter must equal what compute_usage_view predicts. (The zero-rate and
+    missing-capacity SQL guards are unreachable via the API and are pinned by
+    the unit parity suite in tests/cabinet/test_crud.py.)
     """
     client, act_as = authed_db_client
 

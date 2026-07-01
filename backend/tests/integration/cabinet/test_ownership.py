@@ -88,7 +88,7 @@ async def test_cross_account_usage_patch_returns_404(
     user_a, current_user_a = await seed_user()
     _, current_user_b = await seed_user()
     registry = await seed_registry()
-    entry_a = await seed_entry(user=user_a, registry=registry, is_used=False)
+    entry_a = await seed_entry(user=user_a, registry=registry, is_used=True)
 
     act_as(current_user_b)
     response = await client.patch(
@@ -100,11 +100,11 @@ async def test_cross_account_usage_patch_returns_404(
         "cross-account usage write must be rejected with 404"
     )
 
-    # Confirm A's row is unchanged — is_used is still False.
+    # Confirm A's row is unchanged — is_used is still True (B tried to flip it False).
     act_as(current_user_a)
     list_response = await client.get("/api/v1/cabinet/entries")
     assert list_response.status_code == 200
     items = list_response.json()["items"]
     assert len(items) == 1
     assert items[0]["id"] == str(entry_a.id)
-    assert items[0]["is_used"] is False, "victim row must not be mutated"
+    assert items[0]["is_used"] is True, "victim row must not be mutated"

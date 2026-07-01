@@ -340,7 +340,7 @@ def today() -> Iterator[date]:
     seconds of midnight it skips cleanly before the test body, so a passed test
     is never ambiguously re-labelled during finalization. Re-run when skipped.
     """
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
     seconds_until_midnight = 86400 - (now.hour * 3600 + now.minute * 60 + now.second)
     if seconds_until_midnight <= 5:
         pytest.skip("within 5s of midnight rollover — re-run")
