@@ -496,9 +496,9 @@ user data.
 
 #### Automated
 
-- [x] 2.1 Setup project runs standalone and produces the storage-state file: `cd frontend && npx playwright test --project=setup`
-- [x] 2.2 Type checking passes: `cd frontend && npm run build`
-- [x] 2.3 Linting passes: `cd frontend && npm run lint`
+- [x] 2.1 Setup project runs standalone and produces the storage-state file: `cd frontend && npx playwright test --project=setup` — 4c82fbd
+- [x] 2.2 Type checking passes: `cd frontend && npm run build` — 4c82fbd
+- [x] 2.3 Linting passes: `cd frontend && npm run lint` — 4c82fbd
 
 #### Manual
 
