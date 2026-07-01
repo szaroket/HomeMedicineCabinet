@@ -127,8 +127,8 @@ class TestMergeTabletEntry:
             (1, 15, 1, 15, 20, TabletPool(2, 10)),
             # multi-package: 60+27=87 → 5 pkg partial 7
             (3, None, 2, 7, 20, TabletPool(5, 7)),
-            # worked example from plan: 20+5=25 → 2 pkg partial 5
-            (1, None, 1, 5, 20, TabletPool(2, 5)),
+            # multi-package partial+partial remainder: 33+49=82 → 5 pkg partial 2
+            (2, 13, 3, 9, 20, TabletPool(5, 2)),
         ],
     )
     def test_merge_tablet_entry(

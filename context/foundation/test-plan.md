@@ -149,11 +149,19 @@ suite. Frontend entries fill in once Phases 2–3 ship; before that they read
 
 ### 6.2 Adding a backend integration test (endpoint + CRUD)
 
-- **Location**: `backend/tests/<domain>/test_router.py` (HTTP) or `test_crud.py` (DB ops); mirror `app/api/v1/<domain>/`.
-- **Client**: `httpx.AsyncClient`; request shared fixtures (`client`, `authed_client`, `mock_session`, `fake_user`) from `backend/tests/conftest.py` — do not duplicate mocks.
-- **Mocking policy**: always pass `spec=` to mocks; `autospec=True` for patched functions. Assert response *shape and membership*, not just status code (see Risk #1).
-- **Reference test**: `backend/tests/cabinet/test_router.py`, `backend/tests/cabinet/test_crud.py`.
-- **Run locally**: `cd backend && uv run pytest`.
+Two distinct tiers both called "integration" — file each kind in the right place:
+
+**Hermetic HTTP-contract tests** (`tests/<domain>/test_router.py` / `test_crud.py`) — mocked session, no DB needed:
+- Mirror `app/api/v1/<domain>/`; request shared fixtures (`client`, `authed_client`, `mock_session`, `fake_user`) from `backend/tests/conftest.py` — do not duplicate mocks.
+- Mocking policy: always pass `spec=` to mocks; `autospec=True` for patched functions. Assert response *shape and membership*, not just status code (see Risk #1).
+- Reference test: `backend/tests/cabinet/test_router.py`, `backend/tests/cabinet/test_crud.py`.
+- Run locally: `cd backend && uv run pytest`.
+
+**DB-backed integration** (`tests/integration/`) — real Postgres via testcontainers, Docker required:
+- Use when the risk lives in a real SQL path that mocks cannot reproduce (FTS `to_tsquery`, `DISTINCT ON`, generated columns, ownership scoping).
+- Fixtures are in `backend/tests/integration/conftest.py`; see `tests/integration/README.md` for prerequisites and isolation model.
+- Run locally: `cd backend && uv run pytest tests/integration` (Docker must be running).
+- Excluded from CI (`--ignore=tests/integration`) until test-plan Phase 4.
 
 ### 6.3 Adding an e2e test
 
@@ -172,6 +180,11 @@ suite. Frontend entries fill in once Phases 2–3 ship; before that they read
 ### 6.6 Per-rollout-phase notes
 
 (Filled in as phases land — `/10x-implement` appends 2–3 lines capturing anything surprising a phase taught.)
+
+**Phase 5 (Risk #5 + #6, 2026-06-30):**
+- **Unique-constraint trap in parity tests.** When seeding multiple entries for the same user + registry, passing an explicit `expiry_date` to every call overrides the factory counter and triggers `uq_cabinet_entries_user_med_expiry`. Omit the override and let the counter handle it, or use a distinct registry per group.
+- **Boundary case required for `>=` vs `>` parity.** A sufficiency parity test with only "clearly sufficient" entries (supply >> until_end) cannot catch a `>=` → `>` mutation. Seed at least one boundary entry where `supply == until_end` exactly; without it the mutation silently passes.
+- **Wrong `tablets_per_package` breaks the oracle.** The Python `compute_usage_view` oracle must receive the capacity of the entry's *actual* registry. Using a hardcoded tpp when entries span multiple registries produces a wrong prediction and causes the parity assertion to fail on the wrong filter.
 
 ## 7. What We Deliberately Don't Test
 
