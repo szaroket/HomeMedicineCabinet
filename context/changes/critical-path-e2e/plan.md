@@ -59,13 +59,15 @@ dev servers automatically, runs one spec —
 `frontend/e2e/seed.spec.ts` — that logs in (via a pre-saved `storageState`
 from `auth.setup.ts`), adds a medication, confirms it appears in the cabinet,
 confirms it survives a page reload, and confirms the expanded row shows the
-correct detail fields. A teardown step deletes the throwaway test data
-directly from the database afterward. The same command works unchanged in CI
-once test-plan.md Phase 4 wires it into `ci-cd.yml` (out of scope here).
+correct detail fields. A teardown step deletes the shared test account's
+cabinet entries directly from the database afterward (the account itself
+persists — see Phase 4). The same command works unchanged in CI once
+test-plan.md Phase 4 wires it into `ci-cd.yml` (out of scope here).
 
 **Verification**: `cd frontend && npx playwright test` exits 0 with 1 passed
-test, and a post-run query against the test database shows no leftover rows
-matching the e2e test-user email pattern.
+test, and a post-run query against the test database shows no leftover
+`cabinet_entries` rows for the shared test account (`e2e-hmc@example.com`),
+while that account row itself remains.
 
 ## What We're NOT Doing
 
@@ -78,8 +80,9 @@ matching the e2e test-user email pattern.
   not touch the CI workflow file.
 - Provisioning a dedicated test Supabase project — tests run against the
   existing project referenced by `backend/.env` / `frontend/.env.local`, with
-  isolation coming from unique per-run test users, not project separation.
-  Flagged as a follow-up, not solved here.
+  isolation coming from per-run unique cabinet-entry data (timestamped
+  `expiry_date`) plus post-run teardown, not project separation. Flagged as a
+  follow-up, not solved here.
 - Adding a test-only teardown/seed API endpoint on the backend — cleanup goes
   through a direct-DB script instead, keeping this phase frontend-only in
   terms of backend surface area.
@@ -301,21 +304,27 @@ before writing the assertions by querying the registry from native PowerShell
 (per L-001, not the Bash tool). Document "registry must be seeded via
 registry-import" as an explicit run prerequisite.
 
-**Per-run uniqueness**: derive uniqueness from the fresh per-run user
-(new `user_id` every run via the timestamp-suffixed registration email) — the
-medicine and expiry do **not** need to be unique. The
-`uq_cabinet_entries_user_med_expiry` constraint is
-`(user_id, medication_registry_id, expiry_date)`; because each run has a new
-`user_id`, that constraint can never collide across runs, so the earlier
-"unique medicine/expiry per run" rationale does not apply and is dropped.
+**Per-run uniqueness**: the setup project logs in a single fixed shared
+account (`e2e-hmc@example.com`) rather than registering a fresh user (Phase 2
+pivot, see `reviews/impl-review-phase-2.md` F1), so `user_id` is **constant**
+across runs. Uniqueness therefore must come from the `expiry_date` (or
+`package_count`), not the user. The `uq_cabinet_entries_user_med_expiry`
+constraint is `(user_id, medication_registry_id, expiry_date)`; with a fixed
+`user_id`, two runs that submit the same medicine + expiry **would collide**.
+Derive a per-run `expiry_date` (e.g. a base date offset by a timestamp-derived
+number of days) so the tuple is unique every run while the medicine name stays
+a fixed known-catalog constant. Phase 4 teardown still removes the run's
+`cabinet_entries` as a second line of defense.
 
 **Contract**: `test.describe` title binds to Risk #2
 (`context/foundation/test-plan.md`); all locators are
 `getByRole`/`getByLabel`/`getByText` (no CSS/XPath/test-id, per the hard
 rule and the existing form's real `<label>`s); waits use
 `toBeVisible()`/`waitForResponse()`, never `waitForTimeout()`; per-run
-isolation comes from the fresh registered user (timestamp-suffixed email), so
-the medicine name is a fixed known-catalog constant and need not vary per run.
+isolation comes from a timestamp-derived `expiry_date` (the shared login means
+`user_id` is constant), so the medicine name stays a fixed known-catalog
+constant while the expiry varies per run to satisfy
+`uq_cabinet_entries_user_med_expiry`.
 
 #### 2. E2E rules reference (skill setup, if missing)
 
@@ -354,9 +363,12 @@ at implementation time via the skill's SETUP step output.
 
 ### Overview
 
-Add a script that deletes the throwaway test user (and, via cascade or
-explicit multi-table delete, its cabinet entries) directly from Postgres
-after a run, without adding any new backend API endpoint.
+Add a script that deletes the shared test account's **cabinet entries**
+directly from Postgres after a run — **not** the user account itself — without
+adding any new backend API endpoint. Because Phase 2 pivoted to a single fixed
+confirmed login (`e2e-hmc@example.com`) that email confirmation makes
+un-recreatable, the account must survive across runs; only the per-run
+`cabinet_entries` it accumulates get cleaned up.
 
 ### Changes Required:
 
@@ -367,16 +379,16 @@ after a run, without adding any new backend API endpoint.
 **Intent**: Connect directly to the database using the same connection
 string the backend already uses (`DATABASE_URL`, converted to a plain
 `postgres://` URL if the backend's asyncpg-prefixed form doesn't parse for
-the Node `pg` client), find users whose email matches the `e2e-*` pattern
-established in Phase 2's `auth.setup.ts`, and delete their child rows before
-the user row in **FK-safe order: `cabinet_entries` → `user_preferences` →
-`users`** (all filtered by the resolved test `user_id`). Registration
-provisions **two** child rows per user, not one — `auth/crud.py:36,41` inserts
-into both `users` and `user_preferences` (`user_preferences.user_id` is a
-unique FK→`users.id` with no ON DELETE cascade), so omitting the
-`user_preferences` delete raises a FK violation on the `users` delete. The
-Supabase-managed `auth.users` account is a separate table, intentionally left
-(the "accumulation" follow-up already flagged in "What We're NOT Doing").
+the Node `pg` client), resolve the shared test account's `user_id` by its
+**exact** fixed email (`e2e-hmc@example.com`, the account Phase 2's
+`auth.setup.ts` logs in), and delete **only** that user's `cabinet_entries`
+rows. **Do NOT delete the `users`, `user_preferences`, or Supabase
+`auth.users` rows** — the shared account is confirmed once and cannot be
+re-registered (email confirmation), so deleting it breaks every subsequent
+run. Match by exact email, never the `e2e-*` prefix, so the account row itself
+is never a deletion target. This is deliberately narrower than a per-run-user
+teardown: with a shared account there is no throwaway user to remove, only its
+accumulated cabinet entries.
 
 **Contract**: Exported as a Playwright `globalTeardown` function; registered
 via `globalTeardown: './e2e/teardown/cleanup-test-users.ts'` in
@@ -423,11 +435,13 @@ is populated before the teardown runs.
 
 - After a full local run, manually querying the test database (via
   `psql`/Supabase dashboard, from native PowerShell per `lessons.md` L-001,
-  not the Bash tool) for the test user's email confirms zero rows in both
-  the cabinet-entries table and the auth user table.
+  not the Bash tool) for the shared account's `user_id` confirms zero rows in
+  the cabinet-entries table **and** that the `users` / `user_preferences` rows
+  for `e2e-hmc@example.com` are still present (teardown must not delete the
+  account).
 - Running the suite twice consecutively confirms no
-  `uq_cabinet_entries_user_med_expiry` or unique-email collisions from
-  leftover data between runs.
+  `uq_cabinet_entries_user_med_expiry` collisions from leftover data between
+  runs (uniqueness now rides on the per-run `expiry_date`, not a fresh user).
 
 ---
 

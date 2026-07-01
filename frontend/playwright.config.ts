@@ -22,7 +22,7 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   projects: [
-    // Runs auth.setup.ts first: registers a throwaway user and saves the
+    // Runs auth.setup.ts first: logs in the shared test account and saves the
     // session to e2e/.auth/user.json (see Phase 2 of the plan).
     { name: 'setup', testMatch: /auth\.setup\.ts/ },
     {
