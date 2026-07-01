@@ -482,10 +482,10 @@ user data.
 
 #### Automated
 
-- [ ] 1.1 Playwright installs cleanly: `cd frontend && npm install`
-- [ ] 1.2 Config loads and lists zero tests without error: `cd frontend && npx playwright test --list`
-- [ ] 1.3 Type checking still passes with the new e2e project reference: `cd frontend && npm run build`
-- [ ] 1.4 Linting passes on the (empty) e2e dir setup: `cd frontend && npm run lint`
+- [x] 1.1 Playwright installs cleanly: `cd frontend && npm install`
+- [x] 1.2 Config loads and lists zero tests without error: `cd frontend && npx playwright test --list`
+- [x] 1.3 Type checking still passes with the new e2e project reference: `cd frontend && npm run build`
+- [x] 1.4 Linting passes on the (empty) e2e dir setup: `cd frontend && npm run lint`
 
 #### Manual
 

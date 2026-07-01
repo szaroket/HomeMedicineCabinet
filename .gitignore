@@ -222,6 +222,12 @@ node_modules/
 dist-ssr/
 *.local
 
+# Playwright E2E artifacts
+playwright-report/
+test-results/
+.playwright/
+frontend/e2e/.auth/
+
 # Editor directories and files
 .DS_Store
 *.suo
