@@ -1,4 +1,12 @@
+import { config as loadEnv } from 'dotenv'
 import { defineConfig, devices } from '@playwright/test'
+
+// Playwright (unlike Vite) does not auto-load env files, so E2E_TEST_PASSWORD
+// (setup project) and E2E_DATABASE_URL (teardown) would be undefined unless
+// exported in the shell. Load .env.local first, then .env, before the config is
+// built. Already-exported shell vars still win — dotenv never overrides an
+// existing process.env value.
+loadEnv({ path: ['.env.local', '.env'] })
 
 /**
  * Playwright configuration for the critical-path E2E suite.
@@ -17,6 +25,10 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   reporter: 'html',
+  // After the whole run, sweep the shared test account's accumulated cabinet
+  // entries directly from Postgres (the cabinet API has no DELETE) — the account
+  // row itself is preserved. See e2e/teardown/cleanup-test-users.ts and Phase 4.
+  globalTeardown: './e2e/teardown/cleanup-test-users.ts',
   use: {
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',

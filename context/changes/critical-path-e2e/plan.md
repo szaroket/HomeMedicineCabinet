@@ -551,11 +551,11 @@ user data.
 
 #### Automated
 
-- [ ] 4.1 Teardown runs without error after a full suite pass: `cd frontend && npx playwright test`
-- [ ] 4.2 Type checking passes: `cd frontend && npm run build`
-- [ ] 4.3 Linting passes: `cd frontend && npm run lint`
+- [x] 4.1 Teardown runs without error after a full suite pass: `cd frontend && npx playwright test`
+- [x] 4.2 Type checking passes: `cd frontend && npm run build`
+- [x] 4.3 Linting passes: `cd frontend && npm run lint`
 
 #### Manual
 
-- [ ] 4.4 Post-run DB query confirms zero rows remain for the test user (cabinet entries + auth user)
-- [ ] 4.5 Two consecutive runs show no unique-constraint collisions from leftover data
+- [x] 4.4 Post-run DB query confirms zero rows remain for the test user (cabinet entries + auth user)
+- [x] 4.5 Two consecutive runs show no unique-constraint collisions from leftover data
