@@ -551,9 +551,9 @@ user data.
 
 #### Automated
 
-- [x] 4.1 Teardown runs without error after a full suite pass: `cd frontend && npx playwright test`
-- [x] 4.2 Type checking passes: `cd frontend && npm run build`
-- [x] 4.3 Linting passes: `cd frontend && npm run lint`
+- [x] 4.1 Teardown runs without error after a full suite pass: `cd frontend && npx playwright test` — 88c64d5
+- [x] 4.2 Type checking passes: `cd frontend && npm run build` — 88c64d5
+- [x] 4.3 Linting passes: `cd frontend && npm run lint` — 88c64d5
 
 #### Manual
 
