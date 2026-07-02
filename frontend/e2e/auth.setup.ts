@@ -1,5 +1,7 @@
 import { test as setup, expect } from "@playwright/test";
 
+import { TEST_EMAIL } from "./test-account";
+
 /**
  * Auth setup project — Phase 2 of context/changes/critical-path-e2e/plan.md.
  *
@@ -25,8 +27,6 @@ import { test as setup, expect } from "@playwright/test";
 // Kept in sync with the `storageState` path in `playwright.config.ts`. The
 // `.auth/` dir is gitignored (root `.gitignore`); Playwright creates it on write.
 const STORAGE_STATE = "e2e/.auth/user.json";
-
-const TEST_EMAIL = process.env.E2E_TEST_EMAIL ?? "e2e-hmc@example.com";
 
 // Read a required env var, failing fast and clearly if it is missing — kept out
 // of the test body so it doesn't trip playwright/no-conditional-in-test and so

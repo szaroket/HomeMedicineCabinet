@@ -1,5 +1,7 @@
 import { Client } from "pg";
 
+import { TEST_EMAIL } from "../test-account";
+
 /**
  * Global teardown — Phase 4 of context/changes/critical-path-e2e/plan.md.
  *
@@ -26,10 +28,6 @@ import { Client } from "pg";
  * test` command still boots the backend (uv/uvicorn) and must be run from native
  * PowerShell per lessons.md L-001.
  */
-
-// The shared test account whose cabinet entries are swept. Kept in sync with
-// auth.setup.ts's TEST_EMAIL (same default, same override).
-const TEST_EMAIL = process.env.E2E_TEST_EMAIL ?? "e2e-hmc@example.com";
 
 // Resolve the connection string, normalizing the backend's SQLAlchemy dialect
 // URL (`postgresql+asyncpg://…`) to the plain form the `pg` client parses, so the
