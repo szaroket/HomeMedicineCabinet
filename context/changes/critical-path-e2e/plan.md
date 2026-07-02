@@ -337,6 +337,20 @@ per-project copy; if per-project, this is where it lands. No action needed
 in this plan if the skill resolves its own reference file globally — verify
 at implementation time via the skill's SETUP step output.
 
+#### 3. Accessibility labels on the add-medication form (addendum)
+
+**File**: `frontend/src/features/cabinet/components/add-medication-form.tsx`,
+`product-autocomplete.tsx`, `variant-select.tsx`
+
+**Intent**: The plan assumed the form's existing real `<label>`s were already
+locatable by `getByLabel(...)`, but they had no `htmlFor`/`id` association, so
+the seed spec's label locators could not resolve. Add `htmlFor`/`id` to the
+three fields ("Nazwa leku", "Rozmiar opakowania", "Termin ważności"). This is
+behavior-preserving and follows the sanctioned locator-a11y-over-testid pattern
+(fix accessibility rather than add `data-testid`). Documented here as an
+in-spirit addendum surfaced during Phase 3 implementation (impl review F1) so
+future reviews don't re-flag it as unplanned scope.
+
 ### Success Criteria:
 
 #### Automated Verification:
@@ -523,10 +537,10 @@ user data.
 
 #### Automated
 
-- [x] 3.1 Full suite passes end-to-end: `cd frontend && npx playwright test`
-- [x] 3.2 Type checking passes: `cd frontend && npm run build`
-- [x] 3.3 Linting passes: `cd frontend && npm run lint`
-- [x] 3.4 Spec reviewed against the 5 anti-patterns in `e2e-anti-patterns.md`
+- [x] 3.1 Full suite passes end-to-end: `cd frontend && npx playwright test` — 9a57f05
+- [x] 3.2 Type checking passes: `cd frontend && npm run build` — 9a57f05
+- [x] 3.3 Linting passes: `cd frontend && npm run lint` — 9a57f05
+- [x] 3.4 Spec reviewed against the 5 anti-patterns in `e2e-anti-patterns.md` — 9a57f05
 
 #### Manual
 

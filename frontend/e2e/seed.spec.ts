@@ -172,18 +172,34 @@ test.describe("Risk #2 — critical journey: add medication → see it in cabine
     await expect(myRowAfterReload).toBeVisible();
 
     // --- Detail fields render the data the medicines API returned for the
-    //     selected variant (correct data at the seam, not just "a row exists") ---
+    //     selected variant (correct data at the seam, not just "a row exists").
+    //     Assert each value inside its own detail cell (`<dd>`, role
+    //     "definition") rather than as a substring of the whole detail row: this
+    //     stops a value from being satisfied by a sibling field's text and stops
+    //     a null field from being silently "verified" by the ubiquitous "—"
+    //     placeholder. Null fields aren't uniquely checkable (they all render as
+    //     "—"), so they're skipped — the populated ones carry the assertion. ---
     await myRowAfterReload
       .getByRole("button", { name: "Pokaż szczegóły" })
       .click();
-    const detailRow = page
-      .getByRole("row")
-      .filter({ hasText: "Substancja czynna:" });
-    await expect(detailRow).toContainText(variant.active_ingredient ?? "—");
-    await expect(detailRow).toContainText(variant.strength ?? "—");
-    await expect(detailRow).toContainText(variant.pharmaceutical_form ?? "—");
-    await expect(detailRow).toContainText(
-      variant.route_of_administration ?? "—",
-    );
+    // The detail row must be expanded before its cells can be read.
+    await expect(
+      page.getByRole("row").filter({ hasText: "Substancja czynna:" }),
+    ).toBeVisible();
+
+    // Null fields all render as the shared "—" placeholder, so they aren't
+    // uniquely verifiable — filter them out and let the populated fields carry
+    // the assertion (filtering here keeps the test body free of conditionals).
+    const populatedDetailValues = [
+      variant.active_ingredient,
+      variant.strength,
+      variant.pharmaceutical_form,
+      variant.route_of_administration,
+    ].filter((value): value is string => value != null);
+    for (const value of populatedDetailValues) {
+      await expect(
+        page.getByRole("definition").filter({ hasText: value }).first(),
+      ).toBeVisible();
+    }
   });
 });
