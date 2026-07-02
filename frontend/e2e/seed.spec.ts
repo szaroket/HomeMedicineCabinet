@@ -34,8 +34,9 @@ import { test, expect } from "@playwright/test";
  * its own row through the app. Isolation instead comes from a per-run-unique
  * `expiry_date` (the shared login means `user_id` is constant, so uniqueness must
  * ride on the expiry to avoid an `uq_cabinet_entries_user_med_expiry` collision
- * across re-runs). Accumulated rows are swept out-of-band by the direct-DB
- * globalTeardown added in the plan's Phase 4.
+ * across re-runs *and* parallel workers — see `uniqueFutureExpiryIso`, which
+ * gives each worker a disjoint day-band). Accumulated rows are swept out-of-band
+ * by the direct-DB globalTeardown added in the plan's Phase 4.
  */
 
 // The catalog product to drive the journey with. Kept as a constant (overridable
@@ -71,12 +72,18 @@ function productLabel(product: ProductOut): string {
     .join(" ");
 }
 
-// A future, per-run-unique expiry. Spread across ~10 years off a fixed base so
-// two runs get different dates (uniqueness) while every date stays in the future
-// (status stays "valid", never "expired").
+// A future, per-run-unique expiry — the sole isolation axis for
+// uq_cabinet_entries_user_med_expiry (the shared login fixes user_id). Each
+// parallel worker owns a DISJOINT day-band, so two workers firing in the same
+// millisecond can never land on the same date; within a band, wall-clock spreads
+// re-runs apart. Everything stays a future date off a fixed base (status stays
+// "valid", never "expired").
 function uniqueFutureExpiryIso(): string {
+  const workerIndex = Number(process.env.TEST_WORKER_INDEX ?? "0");
+  const bandDays = 365; // each worker's disjoint slice of the day-space
+  const dayOffset = workerIndex * bandDays + (Date.now() % bandDays);
   const base = new Date(Date.UTC(2035, 0, 1));
-  base.setUTCDate(base.getUTCDate() + (Date.now() % 3650));
+  base.setUTCDate(base.getUTCDate() + dayOffset);
   return base.toISOString().slice(0, 10); // YYYY-MM-DD
 }
 
