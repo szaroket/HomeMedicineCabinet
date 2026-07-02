@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
 import { addEntrySchema } from "@/features/cabinet/schemas/cabinet-schemas";
@@ -34,14 +34,16 @@ export function AddMedicationForm() {
     setValue,
     setError,
     reset,
-    watch,
+    control,
     formState: { errors },
   } = useForm<AddEntryValues>({
     resolver: zodResolver(addEntrySchema),
     shouldUnregister: true,
   });
 
-  const isUsed = watch("is_used") ?? false;
+  // useWatch (not the watch() function) so React Compiler can memoize this
+  // component instead of skipping it (react-hooks/incompatible-library).
+  const isUsed = useWatch({ control, name: "is_used" }) ?? false;
 
   function handleProductSelect(product: ProductOut) {
     setSelectedProduct(product);
