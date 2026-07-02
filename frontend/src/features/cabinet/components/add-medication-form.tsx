@@ -159,10 +159,14 @@ export function AddMedicationForm() {
         )}
 
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-blue-400">
+          <label
+            htmlFor="package_count"
+            className="text-sm font-medium text-blue-400"
+          >
             Liczba opakowań
           </label>
           <input
+            id="package_count"
             type="number"
             min={1}
             defaultValue={1}
@@ -204,10 +208,14 @@ export function AddMedicationForm() {
         )}
 
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-blue-400">
+          <label
+            htmlFor="expiry_date"
+            className="text-sm font-medium text-blue-400"
+          >
             Termin ważności
           </label>
           <input
+            id="expiry_date"
             type="date"
             className="rounded border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             {...register("expiry_date")}

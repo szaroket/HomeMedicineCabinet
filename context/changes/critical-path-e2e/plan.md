@@ -523,15 +523,15 @@ user data.
 
 #### Automated
 
-- [ ] 3.1 Full suite passes end-to-end: `cd frontend && npx playwright test`
-- [ ] 3.2 Type checking passes: `cd frontend && npm run build`
-- [ ] 3.3 Linting passes: `cd frontend && npm run lint`
-- [ ] 3.4 Spec reviewed against the 5 anti-patterns in `e2e-anti-patterns.md`
+- [x] 3.1 Full suite passes end-to-end: `cd frontend && npx playwright test`
+- [x] 3.2 Type checking passes: `cd frontend && npm run build`
+- [x] 3.3 Linting passes: `cd frontend && npm run lint`
+- [x] 3.4 Spec reviewed against the 5 anti-patterns in `e2e-anti-patterns.md`
 
 #### Manual
 
-- [ ] 3.5 Headed run visibly completes the full journey correctly
-- [ ] 3.6 Two consecutive runs both pass without manual DB cleanup in between
+- [x] 3.5 Headed run visibly completes the full journey correctly
+- [x] 3.6 Two consecutive runs both pass without manual DB cleanup in between
 
 ### Phase 4: Direct-DB Teardown Script
 
