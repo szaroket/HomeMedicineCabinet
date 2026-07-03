@@ -126,7 +126,10 @@ test.describe("Risk #2 — critical journey: add medication → see it in cabine
         res.url().includes("/medicines/variants") &&
         res.request().method() === "GET",
     );
-    await page.getByText(productLabel(product), { exact: true }).first().click();
+    await page
+      .getByText(productLabel(product), { exact: true })
+      .first()
+      .click();
     const variants = (await (await variantsResponse).json()) as VariantOut[];
     expect(
       variants.length,

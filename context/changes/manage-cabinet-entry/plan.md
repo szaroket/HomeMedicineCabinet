@@ -417,11 +417,11 @@ No schema migration required — `cabinet_entries.package_count` already has the
 
 #### Automated
 
-- [ ] 5.1 Manage/delete spec passes (native PowerShell): `cd frontend; npx playwright test manage-cabinet-entry`
-- [ ] 5.2 Full e2e suite still green: `cd frontend; npx playwright test`
-- [ ] 5.3 Lint + format clean on the new spec: `cd frontend && npm run lint && npx prettier --check e2e/`
+- [x] 5.1 Manage/delete spec passes (native PowerShell): `cd frontend; npx playwright test manage-cabinet-entry`
+- [x] 5.2 Full e2e suite still green: `cd frontend; npx playwright test`
+- [x] 5.3 Lint + format clean on the new spec: `cd frontend && npm run lint && npx prettier --check e2e/`
 
 #### Manual
 
-- [ ] 5.4 Playwright report shows the manage/delete journey passing
-- [ ] 5.5 No orphaned test entries remain after a run (teardown worked)
+- [x] 5.4 Playwright report shows the manage/delete journey passing
+- [x] 5.5 No orphaned test entries remain after a run (teardown worked)
