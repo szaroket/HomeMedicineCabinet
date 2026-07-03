@@ -1549,7 +1549,10 @@ class TestSetEntryQuantity:
 
         assert result.package_count == 0
         mock_crud.update_entry_counts.assert_called_once_with(
-            mock_session, entry, 0, None
+            session=mock_session,
+            entry=entry,
+            package_count=0,
+            partial_tablet_count=None,
         )
 
     async def test_validates_partial_tablet_count_against_variant(

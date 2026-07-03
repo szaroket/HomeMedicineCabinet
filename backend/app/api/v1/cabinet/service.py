@@ -994,7 +994,10 @@ async def set_entry_quantity(
     )
     _validate_and_get_tpp(variant, partial_tablet_count)
     updated_entry = await crud.update_entry_counts(
-        session, entry, package_count, partial_tablet_count
+        session=session,
+        entry=entry,
+        package_count=package_count,
+        partial_tablet_count=partial_tablet_count,
     )
     today = datetime.now(timezone.utc).date()
     return _map_row_to_entry_out(

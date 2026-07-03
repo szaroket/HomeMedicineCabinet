@@ -385,16 +385,16 @@ No schema migration required — `cabinet_entries.package_count` already has the
 
 #### Automated
 
-- [x] 3.1 Unit tests pass: `cd backend && uv run pytest tests/cabinet`
-- [x] 3.2 Integration tests pass (native PowerShell): `cd backend; uv run pytest tests/integration/cabinet`
-- [x] 3.3 Lint + format clean: `cd backend && uv run ruff check . && uv run ruff format --check .`
+- [x] 3.1 Unit tests pass: `cd backend && uv run pytest tests/cabinet` — 75e02c7
+- [x] 3.2 Integration tests pass (native PowerShell): `cd backend; uv run pytest tests/integration/cabinet` — 75e02c7
+- [x] 3.3 Lint + format clean: `cd backend && uv run ruff check . && uv run ruff format --check .` — 75e02c7
 
 #### Manual
 
-- [x] 3.4 PATCH package_count: 0 succeeds and persists at 0
-- [x] 3.5 Negative count → 422; out-of-range/non-tablet partial → 422
-- [x] 3.6 Response reflects recomputed status/below_minimum/total_tablets
-- [x] 3.7 PATCH on foreign/non-existent entry → 404
+- [x] 3.4 PATCH package_count: 0 succeeds and persists at 0 — 75e02c7
+- [x] 3.5 Negative count → 422; out-of-range/non-tablet partial → 422 — 75e02c7
+- [x] 3.6 Response reflects recomputed status/below_minimum/total_tablets — 75e02c7
+- [x] 3.7 PATCH on foreign/non-existent entry → 404 — 75e02c7
 
 ### Phase 4: Frontend — quantity steppers + zero rule
 
