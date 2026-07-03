@@ -261,6 +261,7 @@ _(none — all questions resolved before roadmap finalisation)_
 
 ## Parked
 
+- **Bug: login requires a manual page refresh to reach the user page** — Reported 2026-07-03: entering correct email/password does not navigate to the user page after login; the login form just re-renders (looks like it "refreshes" back to itself), and this repeats on a second attempt — a full browser page reload is needed before login succeeds. Suspect area: post-login redirect/auth-state handling in the frontend (F-01 auth scaffold) — likely a stale auth-state race (token/session not yet propagated to the router/guard before the redirect fires) rather than a backend issue. Why parked: not yet scoped as a change; needs a `/10x-frame` or bug-triage pass to confirm root cause before planning a fix. Revisit before or alongside S-06/S-07 — do not let it block S-03.
 - **Daily dataset update via GitHub Actions workflow** — Why parked: explicitly deferred to v2 by the user; the one-off import script (F-03) covers MVP needs. Revisit when dataset staleness becomes a real user pain point.
 - **Inline PDF preview for drug leaflet and specification** — Why parked: PRD §Non-Goals (v2 item); links only for MVP (FR-012).
 - **Native mobile app (iOS/Android)** — Why parked: PRD §Non-Goals; web-only for MVP.
