@@ -4,7 +4,7 @@
 - **Plan**: context/changes/manage-cabinet-entry/plan.md
 - **Mode**: Deep
 - **Date**: 2026-07-03
-- **Verdict**: REVISE
+- **Verdict**: REVISE → SOUND (all 4 findings fixed 2026-07-03)
 - **Findings**: 0 critical, 2 warnings, 2 observations
 
 ## Verdicts
@@ -37,7 +37,7 @@ Progress↔Phase mechanically consistent ✓.
 - **Location**: Phase 3 §4 — Quantity route (plan.md:205)
 - **Detail**: The plan says the quantity route mirrors "the same except-ladder as the other PATCH handlers" — i.e. `set_entry_usage` (router.py:199-224), which does NOT catch `CabinetInvariantError` because `validate_usage` never raises it. But the quantity service (Phase 3 §2) reuses `_validate_and_get_tpp` (service.py:547) — the only other caller besides the add path — which CAN raise `CabinetInvariantError` (tablet variant with invalid capacity, service.py:568). Since `CabinetInvariantError` subclasses `CabinetError` (errors.py:279), the specified ladder catches it at `CabinetError → 400`. That contradicts the error class's own docstring ("The router maps this to 500") and the add route, which explicitly maps it to 500 (router.py:123-126). A corrupt-data breach would surface as a client 400 instead of 500.
 - **Fix**: In the Phase 3 §4 contract, add an explicit `except CabinetInvariantError → 500` branch (before the generic `CabinetError → 400`), matching the add route rather than the usage route. `CabinetInvariantError` is already imported in router.py.
-- **Decision**: PENDING
+- **Decision**: FIXED — added `CabinetInvariantError → 500` (before generic `CabinetError → 400`) to the Phase 3 §4 route contract.
 
 ### F2 — Absolute-value quantity PATCH races on rapid −/+ clicks
 
@@ -51,7 +51,7 @@ Progress↔Phase mechanically consistent ✓.
   - Tradeoff: Slightly slower feel on very rapid clicks (one PATCH at a time) — acceptable at PRD `low` scale.
   - Confidence: HIGH — `isPending` is already available from the mutation hook.
   - Blind spot: Whether desktop row and mobile card share the pending flag via use-cabinet-entry.ts (they should, per the plan's "one implementation" goal).
-- **Decision**: PENDING
+- **Decision**: FIXED — added a rapid-click race guard (disable −/+ while `isPending`) to Phase 4 §2 contract + new manual criterion 4.8 (and Progress 4.8).
 
 ### F3 — "Uncategorised entry at 0" is UI-reachable, not just raw-API
 
@@ -61,7 +61,7 @@ Progress↔Phase mechanically consistent ✓.
 - **Location**: What We're NOT Doing (plan.md:46); brief Open Risks (:56)
 - **Detail**: The plan accepts an uncategorised-at-0 entry as a raw-API-only edge ("the UI is the only client"). But it's reachable through the UI: an important entry decremented to 0 (kept at 0 by the rule) can then be un-starred via the existing importance toggle → uncategorised, at 0 — exactly the state the zero-delete rule exists to prevent. Not harmful (shows out-of-stock), but the "only a raw caller can do this" justification is inaccurate.
 - **Fix**: Reword the NOT-doing note to acknowledge the un-star path, or note that un-starring a 0-count entry is out of scope for the zero rule. No behavior change needed.
-- **Decision**: PENDING
+- **Decision**: FIXED — reworded the "Server-enforced zero invariant" NOT-doing note to acknowledge the un-star→uncategorised-at-0 path and scope it out of the zero rule.
 
 ### F4 — Zero-delete silently discards loose tablets (partial_tablet_count)
 
@@ -71,4 +71,4 @@ Progress↔Phase mechanically consistent ✓.
 - **Location**: Phase 4 §2 — zero rule (plan.md:246)
 - **Detail**: Decrementing an uncategorised tablet entry from package_count 1 → 0 deletes it. If that entry also has partial_tablet_count > 0 (loose tablets in the opened package), the delete discards them with no mention in the confirm copy. The model treats package_count as the sole "do we still hold this?" signal, but a tablet entry can be 0 packages + N loose tablets. Low confidence — depends on product semantics of package_count for opened tablet packs.
 - **Fix**: Decide intended semantics. Simplest: leave as-is (delete is explicit + confirmed) but consider mentioning loose tablets in the confirm message when partial_tablet_count > 0. No code-path change required for MVP.
-- **Decision**: PENDING
+- **Decision**: FIXED (mention in confirm copy) — Phase 4 §2 zero-delete copy now appends a sentence noting loose tablets are discarded when `partial_tablet_count > 0`.

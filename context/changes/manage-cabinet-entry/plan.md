@@ -43,7 +43,7 @@ Verified by: new backend unit + integration tests pass; `npm run build` + lint +
 - **Changing the medication / variant** of an existing entry — that is a delete + re-add.
 - **Undo / soft-delete / trash recovery** — hard delete with confirmation only; no soft-delete column exists.
 - **Bulk / multi-select delete** — FR-005 is strictly per-entry.
-- **Server-enforced zero invariant** — the "uncategorised entry cannot sit at 0" rule is orchestrated client-side (confirm → DELETE); the backend PATCH allows 0 for all entries. (See Implementation Approach.)
+- **Server-enforced zero invariant** — the "uncategorised entry cannot sit at 0" rule is orchestrated client-side (confirm → DELETE); the backend PATCH allows 0 for all entries. (See Implementation Approach.) Note this is not an absolute invariant: an important entry held at 0 (kept there by the rule) can then be un-starred via the existing importance toggle, yielding an uncategorised entry at 0. That state is harmless (shows out-of-stock) and out of scope for the zero-delete rule — the rule fires only on the decrement path, not on un-starring an already-zero entry.
 - **Optimistic UI updates** — list stays authoritative via invalidate + refetch, so server-computed status/badge/sufficiency never flash stale.
 
 ## Implementation Approach
@@ -202,7 +202,7 @@ Add `PATCH /cabinet/entries/{entry_id}/quantity` accepting absolute `package_cou
 
 **Intent**: Add the `PATCH .../quantity` route calling the facade, with the same except-ladder as the other PATCH handlers plus the 422 mapping for count validation.
 
-**Contract**: `@router.patch("/entries/{entry_id}/quantity", response_model=CabinetEntryOut)`; body `UpdateQuantityRequest`. Map `EntryNotFoundError`/`MedicationNotFoundError` → 404, `(InvalidPackageCountError, InvalidPartialTabletCountError)` → 422, `CabinetDatabaseError`/`UserDatabaseError` → 503, `CabinetError` → 400, unexpected → 500.
+**Contract**: `@router.patch("/entries/{entry_id}/quantity", response_model=CabinetEntryOut)`; body `UpdateQuantityRequest`. Map `EntryNotFoundError`/`MedicationNotFoundError` → 404, `(InvalidPackageCountError, InvalidPartialTabletCountError)` → 422, `CabinetDatabaseError`/`UserDatabaseError` → 503, `CabinetInvariantError` → 500, `CabinetError` → 400, unexpected → 500. **The `CabinetInvariantError → 500` branch must come before the generic `CabinetError → 400`** — this path reuses `_validate_and_get_tpp`, which can raise `CabinetInvariantError` (tablet variant with corrupt capacity), and that class subclasses `CabinetError` (a corrupt-data breach must surface as 500, not a client 400). This is the add-route ladder, not the `set_entry_usage` one. `CabinetInvariantError` is already imported in `router.py`.
 
 ### Success Criteria:
 
@@ -245,7 +245,9 @@ Add the quantity data layer and inline −/+ steppers plus partial-tablet editin
 
 **Intent**: Render a −/+ stepper bound to `package_count` and an editable partial-tablet field (tablet-based entries only; clearing it sends `null` = full package). The decrement handler evaluates the zero rule before issuing a request: at `package_count === 1` with `!is_important && !is_used`, open the `ConfirmDialog` and call `useDeleteEntry` on confirm; otherwise call `useUpdateQuantity` with the new count. Increment and partial edits always call `useUpdateQuantity`.
 
-**Contract**: Decrement/increment/partial logic centralised in `use-cabinet-entry.ts` (returns handlers + a `pendingDelete`/`confirming` flag) so the desktop row and mobile card share one implementation. Partial-tablet input validates client-side `1 … capacity-1` (reuse the add-form cross-check pattern) and hides for non-tablet entries. Polish confirm copy for the zero-delete case, e.g. title `Usuń lek` / message `Zmniejszenie liczby opakowań do zera usunie „{name}" z apteczki. Kontynuować?`. No optimistic updates — rely on invalidate + refetch.
+**Contract**: Decrement/increment/partial logic centralised in `use-cabinet-entry.ts` (returns handlers + a `pendingDelete`/`confirming` flag) so the desktop row and mobile card share one implementation. Partial-tablet input validates client-side `1 … capacity-1` (reuse the add-form cross-check pattern) and hides for non-tablet entries. Polish confirm copy for the zero-delete case, e.g. title `Usuń lek` / message `Zmniejszenie liczby opakowań do zera usunie „{name}" z apteczki. Kontynuować?`. When the entry also holds loose tablets (`partial_tablet_count > 0`), append a sentence noting they will be discarded too (e.g. `Luźne tabletki z otwartego opakowania również zostaną usunięte.`) so the delete isn't a silent data loss. No optimistic updates — rely on invalidate + refetch.
+
+**Rapid-click race guard**: Because there are no optimistic updates, the stepper derives the new count from the last-fetched entry. Two fast decrements from base N both compute N-1 → net −1 instead of −2 (the refetch from click 1 hasn't landed when click 2 fires). Disable the −/+ buttons (and defer the zero-delete branch) while `useUpdateQuantity`/`useDeleteEntry` `isPending`; `keepPreviousData` keeps the number visible so it doesn't blank. The `isPending` flag is exposed from `use-cabinet-entry.ts` so the desktop row and mobile card share the same guard.
 
 ### Success Criteria:
 
@@ -261,6 +263,7 @@ Add the quantity data layer and inline −/+ steppers plus partial-tablet editin
 - Editing/clearing the partial-tablet count works for tablet-based entries and is hidden for non-tablet entries; out-of-range values are rejected client-side.
 - Decrementing an uncategorised entry from 1 → confirm dialog → confirm deletes it; cancel leaves it at 1.
 - Decrementing an important or used entry to 0 leaves it at 0 (visible for restock), no dialog.
+- Rapid −/+ clicks never lose a decrement: the steppers disable while a quantity/delete mutation is in flight, so each click resolves against fresh state (one PATCH at a time).
 - Behaviour is consistent on desktop row and mobile card.
 
 **Implementation Note**: After automated verification passes, pause for manual confirmation before Phase 5.
@@ -407,7 +410,8 @@ No schema migration required — `cabinet_entries.package_count` already has the
 - [ ] 4.5 Partial-tablet edit/clear works for tablet entries, hidden for non-tablet
 - [ ] 4.6 Uncategorised entry 1 → 0 confirms then deletes; cancel leaves at 1
 - [ ] 4.7 Important/used entry decrements to 0 and stays (no dialog)
-- [ ] 4.8 Consistent on desktop row and mobile card
+- [ ] 4.8 Rapid −/+ clicks lose no decrements; steppers disable while a mutation is in flight
+- [ ] 4.9 Consistent on desktop row and mobile card
 
 ### Phase 5: E2E — manage/delete spec + teardown
 
