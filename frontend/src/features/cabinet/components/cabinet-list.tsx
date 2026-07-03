@@ -35,6 +35,7 @@ function EntryRow({ entry }: { entry: CabinetEntryOut }) {
     deletePending,
     deleteMessage,
     deleteNote,
+    deleteError,
     incrementPackage,
     decrementPackage,
     mutationPending,
@@ -100,7 +101,9 @@ function EntryRow({ entry }: { entry: CabinetEntryOut }) {
             >
               −
             </button>
-            <span className="w-6 text-center">{entry.package_count}</span>
+            <span aria-label="Liczba opakowań" className="w-6 text-center">
+              {entry.package_count}
+            </span>
             <button
               type="button"
               aria-label="Zwiększ liczbę opakowań"
@@ -335,6 +338,7 @@ function EntryRow({ entry }: { entry: CabinetEntryOut }) {
         title="Usuń lek"
         message={deleteMessage}
         note={deleteNote}
+        error={deleteError ?? undefined}
         confirmLabel="Usuń"
         onConfirm={confirmDelete}
         onCancel={closeDeleteConfirm}

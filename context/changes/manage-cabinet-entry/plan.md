@@ -136,7 +136,7 @@ Add the delete data layer, the project's first shared `ConfirmDialog` primitive,
 
 **Intent**: A reusable, domain-agnostic confirmation modal — the project's first shared UI primitive — cloned from the `add-result-dialog` centred-overlay pattern plus `filter-sheet`'s Escape-to-close, styled to the dark-slate theme with a destructive (red) confirm variant.
 
-**Contract**: Props `{ open, title, message, confirmLabel, cancelLabel, onConfirm, onCancel, destructive?, pending? }`. Renders a fixed overlay + centred panel; Escape and backdrop click call `onCancel`; confirm button disabled while `pending`. All caller-supplied text is Polish (the component ships no hardcoded domain copy beyond generic fallbacks).
+**Contract**: Props `{ open, title, message, note?, error?, confirmLabel, cancelLabel, onConfirm, onCancel, destructive?, pending? }`. Renders a fixed overlay + centred panel; Escape and backdrop click call `onCancel`; confirm button disabled while `pending`. All caller-supplied text is Polish (the component ships no hardcoded domain copy beyond generic fallbacks). The optional `note?` prop renders the adaptive secondary line (badge-cleared / loose-tablets Polish copy) used by the Phase 2 delete and Phase 4 zero-delete callers — added during implementation to carry the adaptive-copy intent without overloading `message`. The optional `error?` prop renders a red `role="alert"` line for a failed confirm action (used to surface a failed delete while the dialog stays open) — added during impl-review triage (F5).
 
 #### 3. Delete affordance on row + card
 

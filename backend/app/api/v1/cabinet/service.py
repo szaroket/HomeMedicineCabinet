@@ -992,6 +992,11 @@ async def set_entry_quantity(
     variant = await _get_variant_or_raise(
         session=session, medication_registry_id=entry.medication_registry_id
     )
+    # A zero-package entry has no open package, so a partial-tablet count is
+    # contradictory: total_tablets(0, partial, tpp) = partial - tpp < 0. Normalize
+    # it away here so the invariant holds for every caller (stepper and raw API).
+    if package_count == 0:
+        partial_tablet_count = None
     _validate_and_get_tpp(variant, partial_tablet_count)
     updated_entry = await crud.update_entry_counts(
         session=session,

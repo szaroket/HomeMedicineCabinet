@@ -245,7 +245,7 @@ test.describe("Risk #2 — FR-005 manage/delete journey", () => {
     );
 
     const myRow = await findEntryRow(page, productName, expiryDisplay);
-    const packageCell = myRow.getByRole("cell").nth(1); // "Opak." column
+    const packageCount = myRow.getByLabel("Liczba opakowań");
 
     // --- Increment (1 → 2): a real PATCH, and the user sees the new count ---
     const patchUp = page.waitForResponse(
@@ -256,7 +256,7 @@ test.describe("Risk #2 — FR-005 manage/delete journey", () => {
       .getByRole("button", { name: "Zwiększ liczbę opakowań" })
       .click();
     expect((await patchUp).ok()).toBeTruthy();
-    await expect(packageCell).toContainText("2");
+    await expect(packageCount).toContainText("2");
 
     // --- Decrement (2 → 1): a real PATCH (not the zero-delete branch) ---
     const patchDown = page.waitForResponse(
@@ -267,7 +267,7 @@ test.describe("Risk #2 — FR-005 manage/delete journey", () => {
       .getByRole("button", { name: "Zmniejsz liczbę opakowań" })
       .click();
     expect((await patchDown).ok()).toBeTruthy();
-    await expect(packageCell).toContainText("1");
+    await expect(packageCount).toContainText("1");
 
     // --- Plain delete via the trash affordance + confirm dialog ---
     await myRow.getByRole("button", { name: "Usuń lek" }).click();

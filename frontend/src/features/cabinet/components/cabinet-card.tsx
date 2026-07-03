@@ -35,6 +35,7 @@ export function CabinetCard({ entry }: CabinetCardProps) {
     deletePending,
     deleteMessage,
     deleteNote,
+    deleteError,
     incrementPackage,
     decrementPackage,
     mutationPending,
@@ -331,6 +332,7 @@ export function CabinetCard({ entry }: CabinetCardProps) {
         title="Usuń lek"
         message={deleteMessage}
         note={deleteNote}
+        error={deleteError ?? undefined}
         confirmLabel="Usuń"
         onConfirm={confirmDelete}
         onCancel={closeDeleteConfirm}

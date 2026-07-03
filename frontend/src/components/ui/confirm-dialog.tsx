@@ -6,6 +6,7 @@ interface ConfirmDialogProps {
   title: string;
   message: string;
   note?: string;
+  error?: string;
   confirmLabel?: string;
   cancelLabel?: string;
   onConfirm: () => void;
@@ -19,6 +20,7 @@ export function ConfirmDialog({
   title,
   message,
   note,
+  error,
   confirmLabel = "Potwierdź",
   cancelLabel = "Anuluj",
   onConfirm,
@@ -56,6 +58,11 @@ export function ConfirmDialog({
         </h2>
         <p className="text-sm text-slate-300">{message}</p>
         {note && <p className="mt-1 text-sm text-amber-400">{note}</p>}
+        {error && (
+          <p role="alert" className="mt-2 text-sm text-red-400">
+            {error}
+          </p>
+        )}
 
         <div className="mt-5 flex gap-3">
           <button

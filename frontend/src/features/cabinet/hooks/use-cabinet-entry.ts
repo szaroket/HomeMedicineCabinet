@@ -136,6 +136,7 @@ export function useCabinetEntry(entry: CabinetEntryOut) {
   const [showUsageEdit, setShowUsageEdit] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleteReason, setDeleteReason] = useState<"trash" | "zero">("trash");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [editingPartial, setEditingPartial] = useState(false);
   const [partialError, setPartialError] = useState<string | null>(null);
   const { mutate: toggleImportant } = useToggleImportant();
@@ -166,18 +167,25 @@ export function useCabinetEntry(entry: CabinetEntryOut) {
   }
 
   function openDeleteConfirm() {
+    setDeleteError(null);
     setDeleteReason("trash");
     setConfirmingDelete(true);
   }
 
   function closeDeleteConfirm() {
     setConfirmingDelete(false);
+    setDeleteError(null);
   }
 
   function confirmDelete() {
+    setDeleteError(null);
     deleteEntry(
       { id: entry.id },
-      { onSuccess: () => setConfirmingDelete(false) },
+      {
+        onSuccess: () => setConfirmingDelete(false),
+        onError: () =>
+          setDeleteError("Nie udało się usunąć leku. Spróbuj ponownie."),
+      },
     );
   }
 
@@ -198,6 +206,7 @@ export function useCabinetEntry(entry: CabinetEntryOut) {
     if (mutationPending || entry.package_count <= 0) return;
     const nextCount = entry.package_count - 1;
     if (nextCount === 0 && entry.package_count === 1 && isZeroDeleteCategory) {
+      setDeleteError(null);
       setDeleteReason("zero");
       setConfirmingDelete(true);
       return;
@@ -289,6 +298,7 @@ export function useCabinetEntry(entry: CabinetEntryOut) {
     deletePending,
     deleteMessage,
     deleteNote,
+    deleteError,
     incrementPackage,
     decrementPackage,
     mutationPending,
