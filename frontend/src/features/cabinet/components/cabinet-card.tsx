@@ -154,6 +154,7 @@ export function CabinetCard({ entry }: CabinetCardProps) {
                 >
                   <input
                     name="partial"
+                    aria-label="Liczba luźnych tabletek"
                     type="number"
                     min={1}
                     defaultValue={entry.partial_tablet_count ?? ""}

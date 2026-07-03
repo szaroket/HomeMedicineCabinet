@@ -237,9 +237,13 @@ export function useCabinetEntry(entry: CabinetEntryOut) {
       return;
     }
     const parsed = Number(rawValue);
-    const capacity = entry.capacity ?? 0;
+    const capacity = entry.capacity;
+    if (capacity == null) {
+      setPartialError("Nie można zapisać luźnych tabletek dla tego leku.");
+      return;
+    }
     if (!Number.isInteger(parsed) || parsed < 1 || parsed >= capacity) {
-      setPartialError(`Podaj liczbę od 1 do ${Math.max(capacity - 1, 1)}`);
+      setPartialError(`Podaj liczbę od 1 do ${capacity - 1}`);
       return;
     }
     updateQuantity(
