@@ -357,15 +357,15 @@ No schema migration required — `cabinet_entries.package_count` already has the
 
 #### Automated
 
-- [x] 1.1 Unit tests pass: `cd backend && uv run pytest tests/cabinet`
-- [x] 1.2 Integration tests pass (native PowerShell): `cd backend; uv run pytest tests/integration/cabinet`
-- [x] 1.3 Lint + format clean: `cd backend && uv run ruff check . && uv run ruff format --check .`
+- [x] 1.1 Unit tests pass: `cd backend && uv run pytest tests/cabinet` — 64fdb63
+- [x] 1.2 Integration tests pass (native PowerShell): `cd backend; uv run pytest tests/integration/cabinet` — 64fdb63
+- [x] 1.3 Lint + format clean: `cd backend && uv run ruff check . && uv run ruff format --check .` — 64fdb63
 
 #### Manual
 
-- [x] 1.4 DELETE on owned entry returns 204 and the entry disappears from the list
-- [x] 1.5 DELETE on non-existent/foreign entry returns 404 (isolation holds)
-- [x] 1.6 OpenAPI shows the lock icon on the new route
+- [x] 1.4 DELETE on owned entry returns 204 and the entry disappears from the list — 64fdb63
+- [x] 1.5 DELETE on non-existent/foreign entry returns 404 (isolation holds) — 64fdb63
+- [x] 1.6 OpenAPI shows the lock icon on the new route — 64fdb63
 
 ### Phase 2: Frontend — delete action
 
