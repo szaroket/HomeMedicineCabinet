@@ -41,6 +41,7 @@ A single adult can't reliably track their home medication inventory — what the
 | S-07 | dashboard                    | land on a dashboard showing summary counts (total / valid / expiring soon / expired / out-of-stock) with clickable links to the cabinet list pre-filtered to each status | S-06 | FR-009 | proposed |
 | F-01b | auth-polish                 | (foundation) confirm-password field on the registration form so users cannot submit a typo in their password | F-01 | FR-001 | proposed |
 | F-05 | backend-logging              | (foundation) structured logging across the FastAPI backend — central config, request/response middleware, consistent levels, meaningful logs at service/crud boundaries, no secrets/PII logged | F-01, F-02 | NFR (observability — baseline gap) | done |
+| F-06 | spa-refresh-fallback        | (foundation) refreshing or deep-linking any client-side route on the deployed Render static site serves the app instead of a 404 | F-04 | NFR (data persists across sessions and devices — stable deployed environment) | proposed |
 
 ## Streams
 
@@ -51,6 +52,7 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 | A      | Core trunk           | `F-01` → `F-02` → `F-03` → `S-01` → `S-02`   | Main dependency spine; north star (S-01) sits as early as Prerequisites allow |
 | A′     | Mobile polish        | `S-01` → `S-08`                                | Branches from S-01 in parallel with S-02; scoped to responsive layout only    |
 | B      | CI/CD                | `F-04`                                         | Standalone; run in parallel with Stream A from day one                        |
+| B″     | Deploy correctness   | `F-04` → `F-06`                                | SPA refresh/deep-link fallback on the Render static host; runnable any time after deploy exists |
 | B′     | Observability        | `F-05`                                         | Standalone backend hardening; depends only on the backend skeleton (F-01, F-02), runnable any time |
 | C      | Cabinet management   | `S-04` → `S-03`                                | Branches from S-02; S-03 needs category-aware zero behaviour from S-04        |
 | D      | Dosage tracking      | `S-05`                                         | Branches from S-02 in parallel with Stream C                                  |
@@ -138,6 +140,21 @@ Foundations below assume these are present and do NOT re-scaffold them.
   - Whether to adopt a library (`structlog`) or wrap stdlib `logging`. Block: no — resolve during `/10x-plan`.
 - **Risk:** Low. The main pitfall is leaking secrets/PII (auth tokens, emails) into logs — the plan must define a redaction/allow-list rule and verify it in tests. Introducing logging via the existing `create_app()` middleware seam keeps the change centralised and avoids scattering logging concerns across domains.
 - **Status:** done
+
+### F-06: SPA refresh fallback
+
+- **Outcome:** (foundation) On the deployed Render static site, refreshing the browser or opening a deep link to any client-side route (e.g. `/cabinet`, `/dashboard`) serves the SPA and lands the user on the correct in-app view, instead of returning Render's 404 page. The React Router app (`frontend/src/app/router.tsx`) currently owns all routing client-side; the Render static service (`render.yaml`) has no rewrite rule, so any non-`/` request that misses a built file 404s. Fix is a catch-all rewrite to `/index.html` on the static service (the standard SPA fallback), verified against the live Render URL for both a refresh on a deep route and a cold deep-link.
+- **Change ID:** spa-refresh-fallback
+- **PRD refs:** NFR (data persists across sessions and devices — implies the deployed app is usable via refresh/bookmark, not just first-load navigation)
+- **Unlocks:** reliable use of every user-facing slice on the deployed MVP — without the fallback, any refresh or shared/bookmarked link on a deep route breaks the app for real users
+- **Prerequisites:** F-04 (a Render deploy must exist to configure and verify the rewrite against)
+- **Parallel with:** any slice — infra/config-only change with no schema or app-code impact
+- **Blockers:** —
+- **Unknowns:**
+  - Exact Render config surface for a static-service rewrite (`routes:` block in `render.yaml` vs. dashboard "Redirects/Rewrites" rule). Both are viable; prefer the `render.yaml` `routes` rewrite so the fix is version-controlled. Block: no — resolve during `/10x-plan`.
+  - Confirm the rewrite does not shadow real static assets (hashed JS/CSS, favicon) — a `/*` → `/index.html` rewrite must only apply as a fallback for unmatched paths. Block: no.
+- **Risk:** Low and well-understood (standard SPA hosting requirement). The only pitfall is a misconfigured rewrite that intercepts asset requests and returns HTML for JS/CSS; verifying against the live URL (refresh on a deep route + a fresh deep-link + assets still load) closes it.
+- **Status:** proposed
 
 ## Slices
 
@@ -246,6 +263,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | F-03       | registry-import              | Registry import: Polish medicines XML → PostgreSQL                            | no                    | Depends on F-02                   |
 | F-04       | ci-cd-wiring                 | CI/CD: GitHub Actions → Render deploy hooks                                   | yes                   | Run `/10x-plan ci-cd-wiring`      |
 | F-05       | backend-logging              | Backend logging: structured logging + request middleware + redaction         | yes                   | Depends on F-01, F-02; run `/10x-plan backend-logging` |
+| F-06       | spa-refresh-fallback         | Deploy fix: SPA refresh/deep-link fallback on Render static site (`/*` → `/index.html`) | yes         | Depends on F-04; run `/10x-plan spa-refresh-fallback` |
 | S-01       | add-medication-from-registry | Feature: add medication from Polish registry (autocomplete + add flow + dedup)| no                    | Depends on F-01, F-02, F-03       |
 | S-08       | mobile-responsive-cabinet    | Feature: mobile-responsive cabinet add flow and list                          | yes                   | Depends on S-01; parallel with S-02; run `/10x-plan mobile-responsive-cabinet` |
 | S-02       | cabinet-view-and-search      | Feature: cabinet list with filter, sort, search, and entry details            | no                    | Depends on S-01                   |
