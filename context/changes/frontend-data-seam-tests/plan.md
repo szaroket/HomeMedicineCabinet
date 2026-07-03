@@ -493,16 +493,16 @@ bug into an oracle).
 
 #### Automated
 
-- [ ] 1.1 Dependencies install cleanly: `npm install`
-- [ ] 1.2 Smoke test passes: `npm run test:run`
-- [ ] 1.3 Production build passes with test files present: `npm run build`
-- [ ] 1.4 Lint passes: `npm run lint`
-- [ ] 1.5 Format check passes: `npx prettier --check src/`
+- [x] 1.1 Dependencies install cleanly: `npm install`
+- [x] 1.2 Smoke test passes: `npm run test:run`
+- [x] 1.3 Production build passes with test files present: `npm run build`
+- [x] 1.4 Lint passes: `npm run lint`
+- [x] 1.5 Format check passes: `npx prettier --check src/`
 
 #### Manual
 
-- [ ] 1.6 `npm test` watch mode runs the smoke test
-- [ ] 1.7 Playwright unaffected: `npm run e2e -- --list` enumerates E2E specs
+- [x] 1.6 `npm test` watch mode runs the smoke test
+- [x] 1.7 Playwright unaffected: `npm run e2e -- --list` enumerates E2E specs
 
 ### Phase 2: Transport Tests (`lib/api-client.ts`)
 
