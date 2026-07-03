@@ -1,6 +1,10 @@
 import { useState } from "react";
 import type { CabinetEntryOut } from "@/features/cabinet/api/cabinet-api";
-import { useToggleImportant } from "@/features/cabinet/api/cabinet-queries";
+import {
+  useToggleImportant,
+  useDeleteEntry,
+  useUpdateQuantity,
+} from "@/features/cabinet/api/cabinet-queries";
 
 export const OUT_OF_STOCK_LABEL = "Brak w apteczce";
 
@@ -130,7 +134,16 @@ function buildUsageView(entry: CabinetEntryOut): UsageView {
 export function useCabinetEntry(entry: CabinetEntryOut) {
   const [expanded, setExpanded] = useState(false);
   const [showUsageEdit, setShowUsageEdit] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleteReason, setDeleteReason] = useState<"trash" | "zero">("trash");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [editingPartial, setEditingPartial] = useState(false);
+  const [partialError, setPartialError] = useState<string | null>(null);
   const { mutate: toggleImportant } = useToggleImportant();
+  const { mutate: deleteEntry, isPending: deletePending } = useDeleteEntry();
+  const { mutate: updateQuantity, isPending: quantityPending } =
+    useUpdateQuantity();
+  const mutationPending = deletePending || quantityPending;
 
   const statusInfo = STATUS_LABEL[entry.status] ?? {
     label: entry.status,
@@ -153,6 +166,120 @@ export function useCabinetEntry(entry: CabinetEntryOut) {
     toggleImportant({ id: entry.id, is_important: !entry.is_important });
   }
 
+  function openDeleteConfirm() {
+    setDeleteError(null);
+    setDeleteReason("trash");
+    setConfirmingDelete(true);
+  }
+
+  function closeDeleteConfirm() {
+    setConfirmingDelete(false);
+    setDeleteError(null);
+  }
+
+  function confirmDelete() {
+    setDeleteError(null);
+    deleteEntry(
+      { id: entry.id },
+      {
+        onSuccess: () => setConfirmingDelete(false),
+        onError: () =>
+          setDeleteError("Nie udało się usunąć leku. Spróbuj ponownie."),
+      },
+    );
+  }
+
+  const isZeroDeleteCategory = !entry.is_important && !entry.is_used;
+
+  function incrementPackage() {
+    if (mutationPending) return;
+    updateQuantity({
+      id: entry.id,
+      payload: {
+        package_count: entry.package_count + 1,
+        partial_tablet_count: entry.partial_tablet_count,
+      },
+    });
+  }
+
+  function decrementPackage() {
+    if (mutationPending || entry.package_count <= 0) return;
+    const nextCount = entry.package_count - 1;
+    if (nextCount === 0 && entry.package_count === 1 && isZeroDeleteCategory) {
+      setDeleteError(null);
+      setDeleteReason("zero");
+      setConfirmingDelete(true);
+      return;
+    }
+    updateQuantity({
+      id: entry.id,
+      payload: {
+        package_count: nextCount,
+        partial_tablet_count: entry.partial_tablet_count,
+      },
+    });
+  }
+
+  function openPartialEdit() {
+    setPartialError(null);
+    setEditingPartial(true);
+  }
+
+  function closePartialEdit() {
+    setEditingPartial(false);
+    setPartialError(null);
+  }
+
+  function savePartialTablet(rawValue: string) {
+    if (mutationPending) return;
+    if (rawValue.trim() === "") {
+      updateQuantity(
+        {
+          id: entry.id,
+          payload: {
+            package_count: entry.package_count,
+            partial_tablet_count: null,
+          },
+        },
+        { onSuccess: closePartialEdit },
+      );
+      return;
+    }
+    const parsed = Number(rawValue);
+    const capacity = entry.capacity;
+    if (capacity == null) {
+      setPartialError("Nie można zapisać luźnych tabletek dla tego leku.");
+      return;
+    }
+    if (!Number.isInteger(parsed) || parsed < 1 || parsed >= capacity) {
+      setPartialError(`Podaj liczbę od 1 do ${capacity - 1}`);
+      return;
+    }
+    updateQuantity(
+      {
+        id: entry.id,
+        payload: {
+          package_count: entry.package_count,
+          partial_tablet_count: parsed,
+        },
+      },
+      { onSuccess: closePartialEdit },
+    );
+  }
+
+  const deleteMessage =
+    deleteReason === "zero"
+      ? `Zmniejszenie liczby opakowań do zera usunie „${entry.name}” z apteczki. Kontynuować?`
+      : `Czy na pewno chcesz usunąć „${entry.name}” z apteczki?`;
+  const deleteNote =
+    deleteReason === "zero"
+      ? entry.partial_tablet_count != null && entry.partial_tablet_count > 0
+        ? "Luźne tabletki z otwartego opakowania również zostaną usunięte."
+        : undefined
+      : entry.below_minimum
+        ? `Oznaczenie „${OUT_OF_STOCK_LABEL}” również zniknie.`
+        : undefined;
+
   return {
     expanded,
     toggleExpanded,
@@ -164,5 +291,21 @@ export function useCabinetEntry(entry: CabinetEntryOut) {
     belowMinimum: entry.below_minimum,
     formattedExpiryDate: formatDate(entry.expiry_date),
     usageView: buildUsageView(entry),
+    confirmingDelete,
+    openDeleteConfirm,
+    closeDeleteConfirm,
+    confirmDelete,
+    deletePending,
+    deleteMessage,
+    deleteNote,
+    deleteError,
+    incrementPackage,
+    decrementPackage,
+    mutationPending,
+    editingPartial,
+    openPartialEdit,
+    closePartialEdit,
+    savePartialTablet,
+    partialError,
   };
 }

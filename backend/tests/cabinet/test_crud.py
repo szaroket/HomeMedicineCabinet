@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.api.v1.cabinet.crud import (
     _build_base_query,
+    delete_entry,
     find_entry,
     get_registry_by_id,
     insert_entry,
@@ -287,3 +288,31 @@ class TestUpdateEntryCounts:
 
             with pytest.raises(CabinetDatabaseError):
                 await update_entry_counts(mock_session, entry, 3, 7)
+
+
+class TestDeleteEntry:
+    def _make_entry(self) -> CabinetEntry:
+        return CabinetEntry(
+            id=uuid4(),
+            user_id=_USER_ID,
+            medication_registry_id=_REGISTRY_ID,
+            package_count=1,
+            expiry_date=_EXPIRY,
+        )
+
+    async def test_success_deletes_and_commits(self, mock_session: AsyncMock):
+        entry = self._make_entry()
+
+        await delete_entry(mock_session, entry)
+
+        mock_session.delete.assert_called_once_with(entry)
+        mock_session.commit.assert_called_once()
+
+    async def test_db_error_raises_cabinet_database_error(
+        self, mock_session: AsyncMock
+    ):
+        entry = self._make_entry()
+        mock_session.delete.side_effect = SQLAlchemyError("lock timeout")
+
+        with pytest.raises(CabinetDatabaseError):
+            await delete_entry(mock_session, entry)

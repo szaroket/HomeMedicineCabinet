@@ -1,8 +1,8 @@
 # E2E Testing Rules
 
 The quality lever for every Playwright spec in this directory. A generated test
-inherits whatever the seed (`seed.spec.ts`) and these rules encode — *what you
-show is what you get*. Read this before writing or modifying an e2e spec.
+inherits whatever the seed (`seed.spec.ts`) and these rules encode — _what you
+show is what you get_. Read this before writing or modifying an e2e spec.
 
 - Use `getByRole`, `getByLabel`, `getByText` as primary locators (also
   `getByPlaceholder` for user-facing placeholder text). Fall back to
@@ -16,8 +16,8 @@ show is what you get*. Read this before writing or modifying an e2e spec.
 - Never use `page.waitForTimeout()`. Wait for a concrete condition:
   `toBeVisible()`, `waitForURL()`, `waitForResponse()`.
 - Assert the business outcome (the data the user sees), not implementation
-  details. Control question for every assertion: *would this fail if the
-  `context/foundation/test-plan.md` risk came true?* If not, it's decorative.
+  details. Control question for every assertion: _would this fail if the
+  `context/foundation/test-plan.md` risk came true?_ If not, it's decorative.
 - Use unique per-run identifiers for test data to avoid collisions in re-runs and
   parallel runs. Prefer timestamp-derived values.
 - Authenticate via `storageState` (the `setup` project writes
@@ -29,17 +29,21 @@ show is what you get*. Read this before writing or modifying an e2e spec.
 ## Real vs mocked
 
 Internal boundaries (auth, routing, API, DB) stay **real** — that seam is exactly
-where Risk #2 hides. Mock only expensive or non-deterministic *external* APIs at
+where Risk #2 hides. Mock only expensive or non-deterministic _external_ APIs at
 the network layer. This suite currently mocks nothing.
 
 ## Cleanup
 
-The cabinet API exposes no `DELETE` endpoint, so a spec cannot tear down its own
-rows through the app. Cleanup is therefore handled out-of-band by the direct-DB
-`globalTeardown` (see the plan's Phase 4), and per-run uniqueness (a
-timestamp-derived `expiry_date`) keeps re-runs from colliding on
-`uq_cabinet_entries_user_med_expiry`. State this rationale in any spec that
-creates cabinet data.
+Prefer app-level cleanup now that a cabinet `DELETE` endpoint exists
+(`manage-cabinet-entry`): a spec that creates cabinet data should delete its own
+rows through the API — a per-test fixture / `afterEach` for the common case, plus
+a `test.afterAll` safety net for rows a crashed test left behind. The direct-DB
+`globalTeardown` remains the final backstop for anything both miss. Per-run
+uniqueness (a timestamp-derived `expiry_date`) still keeps re-runs and parallel
+workers from colliding on `uq_cabinet_entries_user_med_expiry`. See
+`manage-cabinet-entry.spec.ts` for the fixture + `afterAll` pattern. (`seed.spec.ts`
+predates the endpoint and leans on the `globalTeardown` sweep alone.) State the
+cleanup rationale in any spec that creates cabinet data.
 
 ## Running (L-001)
 

@@ -1,4 +1,10 @@
 import { test, expect } from "@playwright/test";
+import {
+  productLabel,
+  toDisplayDate,
+  type ProductOut,
+  type VariantOut,
+} from "./helpers";
 
 /**
  * seed.spec.ts — Journey A, Phase 3 of context/changes/critical-path-e2e/plan.md.
@@ -45,32 +51,8 @@ import { test, expect } from "@playwright/test";
 // product known to exist in the seeded catalog if this one is absent.
 const PRODUCT_SEARCH = process.env.E2E_PRODUCT_SEARCH ?? "Apap";
 
-// Minimal structural views of the API responses — decoupled from the app's own
-// types on purpose (the e2e tsconfig need not resolve `@/…` src paths).
-interface ProductOut {
-  name: string;
-  strength: string | null;
-  pharmaceutical_form: string | null;
-}
-interface VariantOut {
-  id: string;
-  strength: string | null;
-  pharmaceutical_form: string | null;
-  active_ingredient: string | null;
-  route_of_administration: string | null;
-}
-
-// Rebuild the dropdown option label exactly as ProductAutocomplete renders it,
-// so we click the right catalog row by its user-visible text.
-function productLabel(product: ProductOut): string {
-  return [
-    product.name,
-    product.strength,
-    product.pharmaceutical_form ? `· ${product.pharmaceutical_form}` : null,
-  ]
-    .filter(Boolean)
-    .join(" ");
-}
+// The shared ProductOut/VariantOut structural views and the productLabel builder
+// come from ./helpers.
 
 // A future, per-run-unique expiry — the sole isolation axis for
 // uq_cabinet_entries_user_med_expiry (the shared login fixes user_id). Each
@@ -85,15 +67,6 @@ function uniqueFutureExpiryIso(): string {
   const base = new Date(Date.UTC(2035, 0, 1));
   base.setUTCDate(base.getUTCDate() + dayOffset);
   return base.toISOString().slice(0, 10); // YYYY-MM-DD
-}
-
-// The cabinet list renders dates with pl-PL `dd.MM.yyyy` (use-cabinet-entry
-// formatDate). Build the same string deterministically from the ISO parts so we
-// can locate our specific row by its unique expiry without depending on the
-// runner's ICU locale data.
-function toDisplayDate(expiryIso: string): string {
-  const [year, month, day] = expiryIso.split("-");
-  return `${day}.${month}.${year}`;
 }
 
 test.describe("Risk #2 — critical journey: add medication → see it in cabinet", () => {
@@ -126,7 +99,10 @@ test.describe("Risk #2 — critical journey: add medication → see it in cabine
         res.url().includes("/medicines/variants") &&
         res.request().method() === "GET",
     );
-    await page.getByText(productLabel(product), { exact: true }).first().click();
+    await page
+      .getByText(productLabel(product), { exact: true })
+      .first()
+      .click();
     const variants = (await (await variantsResponse).json()) as VariantOut[];
     expect(
       variants.length,

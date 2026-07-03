@@ -9,10 +9,12 @@ import {
 import {
   StarIcon,
   ChevronIcon,
+  TrashIcon,
 } from "@/features/cabinet/components/entry-icons";
 import { StatusBadge } from "@/features/cabinet/components/status-badge";
 import { CabinetCard } from "@/features/cabinet/components/cabinet-card";
 import { UsageEditForm } from "@/features/cabinet/components/usage-edit-form";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 function EntryRow({ entry }: { entry: CabinetEntryOut }) {
   const {
@@ -26,6 +28,22 @@ function EntryRow({ entry }: { entry: CabinetEntryOut }) {
     belowMinimum,
     formattedExpiryDate,
     usageView,
+    confirmingDelete,
+    openDeleteConfirm,
+    closeDeleteConfirm,
+    confirmDelete,
+    deletePending,
+    deleteMessage,
+    deleteNote,
+    deleteError,
+    incrementPackage,
+    decrementPackage,
+    mutationPending,
+    editingPartial,
+    openPartialEdit,
+    closePartialEdit,
+    savePartialTablet,
+    partialError,
   } = useCabinetEntry(entry);
   const rowBg = belowMinimum
     ? "bg-amber-950/40 hover:bg-amber-950/60"
@@ -69,7 +87,90 @@ function EntryRow({ entry }: { entry: CabinetEntryOut }) {
             {entry.name}
           </span>
         </td>
-        <td className="px-4 py-3">{entry.package_count}</td>
+        <td className="px-4 py-3">
+          <span className="inline-flex items-center gap-1">
+            <button
+              type="button"
+              aria-label="Zmniejsz liczbę opakowań"
+              disabled={mutationPending || entry.package_count <= 0}
+              onClick={(ev) => {
+                ev.stopPropagation();
+                decrementPackage();
+              }}
+              className="inline-flex h-6 w-6 items-center justify-center rounded border border-slate-600 text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+            >
+              −
+            </button>
+            <span aria-label="Liczba opakowań" className="w-6 text-center">
+              {entry.package_count}
+            </span>
+            <button
+              type="button"
+              aria-label="Zwiększ liczbę opakowań"
+              disabled={mutationPending}
+              onClick={(ev) => {
+                ev.stopPropagation();
+                incrementPackage();
+              }}
+              className="inline-flex h-6 w-6 items-center justify-center rounded border border-slate-600 text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+            >
+              +
+            </button>
+          </span>
+          {entry.is_tablet_based && (
+            <div className="mt-1" onClick={(ev) => ev.stopPropagation()}>
+              {editingPartial ? (
+                <form
+                  onSubmit={(ev) => {
+                    ev.preventDefault();
+                    const input = ev.currentTarget.elements.namedItem(
+                      "partial",
+                    ) as HTMLInputElement;
+                    savePartialTablet(input.value);
+                  }}
+                  className="flex items-center gap-1"
+                >
+                  <input
+                    name="partial"
+                    aria-label="Liczba luźnych tabletek"
+                    type="number"
+                    min={1}
+                    defaultValue={entry.partial_tablet_count ?? ""}
+                    placeholder="Pełne opak."
+                    className="w-20 rounded border border-slate-600 bg-slate-700 px-1 py-0.5 text-xs text-white"
+                  />
+                  <button
+                    type="submit"
+                    disabled={mutationPending}
+                    className="text-xs text-blue-400 hover:text-blue-300 disabled:opacity-50"
+                  >
+                    Zapisz
+                  </button>
+                  <button
+                    type="button"
+                    onClick={closePartialEdit}
+                    className="text-xs text-slate-400 hover:text-white"
+                  >
+                    Anuluj
+                  </button>
+                </form>
+              ) : (
+                <button
+                  type="button"
+                  onClick={openPartialEdit}
+                  className="text-xs text-blue-400 hover:text-blue-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                >
+                  {entry.partial_tablet_count != null
+                    ? `Luźne: ${entry.partial_tablet_count} szt.`
+                    : "Ustaw luźne tabletki"}
+                </button>
+              )}
+              {partialError && (
+                <p className="mt-0.5 text-xs text-red-400">{partialError}</p>
+              )}
+            </div>
+          )}
+        </td>
         <td className="px-4 py-3">
           {entry.total_tablets != null ? entry.total_tablets : "—"}
         </td>
@@ -87,10 +188,23 @@ function EntryRow({ entry }: { entry: CabinetEntryOut }) {
             {sufficiencyInfo && <StatusBadge status={sufficiencyInfo} />}
           </span>
         </td>
+        <td className="px-4 py-3">
+          <button
+            type="button"
+            aria-label="Usuń lek"
+            onClick={(ev) => {
+              ev.stopPropagation();
+              openDeleteConfirm();
+            }}
+            className="inline-flex items-center rounded text-slate-400 hover:text-red-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
+          >
+            <TrashIcon />
+          </button>
+        </td>
       </tr>
       {expanded && (
         <tr className="border-b border-slate-700 last:border-0 bg-slate-800/30">
-          <td colSpan={6} className="px-6 py-3">
+          <td colSpan={7} className="px-6 py-3">
             <dl className="flex flex-wrap gap-x-8 gap-y-1 text-sm">
               <div className="w-full pb-2 mb-2 border-b border-slate-700">
                 {entry.is_used && (
@@ -219,6 +333,18 @@ function EntryRow({ entry }: { entry: CabinetEntryOut }) {
           </td>
         </tr>
       )}
+      <ConfirmDialog
+        open={confirmingDelete}
+        title="Usuń lek"
+        message={deleteMessage}
+        note={deleteNote}
+        error={deleteError ?? undefined}
+        confirmLabel="Usuń"
+        onConfirm={confirmDelete}
+        onCancel={closeDeleteConfirm}
+        destructive
+        pending={deletePending}
+      />
     </>
   );
 }
@@ -291,6 +417,9 @@ export function CabinetList({
               </th>
               <th className="px-4 py-3 text-left font-medium text-blue-400">
                 Zapasy
+              </th>
+              <th className="px-4 py-3 text-left font-medium text-blue-400">
+                <span className="sr-only">Akcje</span>
               </th>
             </tr>
           </thead>

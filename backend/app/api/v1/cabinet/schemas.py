@@ -196,6 +196,52 @@ class SetImportantRequest(BaseModel):
     is_important: bool
 
 
+class UpdateQuantityRequest(BaseModel):
+    """Request body for PATCH /cabinet/entries/{entry_id}/quantity.
+
+    Unlike AddEntryRequest, package_count may be 0 here (decrement to zero is valid).
+    """
+
+    package_count: int
+    partial_tablet_count: int | None = None
+
+    @field_validator("package_count")
+    @classmethod
+    def package_count_at_least_zero(cls, v: int) -> int:
+        """Validate package_count >= 0.
+
+        Args:
+            v: The incoming value.
+
+        Returns:
+            The value unchanged if valid.
+
+        Raises:
+            ValueError: When the count is negative.
+        """
+        if v < 0:
+            raise ValueError("package_count must be at least 0")
+        return v
+
+    @field_validator("partial_tablet_count")
+    @classmethod
+    def partial_tablet_count_at_least_one(cls, v: int | None) -> int | None:
+        """Validate partial_tablet_count >= 1 when provided.
+
+        Args:
+            v: The incoming value or None.
+
+        Returns:
+            The value unchanged if valid.
+
+        Raises:
+            ValueError: When the count is less than 1.
+        """
+        if v is not None and v < 1:
+            raise ValueError("partial_tablet_count must be at least 1 when provided")
+        return v
+
+
 class CabinetPageOut(BaseModel):
     """Paginated response envelope for GET /cabinet/entries."""
 

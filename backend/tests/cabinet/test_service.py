@@ -24,11 +24,13 @@ from app.api.v1.cabinet.service import (
     compute_usage_view,
     daily_consumption_rate,
     days_of_supply_from_rate,
+    delete_entry,
     is_below_minimum,
     list_entries,
     merge_non_tablet_entry,
     merge_tablet_entry,
     normalize_tablet_pool,
+    set_entry_quantity,
     set_entry_usage,
     total_tablets,
     validate_usage,
@@ -1524,4 +1526,126 @@ class TestSetEntryUsage:
                     # missing dosage_times/period/amount for tablet variant
                 ),
                 expiry_threshold_days=30,
+            )
+
+
+class TestSetEntryQuantity:
+    async def test_allows_package_count_zero(self, mock_session: AsyncMock, mock_crud):
+        variant = _make_variant(is_tablet_based=False)
+        entry = _make_entry(package_count=1)
+        updated = _make_entry(package_count=0)
+        mock_crud.find_entry_by_id = AsyncMock(return_value=entry)
+        mock_crud.get_registry_by_id = AsyncMock(return_value=variant)
+        mock_crud.update_entry_counts = AsyncMock(return_value=updated)
+
+        result = await set_entry_quantity(
+            session=mock_session,
+            user_id=_USER_ID,
+            entry_id=_ENTRY_ID,
+            package_count=0,
+            partial_tablet_count=None,
+            expiry_threshold_days=30,
+        )
+
+        assert result.package_count == 0
+        mock_crud.update_entry_counts.assert_called_once_with(
+            session=mock_session,
+            entry=entry,
+            package_count=0,
+            partial_tablet_count=None,
+        )
+
+    async def test_validates_partial_tablet_count_against_variant(
+        self, mock_session: AsyncMock, mock_crud
+    ):
+        variant = _make_variant(is_tablet_based=True, capacity=Decimal(_TPP))
+        entry = _make_entry(package_count=2)
+        mock_crud.find_entry_by_id = AsyncMock(return_value=entry)
+        mock_crud.get_registry_by_id = AsyncMock(return_value=variant)
+
+        with pytest.raises(InvalidPartialTabletCountError):
+            await set_entry_quantity(
+                session=mock_session,
+                user_id=_USER_ID,
+                entry_id=_ENTRY_ID,
+                package_count=2,
+                partial_tablet_count=_TPP,
+                expiry_threshold_days=30,
+            )
+
+    async def test_partial_on_non_tablet_variant_raises(
+        self, mock_session: AsyncMock, mock_crud
+    ):
+        variant = _make_variant(is_tablet_based=False)
+        entry = _make_entry(package_count=2)
+        mock_crud.find_entry_by_id = AsyncMock(return_value=entry)
+        mock_crud.get_registry_by_id = AsyncMock(return_value=variant)
+
+        with pytest.raises(InvalidPartialTabletCountError):
+            await set_entry_quantity(
+                session=mock_session,
+                user_id=_USER_ID,
+                entry_id=_ENTRY_ID,
+                package_count=2,
+                partial_tablet_count=5,
+                expiry_threshold_days=30,
+            )
+
+    async def test_entry_not_found_raises_entry_not_found_error(
+        self, mock_session: AsyncMock, mock_crud
+    ):
+        mock_crud.find_entry_by_id = AsyncMock(return_value=None)
+
+        with pytest.raises(EntryNotFoundError):
+            await set_entry_quantity(
+                session=mock_session,
+                user_id=_USER_ID,
+                entry_id=_ENTRY_ID,
+                package_count=1,
+                partial_tablet_count=None,
+                expiry_threshold_days=30,
+            )
+
+    async def test_returns_recomputed_output(self, mock_session: AsyncMock, mock_crud):
+        variant = _make_variant(is_tablet_based=True, capacity=Decimal(_TPP))
+        entry = _make_entry(package_count=1)
+        updated = _make_entry(package_count=3, partial=10)
+        mock_crud.find_entry_by_id = AsyncMock(return_value=entry)
+        mock_crud.get_registry_by_id = AsyncMock(return_value=variant)
+        mock_crud.update_entry_counts = AsyncMock(return_value=updated)
+
+        result = await set_entry_quantity(
+            session=mock_session,
+            user_id=_USER_ID,
+            entry_id=_ENTRY_ID,
+            package_count=3,
+            partial_tablet_count=10,
+            expiry_threshold_days=30,
+        )
+
+        assert result.package_count == 3
+        assert result.partial_tablet_count == 10
+        assert result.total_tablets == (3 - 1) * _TPP + 10
+
+
+class TestDeleteEntry:
+    async def test_deletes_owned_entry(self, mock_session: AsyncMock, mock_crud):
+        entry = _make_entry()
+        mock_crud.find_entry_by_id = AsyncMock(return_value=entry)
+        mock_crud.delete_entry = AsyncMock(return_value=None)
+
+        await delete_entry(session=mock_session, user_id=_USER_ID, entry_id=_ENTRY_ID)
+
+        mock_crud.delete_entry.assert_called_once_with(
+            session=mock_session, entry=entry
+        )
+
+    async def test_entry_not_found_raises_entry_not_found_error(
+        self, mock_session: AsyncMock, mock_crud
+    ):
+        mock_crud.find_entry_by_id = AsyncMock(return_value=None)
+
+        with pytest.raises(EntryNotFoundError):
+            await delete_entry(
+                session=mock_session, user_id=_USER_ID, entry_id=_ENTRY_ID
             )

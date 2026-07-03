@@ -150,3 +150,36 @@ async def set_entry_usage(
         expiry_threshold_days=resolved.expiry_threshold_days,
         min_package_count=resolved.min_package_count,
     )
+
+
+async def set_entry_quantity(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    entry_id: uuid.UUID,
+    package_count: int,
+    partial_tablet_count: int | None,
+) -> CabinetEntryOut:
+    """Set the absolute package and partial-tablet counts on a cabinet entry.
+
+    Fetches user preferences to resolve thresholds, then delegates to the cabinet service.
+
+    Args:
+        session (AsyncSession): Active async database session.
+        user_id (uuid.UUID): Authenticated user's UUID.
+        entry_id (uuid.UUID): UUID of the cabinet entry to update.
+        package_count (int): New absolute package count (>= 0).
+        partial_tablet_count (int | None): New partial tablet count, or None for a full package.
+
+    Returns:
+        CabinetEntryOut: The updated entry with recomputed status and below_minimum.
+    """
+    resolved = await _resolve_prefs(session, user_id)
+    return await cabinet_service.set_entry_quantity(
+        session=session,
+        user_id=user_id,
+        entry_id=entry_id,
+        package_count=package_count,
+        partial_tablet_count=partial_tablet_count,
+        expiry_threshold_days=resolved.expiry_threshold_days,
+        min_package_count=resolved.min_package_count,
+    )

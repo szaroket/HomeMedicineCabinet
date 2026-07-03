@@ -43,39 +43,42 @@ function requireEnv(name: string): string {
   return value;
 }
 
-setup("authenticate: log in with the test account and persist the session", async ({
-  page,
-}) => {
-  const password = requireEnv("E2E_TEST_PASSWORD");
+setup(
+  "authenticate: log in with the test account and persist the session",
+  async ({ page }) => {
+    const password = requireEnv("E2E_TEST_PASSWORD");
 
-  // Log in through the real UI (no API shortcut) so this drives the same
-  // login → API → DB → localStorage-token seam the app uses in production.
-  await page.goto("/login");
-  await page.getByLabel("Adres e-mail").fill(TEST_EMAIL);
-  await page.getByLabel("Hasło").fill(password);
+    // Log in through the real UI (no API shortcut) so this drives the same
+    // login → API → DB → localStorage-token seam the app uses in production.
+    await page.goto("/login");
+    await page.getByLabel("Adres e-mail").fill(TEST_EMAIL);
+    await page.getByLabel("Hasło").fill(password);
 
-  // Capture the login API response so a rejection fails here with a precise
-  // status (401 = wrong test-account credentials / unconfirmed account) instead
-  // of a blind 30s navigation timeout downstream.
-  const loginResponse = page.waitForResponse(
-    (res) =>
-      res.url().includes("/auth/login") && res.request().method() === "POST",
-  );
-  await page.getByRole("button", { name: "Zaloguj się" }).click();
-  const response = await loginResponse;
-  expect(
-    response.status(),
-    "POST /auth/login must return 200; a 401 usually means the E2E_TEST_EMAIL/" +
-      "E2E_TEST_PASSWORD pair is wrong or the account is unconfirmed",
-  ).toBe(200);
+    // Capture the login API response so a rejection fails here with a precise
+    // status (401 = wrong test-account credentials / unconfirmed account) instead
+    // of a blind 30s navigation timeout downstream.
+    const loginResponse = page.waitForResponse(
+      (res) =>
+        res.url().includes("/auth/login") && res.request().method() === "POST",
+    );
+    await page.getByRole("button", { name: "Zaloguj się" }).click();
+    const response = await loginResponse;
+    expect(
+      response.status(),
+      "POST /auth/login must return 200; a 401 usually means the E2E_TEST_EMAIL/" +
+        "E2E_TEST_PASSWORD pair is wrong or the account is unconfirmed",
+    ).toBe(200);
 
-  // Successful login redirects to the protected dashboard ("/"). Assert a
-  // protected-route element actually renders — proof the session took and we
-  // were not bounced back to /login by ProtectedLayout.
-  await page.waitForURL("/");
-  await expect(page.getByRole("link", { name: "Moja apteczka" })).toBeVisible();
+    // Successful login redirects to the protected dashboard ("/"). Assert a
+    // protected-route element actually renders — proof the session took and we
+    // were not bounced back to /login by ProtectedLayout.
+    await page.waitForURL("/");
+    await expect(
+      page.getByRole("link", { name: "Moja apteczka" }),
+    ).toBeVisible();
 
-  // Persist cookies + localStorage (incl. the `auth_token`) for the chromium
-  // project to reuse via `storageState`.
-  await page.context().storageState({ path: STORAGE_STATE });
-});
+    // Persist cookies + localStorage (incl. the `auth_token`) for the chromium
+    // project to reuse via `storageState`.
+    await page.context().storageState({ path: STORAGE_STATE });
+  },
+);
