@@ -138,8 +138,15 @@ transport tests are isolated from store internals.
 - **Reset global state between tests.** The `refreshing` single-flight latch in
   `api-client.ts` persists across calls within a module load; `localStorage`
   persists across tests under jsdom. Use `afterEach` (in `src/test/setup.ts` or
-  per-suite) to restore mocks and clear `localStorage`, and structure the
-  single-flight test so a prior test's latch can't mask a bug.
+  per-suite) to restore mocks and clear `localStorage`. **Latch-reset
+  mechanism**: the `refreshing` latch (`api-client.ts:7`) has no exported reset
+  hook and `afterEach` does not clear it — it only self-resets via `.finally`
+  when the refresh promise settles (`api-client.ts:23-25`). Therefore **every
+  refresh `fetch` mock must resolve (not reject or hang)** so `.finally` fires
+  and clears the latch before the next test; a rejecting/never-resolving mock
+  would leak the latch and mask a bug. For the failed-refresh case, resolve the
+  refresh `fetch` with a non-`ok` `Response` so `refreshOnce` returns `null` and
+  `.finally` still runs — don't reject the fetch.
 - **`BASE` is fixed at import time from `import.meta.env.VITE_API_URL`.** Do not
   try to vary it mid-suite; assert against the resolved default
   (`http://localhost:8000/api/v1`) via the path-stripping helper.
@@ -172,6 +179,17 @@ component phase) run without a second bootstrap.
 `"test:run": "vitest run"`. `@testing-library/react`/`user-event` are installed
 but unused this phase (no component tests) — they complete the runner per
 `AGENTS.md` line 121.
+
+**Peer-resolution contingency (Vite 8 is bleeding-edge)**: Vitest bundles its
+own Vite dependency and declares a supported Vite peer range. If `npm install`
+fails peer resolution against `vite ^8.0.12` — or the runner misbehaves — pin a
+Vitest version whose peer range includes Vite 8, or add an npm `overrides` entry
+to reconcile the bundled Vite. The RTL-for-React-19 adapter pin is a second
+unverified version in the same install; resolve it the same way. Record the
+resolved `vitest` / RTL / jsdom versions in the §6.6 per-phase note.
+**Checkpoint**: treat "the runner starts and the smoke test passes against Vite
+8" (criterion 1.2) as the explicit gate that this compatibility holds — do not
+proceed past Phase 1 until it does.
 
 #### 2. Vitest config
 
@@ -262,10 +280,14 @@ latch, and the exact thrown error shapes.
 **Intent**: Provide a `Response` factory and a URL-path-stripping assertion
 helper so every transport/fetcher suite reads cleanly.
 
-**Contract**: Export a `jsonResponse(body, { status?, ok? })` factory returning a
-`Response`-like object (real `Response` or a typed stub with `ok`, `status`,
-`json()`), and a helper to extract the path (BASE-stripped) + `RequestInit` from
-a `fetch` mock call. No production code imports this.
+**Contract**: Export a `jsonResponse(body, { status? })` factory returning a
+**real `Response`** (`new Response(JSON.stringify(body), { status })`) — not a
+typed stub — so the `throw res` path is thrown as a genuine `Response` and the
+`error instanceof Response` predicate `query-client.ts:10` depends on is
+exercised faithfully. (Node ≥18/undici supplies a global `Response` under
+jsdom.) Also export a helper to extract the path (BASE-stripped) + `RequestInit`
+from a `fetch` mock call. No production code imports this. Note: a `Response`
+body is single-use — a test that reads `.json()` twice needs a fresh instance.
 
 #### 2. `apiFetch` tests
 
@@ -301,8 +323,12 @@ the retry response; (c) a `401` on a `/auth/`-prefixed path does **not** refresh
 
 **Contract**: Two concurrent `refreshOnce()` calls issue exactly **one** refresh
 `fetch`; after settlement the latch resets so a subsequent call issues a fresh
-`fetch`. Assert `fetch` call count. Ensure the latch is reset between tests
-(module state) so the assertion is meaningful.
+`fetch`. Assert `fetch` call count. Ensure the latch is reset between tests by
+having **both** concurrent refresh mocks resolve so the shared promise's
+`.finally` fires and clears `refreshing` before the next test (a rejecting or
+never-resolving mock would leak the latch — see Critical Implementation
+Details); this is what makes the "subsequent call issues a fresh `fetch`"
+assertion meaningful.
 
 ### Success Criteria:
 
