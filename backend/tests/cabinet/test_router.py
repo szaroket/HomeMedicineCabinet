@@ -24,6 +24,7 @@ from app.utilities.errors import (
     CabinetInvariantError,
     EntryNotFoundError,
     InvalidDosageError,
+    InvalidPackageCountError,
     InvalidPartialTabletCountError,
     MedicationNotFoundError,
     UserDatabaseError,
@@ -817,6 +818,171 @@ class TestSetEntryUsageErrorMapping:
             json=body,
         )
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+
+_QUANTITY_BODY = {"package_count": 3, "partial_tablet_count": 10}
+
+
+class TestSetEntryQuantitySuccess:
+    @pytest.mark.asyncio
+    async def test_set_quantity_returns_200(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.set_entry_quantity",
+            new_callable=AsyncMock,
+            return_value=_make_cabinet_entry_out(
+                package_count=3, partial_tablet_count=10
+            ),
+        )
+
+        response = await authed_client.patch(
+            f"/api/v1/cabinet/entries/{_ENTRY_ID}/quantity",
+            json=_QUANTITY_BODY,
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["package_count"] == 3
+
+    @pytest.mark.asyncio
+    async def test_zero_package_count_returns_200(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.set_entry_quantity",
+            new_callable=AsyncMock,
+            return_value=_make_cabinet_entry_out(
+                package_count=0, partial_tablet_count=None
+            ),
+        )
+
+        response = await authed_client.patch(
+            f"/api/v1/cabinet/entries/{_ENTRY_ID}/quantity",
+            json={"package_count": 0},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["package_count"] == 0
+
+
+class TestSetEntryQuantityErrorMapping:
+    @pytest.mark.asyncio
+    async def test_negative_package_count_returns_422(self, authed_client: AsyncClient):
+        response = await authed_client.patch(
+            f"/api/v1/cabinet/entries/{_ENTRY_ID}/quantity",
+            json={"package_count": -1},
+        )
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+    @pytest.mark.asyncio
+    async def test_entry_not_found_returns_404(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.set_entry_quantity",
+            new_callable=AsyncMock,
+            side_effect=EntryNotFoundError(),
+        )
+
+        response = await authed_client.patch(
+            f"/api/v1/cabinet/entries/{_ENTRY_ID}/quantity",
+            json=_QUANTITY_BODY,
+        )
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    @pytest.mark.asyncio
+    async def test_medication_not_found_returns_404(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.set_entry_quantity",
+            new_callable=AsyncMock,
+            side_effect=MedicationNotFoundError(),
+        )
+
+        response = await authed_client.patch(
+            f"/api/v1/cabinet/entries/{_ENTRY_ID}/quantity",
+            json=_QUANTITY_BODY,
+        )
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    @pytest.mark.asyncio
+    async def test_invalid_partial_tablet_count_returns_422(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.set_entry_quantity",
+            new_callable=AsyncMock,
+            side_effect=InvalidPartialTabletCountError(),
+        )
+
+        response = await authed_client.patch(
+            f"/api/v1/cabinet/entries/{_ENTRY_ID}/quantity",
+            json=_QUANTITY_BODY,
+        )
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+    @pytest.mark.asyncio
+    async def test_invalid_package_count_returns_422(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.set_entry_quantity",
+            new_callable=AsyncMock,
+            side_effect=InvalidPackageCountError(),
+        )
+
+        response = await authed_client.patch(
+            f"/api/v1/cabinet/entries/{_ENTRY_ID}/quantity",
+            json=_QUANTITY_BODY,
+        )
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+    @pytest.mark.asyncio
+    async def test_invariant_error_returns_500(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.set_entry_quantity",
+            new_callable=AsyncMock,
+            side_effect=CabinetInvariantError(),
+        )
+
+        response = await authed_client.patch(
+            f"/api/v1/cabinet/entries/{_ENTRY_ID}/quantity",
+            json=_QUANTITY_BODY,
+        )
+
+        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+
+    @pytest.mark.asyncio
+    async def test_database_error_returns_503(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.cabinet.router.cabinet_facade.set_entry_quantity",
+            new_callable=AsyncMock,
+            side_effect=CabinetDatabaseError(),
+        )
+
+        response = await authed_client.patch(
+            f"/api/v1/cabinet/entries/{_ENTRY_ID}/quantity",
+            json=_QUANTITY_BODY,
+        )
+
+        assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+
+    @pytest.mark.asyncio
+    async def test_missing_token_returns_401(self, client: AsyncClient):
+        response = await client.patch(
+            f"/api/v1/cabinet/entries/{_ENTRY_ID}/quantity",
+            json=_QUANTITY_BODY,
+        )
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 class TestDeleteEntrySuccess:

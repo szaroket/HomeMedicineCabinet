@@ -952,6 +952,60 @@ async def set_entry_usage(
     )
 
 
+async def set_entry_quantity(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    entry_id: uuid.UUID,
+    package_count: int,
+    partial_tablet_count: int | None,
+    expiry_threshold_days: int,
+    min_package_count: int = DEFAULT_MIN_PACKAGE_COUNT,
+) -> CabinetEntryOut:
+    """Set the absolute package and partial-tablet counts on a cabinet entry owned by the user.
+
+    Args:
+        session (AsyncSession): Active async database session.
+        user_id (uuid.UUID): Authenticated user's UUID.
+        entry_id (uuid.UUID): UUID of the cabinet entry to update.
+        package_count (int): New absolute package count (>= 0).
+        partial_tablet_count (int | None): New partial tablet count, or None for a full package.
+        expiry_threshold_days (int): Days ahead that triggers "expiring" status.
+        min_package_count (int): User's global minimum package count for below-minimum signal.
+
+    Returns:
+        CabinetEntryOut: The updated CabinetEntryOut with recomputed status and below_minimum.
+
+    Raises:
+        EntryNotFoundError: When the entry does not exist or does not belong to the user.
+        MedicationNotFoundError: When the entry's registry variant no longer exists.
+        InvalidPartialTabletCountError: When partial_tablet_count is supplied for
+            a non-tablet variant, or outside the valid range.
+        CabinetInvariantError: When a tablet-based variant has a missing or
+            non-positive capacity (data-integrity breach).
+        CabinetDatabaseError: When a database operation fails.
+    """
+    entry = await crud.find_entry_by_id(
+        session=session, user_id=user_id, entry_id=entry_id
+    )
+    if entry is None:
+        raise EntryNotFoundError()
+    variant = await _get_variant_or_raise(
+        session=session, medication_registry_id=entry.medication_registry_id
+    )
+    _validate_and_get_tpp(variant, partial_tablet_count)
+    updated_entry = await crud.update_entry_counts(
+        session, entry, package_count, partial_tablet_count
+    )
+    today = datetime.now(timezone.utc).date()
+    return _map_row_to_entry_out(
+        entry=updated_entry,
+        variant=variant,
+        today=today,
+        expiry_threshold_days=expiry_threshold_days,
+        min_package_count=min_package_count,
+    )
+
+
 async def delete_entry(
     session: AsyncSession,
     user_id: uuid.UUID,
