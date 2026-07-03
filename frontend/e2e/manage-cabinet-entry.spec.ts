@@ -1,4 +1,10 @@
 import { test as base, expect, type Page } from "@playwright/test";
+import {
+  productLabel,
+  toDisplayDate,
+  type ProductOut,
+  type VariantOut,
+} from "./helpers";
 
 /**
  * manage-cabinet-entry.spec.ts — Phase 5 of
@@ -42,30 +48,10 @@ import { test as base, expect, type Page } from "@playwright/test";
 const PRODUCT_SEARCH = process.env.E2E_PRODUCT_SEARCH ?? "Apap";
 const API_BASE = `${process.env.VITE_API_URL ?? "http://localhost:8000"}/api/v1`;
 
-// Minimal structural views of the API responses — decoupled from the app's own
-// `@/…` types on purpose (the e2e tsconfig need not resolve src paths).
-interface ProductOut {
-  name: string;
-  strength: string | null;
-  pharmaceutical_form: string | null;
-}
-interface VariantOut {
-  id: string;
-}
+// The one structural view unique to this spec; the shared ProductOut/VariantOut
+// and the productLabel/toDisplayDate builders come from ./helpers.
 interface AddEntryResult {
   entry: { id: string };
-}
-
-// Rebuild the ProductAutocomplete option label so we click the right catalog row
-// by its user-visible text (mirrors seed.spec.ts::productLabel).
-function productLabel(product: ProductOut): string {
-  return [
-    product.name,
-    product.strength,
-    product.pharmaceutical_form ? `· ${product.pharmaceutical_form}` : null,
-  ]
-    .filter(Boolean)
-    .join(" ");
 }
 
 // A future, per-run-unique expiry — the sole isolation axis for
@@ -83,13 +69,6 @@ function uniqueFutureExpiryIso(): string {
   const base = new Date(Date.UTC(2060, 0, 1));
   base.setUTCDate(base.getUTCDate() + dayOffset);
   return base.toISOString().slice(0, 10); // YYYY-MM-DD
-}
-
-// The cabinet renders dates with pl-PL `dd.MM.yyyy`; rebuild the same string from
-// the ISO parts (locale-independent) to locate our specific row by its expiry.
-function toDisplayDate(expiryIso: string): string {
-  const [year, month, day] = expiryIso.split("-");
-  return `${day}.${month}.${year}`;
 }
 
 // Write-only ledger of EVERY entry id this file's tests create. It is never read
