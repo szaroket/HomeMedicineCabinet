@@ -24,6 +24,7 @@ from app.api.v1.cabinet.service import (
     compute_usage_view,
     daily_consumption_rate,
     days_of_supply_from_rate,
+    delete_entry,
     is_below_minimum,
     list_entries,
     merge_non_tablet_entry,
@@ -1524,4 +1525,27 @@ class TestSetEntryUsage:
                     # missing dosage_times/period/amount for tablet variant
                 ),
                 expiry_threshold_days=30,
+            )
+
+
+class TestDeleteEntry:
+    async def test_deletes_owned_entry(self, mock_session: AsyncMock, mock_crud):
+        entry = _make_entry()
+        mock_crud.find_entry_by_id = AsyncMock(return_value=entry)
+        mock_crud.delete_entry = AsyncMock(return_value=None)
+
+        await delete_entry(session=mock_session, user_id=_USER_ID, entry_id=_ENTRY_ID)
+
+        mock_crud.delete_entry.assert_called_once_with(
+            session=mock_session, entry=entry
+        )
+
+    async def test_entry_not_found_raises_entry_not_found_error(
+        self, mock_session: AsyncMock, mock_crud
+    ):
+        mock_crud.find_entry_by_id = AsyncMock(return_value=None)
+
+        with pytest.raises(EntryNotFoundError):
+            await delete_entry(
+                session=mock_session, user_id=_USER_ID, entry_id=_ENTRY_ID
             )

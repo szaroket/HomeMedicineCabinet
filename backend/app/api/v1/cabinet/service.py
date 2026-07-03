@@ -952,6 +952,30 @@ async def set_entry_usage(
     )
 
 
+async def delete_entry(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    entry_id: uuid.UUID,
+) -> None:
+    """Delete a cabinet entry owned by the user.
+
+    Args:
+        session (AsyncSession): Active async database session.
+        user_id (uuid.UUID): Authenticated user's UUID.
+        entry_id (uuid.UUID): UUID of the cabinet entry to delete.
+
+    Raises:
+        EntryNotFoundError: When the entry does not exist or does not belong to the user.
+        CabinetDatabaseError: When a database operation fails.
+    """
+    entry = await crud.find_entry_by_id(
+        session=session, user_id=user_id, entry_id=entry_id
+    )
+    if entry is None:
+        raise EntryNotFoundError()
+    await crud.delete_entry(session=session, entry=entry)
+
+
 async def _merge_and_commit(
     *,
     session: AsyncSession,

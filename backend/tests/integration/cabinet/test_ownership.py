@@ -108,3 +108,55 @@ async def test_cross_account_usage_patch_returns_404(
     assert len(items) == 1
     assert items[0]["id"] == str(entry_a.id)
     assert items[0]["is_used"] is True, "victim row must not be mutated"
+
+
+@pytest.mark.asyncio
+async def test_cross_account_delete_returns_404(
+    authed_db_client: tuple[AsyncClient, Callable[[CurrentUser], None]],
+    seed_user: Callable[..., Awaitable[tuple[User, CurrentUser]]],
+    seed_registry: Callable[..., Awaitable[MedicationRegistry]],
+    seed_entry: Callable[..., Awaitable[CabinetEntry]],
+) -> None:
+    """As user B, DELETE /entries/{A_entry_id} returns 404 and leaves A's row intact."""
+    client, act_as = authed_db_client
+
+    user_a, current_user_a = await seed_user()
+    _, current_user_b = await seed_user()
+    registry = await seed_registry()
+    entry_a = await seed_entry(user=user_a, registry=registry)
+
+    act_as(current_user_b)
+    response = await client.delete(f"/api/v1/cabinet/entries/{entry_a.id}")
+
+    assert response.status_code == 404, "cross-account delete must be rejected with 404"
+
+    act_as(current_user_a)
+    list_response = await client.get("/api/v1/cabinet/entries")
+    assert list_response.status_code == 200
+    items = list_response.json()["items"]
+    assert len(items) == 1
+    assert items[0]["id"] == str(entry_a.id), "victim row must not be deleted"
+
+
+@pytest.mark.asyncio
+async def test_owned_delete_returns_204_and_removes_entry(
+    authed_db_client: tuple[AsyncClient, Callable[[CurrentUser], None]],
+    seed_user: Callable[..., Awaitable[tuple[User, CurrentUser]]],
+    seed_registry: Callable[..., Awaitable[MedicationRegistry]],
+    seed_entry: Callable[..., Awaitable[CabinetEntry]],
+) -> None:
+    """As the owning user, DELETE /entries/{id} returns 204 and the entry disappears."""
+    client, act_as = authed_db_client
+
+    user_a, current_user_a = await seed_user()
+    registry = await seed_registry()
+    entry_a = await seed_entry(user=user_a, registry=registry)
+
+    act_as(current_user_a)
+    response = await client.delete(f"/api/v1/cabinet/entries/{entry_a.id}")
+
+    assert response.status_code == 204
+
+    list_response = await client.get("/api/v1/cabinet/entries")
+    assert list_response.status_code == 200
+    assert list_response.json()["total"] == 0

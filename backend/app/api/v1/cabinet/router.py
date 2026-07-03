@@ -178,6 +178,42 @@ async def set_entry_importance(
         ) from exc
 
 
+@router.delete(
+    "/entries/{entry_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_entry(
+    entry_id: uuid.UUID,
+    current_user: CurrentUser = Security(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> None:
+    """Delete a cabinet entry owned by the current user."""
+    try:
+        await cabinet_service.delete_entry(
+            session=session,
+            user_id=current_user.id,
+            entry_id=entry_id,
+        )
+    except EntryNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=exc.message
+        ) from exc
+    except (CabinetDatabaseError, UserDatabaseError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=exc.message
+        ) from exc
+    except CabinetError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
+        ) from exc
+    except Exception as exc:
+        logger.exception("Unexpected error when deleting entry: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred.",
+        ) from exc
+
+
 @router.patch(
     "/entries/{entry_id}/usage",
     response_model=CabinetEntryOut,
