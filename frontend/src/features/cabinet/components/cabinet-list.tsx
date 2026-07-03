@@ -33,11 +33,9 @@ function EntryRow({ entry }: { entry: CabinetEntryOut }) {
     closeDeleteConfirm,
     confirmDelete,
     deletePending,
+    deleteMessage,
+    deleteNote,
   } = useCabinetEntry(entry);
-  const deleteMessage = `Czy na pewno chcesz usunąć „${entry.name}” z apteczki?`;
-  const deleteNote = belowMinimum
-    ? `Oznaczenie „${OUT_OF_STOCK_LABEL}” również zniknie.`
-    : undefined;
   const rowBg = belowMinimum
     ? "bg-amber-950/40 hover:bg-amber-950/60"
     : entry.is_sufficient === false

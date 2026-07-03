@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useEffect, useId } from "react";
+import { createPortal } from "react-dom";
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -25,6 +26,8 @@ export function ConfirmDialog({
   destructive = false,
   pending = false,
 }: ConfirmDialogProps) {
+  const titleId = useId();
+
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
@@ -36,16 +39,21 @@ export function ConfirmDialog({
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
       onClick={onCancel}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
         className="w-full max-w-sm rounded-lg border border-slate-600 bg-slate-800 p-6 shadow-xl"
         onClick={(ev) => ev.stopPropagation()}
       >
-        <h2 className="mb-3 text-lg font-semibold text-white">{title}</h2>
+        <h2 id={titleId} className="mb-3 text-lg font-semibold text-white">
+          {title}
+        </h2>
         <p className="text-sm text-slate-300">{message}</p>
         {note && <p className="mt-1 text-sm text-amber-400">{note}</p>}
 
@@ -72,6 +80,7 @@ export function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -173,6 +173,11 @@ export function useCabinetEntry(entry: CabinetEntryOut) {
     );
   }
 
+  const deleteMessage = `Czy na pewno chcesz usunąć „${entry.name}” z apteczki?`;
+  const deleteNote = entry.below_minimum
+    ? `Oznaczenie „${OUT_OF_STOCK_LABEL}” również zniknie.`
+    : undefined;
+
   return {
     expanded,
     toggleExpanded,
@@ -189,5 +194,7 @@ export function useCabinetEntry(entry: CabinetEntryOut) {
     closeDeleteConfirm,
     confirmDelete,
     deletePending,
+    deleteMessage,
+    deleteNote,
   };
 }

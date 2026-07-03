@@ -371,15 +371,15 @@ No schema migration required — `cabinet_entries.package_count` already has the
 
 #### Automated
 
-- [x] 2.1 Build passes: `cd frontend && npm run build`
-- [x] 2.2 Lint passes: `cd frontend && npm run lint`
-- [x] 2.3 Format clean: `cd frontend && npx prettier --check src/`
+- [x] 2.1 Build passes: `cd frontend && npm run build` — 9ec736e
+- [x] 2.2 Lint passes: `cd frontend && npm run lint` — 9ec736e
+- [x] 2.3 Format clean: `cd frontend && npx prettier --check src/` — 9ec736e
 
 #### Manual
 
-- [ ] 2.4 Trash action opens a Polish confirm dialog; cancel paths work; confirm removes the entry
-- [ ] 2.5 Out-of-stock entry's dialog states the badge will be cleared
-- [ ] 2.6 Works on both desktop row and mobile card
+- [x] 2.4 Trash action opens a Polish confirm dialog; cancel paths work; confirm removes the entry — 9ec736e
+- [x] 2.5 Out-of-stock entry's dialog states the badge will be cleared — 9ec736e
+- [x] 2.6 Works on both desktop row and mobile card — 9ec736e
 
 ### Phase 3: Backend — quantity PATCH endpoint
 
