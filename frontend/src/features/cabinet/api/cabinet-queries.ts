@@ -11,6 +11,7 @@ import {
   listEntries,
   toggleImportant,
   setUsage,
+  deleteEntry,
 } from "@/features/cabinet/api/cabinet-api";
 import type {
   ProductOut,
@@ -92,6 +93,16 @@ export function useSetUsage() {
       id: string;
       payload: UsageFieldsPayload;
     }) => setUsage(id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: cabinetKeys.entriesAll() });
+    },
+  });
+}
+
+export function useDeleteEntry() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id }: { id: string }) => deleteEntry(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: cabinetKeys.entriesAll() });
     },

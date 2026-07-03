@@ -1,6 +1,9 @@
 import { useState } from "react";
 import type { CabinetEntryOut } from "@/features/cabinet/api/cabinet-api";
-import { useToggleImportant } from "@/features/cabinet/api/cabinet-queries";
+import {
+  useToggleImportant,
+  useDeleteEntry,
+} from "@/features/cabinet/api/cabinet-queries";
 
 export const OUT_OF_STOCK_LABEL = "Brak w apteczce";
 
@@ -130,7 +133,9 @@ function buildUsageView(entry: CabinetEntryOut): UsageView {
 export function useCabinetEntry(entry: CabinetEntryOut) {
   const [expanded, setExpanded] = useState(false);
   const [showUsageEdit, setShowUsageEdit] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const { mutate: toggleImportant } = useToggleImportant();
+  const { mutate: deleteEntry, isPending: deletePending } = useDeleteEntry();
 
   const statusInfo = STATUS_LABEL[entry.status] ?? {
     label: entry.status,
@@ -153,6 +158,21 @@ export function useCabinetEntry(entry: CabinetEntryOut) {
     toggleImportant({ id: entry.id, is_important: !entry.is_important });
   }
 
+  function openDeleteConfirm() {
+    setConfirmingDelete(true);
+  }
+
+  function closeDeleteConfirm() {
+    setConfirmingDelete(false);
+  }
+
+  function confirmDelete() {
+    deleteEntry(
+      { id: entry.id },
+      { onSuccess: () => setConfirmingDelete(false) },
+    );
+  }
+
   return {
     expanded,
     toggleExpanded,
@@ -164,5 +184,10 @@ export function useCabinetEntry(entry: CabinetEntryOut) {
     belowMinimum: entry.below_minimum,
     formattedExpiryDate: formatDate(entry.expiry_date),
     usageView: buildUsageView(entry),
+    confirmingDelete,
+    openDeleteConfirm,
+    closeDeleteConfirm,
+    confirmDelete,
+    deletePending,
   };
 }

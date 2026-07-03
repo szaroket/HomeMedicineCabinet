@@ -371,9 +371,9 @@ No schema migration required — `cabinet_entries.package_count` already has the
 
 #### Automated
 
-- [ ] 2.1 Build passes: `cd frontend && npm run build`
-- [ ] 2.2 Lint passes: `cd frontend && npm run lint`
-- [ ] 2.3 Format clean: `cd frontend && npx prettier --check src/`
+- [x] 2.1 Build passes: `cd frontend && npm run build`
+- [x] 2.2 Lint passes: `cd frontend && npm run lint`
+- [x] 2.3 Format clean: `cd frontend && npx prettier --check src/`
 
 #### Manual
 

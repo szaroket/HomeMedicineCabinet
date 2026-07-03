@@ -9,10 +9,12 @@ import {
 import {
   StarIcon,
   ChevronIcon,
+  TrashIcon,
 } from "@/features/cabinet/components/entry-icons";
 import { StatusBadge } from "@/features/cabinet/components/status-badge";
 import { CabinetCard } from "@/features/cabinet/components/cabinet-card";
 import { UsageEditForm } from "@/features/cabinet/components/usage-edit-form";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 function EntryRow({ entry }: { entry: CabinetEntryOut }) {
   const {
@@ -26,7 +28,16 @@ function EntryRow({ entry }: { entry: CabinetEntryOut }) {
     belowMinimum,
     formattedExpiryDate,
     usageView,
+    confirmingDelete,
+    openDeleteConfirm,
+    closeDeleteConfirm,
+    confirmDelete,
+    deletePending,
   } = useCabinetEntry(entry);
+  const deleteMessage = `Czy na pewno chcesz usunąć „${entry.name}” z apteczki?`;
+  const deleteNote = belowMinimum
+    ? `Oznaczenie „${OUT_OF_STOCK_LABEL}” również zniknie.`
+    : undefined;
   const rowBg = belowMinimum
     ? "bg-amber-950/40 hover:bg-amber-950/60"
     : entry.is_sufficient === false
@@ -87,10 +98,23 @@ function EntryRow({ entry }: { entry: CabinetEntryOut }) {
             {sufficiencyInfo && <StatusBadge status={sufficiencyInfo} />}
           </span>
         </td>
+        <td className="px-4 py-3">
+          <button
+            type="button"
+            aria-label="Usuń lek"
+            onClick={(ev) => {
+              ev.stopPropagation();
+              openDeleteConfirm();
+            }}
+            className="inline-flex items-center rounded text-slate-400 hover:text-red-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
+          >
+            <TrashIcon />
+          </button>
+        </td>
       </tr>
       {expanded && (
         <tr className="border-b border-slate-700 last:border-0 bg-slate-800/30">
-          <td colSpan={6} className="px-6 py-3">
+          <td colSpan={7} className="px-6 py-3">
             <dl className="flex flex-wrap gap-x-8 gap-y-1 text-sm">
               <div className="w-full pb-2 mb-2 border-b border-slate-700">
                 {entry.is_used && (
@@ -219,6 +243,17 @@ function EntryRow({ entry }: { entry: CabinetEntryOut }) {
           </td>
         </tr>
       )}
+      <ConfirmDialog
+        open={confirmingDelete}
+        title="Usuń lek"
+        message={deleteMessage}
+        note={deleteNote}
+        confirmLabel="Usuń"
+        onConfirm={confirmDelete}
+        onCancel={closeDeleteConfirm}
+        destructive
+        pending={deletePending}
+      />
     </>
   );
 }
@@ -291,6 +326,9 @@ export function CabinetList({
               </th>
               <th className="px-4 py-3 text-left font-medium text-blue-400">
                 Zapasy
+              </th>
+              <th className="px-4 py-3 text-left font-medium text-blue-400">
+                <span className="sr-only">Akcje</span>
               </th>
             </tr>
           </thead>

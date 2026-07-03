@@ -7,8 +7,10 @@ import { StatusBadge } from "@/features/cabinet/components/status-badge";
 import {
   StarIcon,
   ChevronIcon,
+  TrashIcon,
 } from "@/features/cabinet/components/entry-icons";
 import { UsageEditForm } from "@/features/cabinet/components/usage-edit-form";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface CabinetCardProps {
   entry: CabinetEntryOut;
@@ -26,7 +28,16 @@ export function CabinetCard({ entry }: CabinetCardProps) {
     belowMinimum,
     formattedExpiryDate,
     usageView,
+    confirmingDelete,
+    openDeleteConfirm,
+    closeDeleteConfirm,
+    confirmDelete,
+    deletePending,
   } = useCabinetEntry(entry);
+  const deleteMessage = `Czy na pewno chcesz usunąć „${entry.name}” z apteczki?`;
+  const deleteNote = belowMinimum
+    ? `Oznaczenie „${OUT_OF_STOCK_LABEL}” również zniknie.`
+    : undefined;
 
   return (
     <div
@@ -58,18 +69,31 @@ export function CabinetCard({ entry }: CabinetCardProps) {
           </button>
           <span className="truncate font-medium text-white">{entry.name}</span>
         </span>
-        <button
-          type="button"
-          aria-expanded={expanded}
-          aria-label="Pokaż szczegóły"
-          onClick={(ev) => {
-            ev.stopPropagation();
-            toggleExpanded();
-          }}
-          className="inline-flex items-center rounded text-slate-400 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
-        >
-          <ChevronIcon expanded={expanded} />
-        </button>
+        <span className="inline-flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            aria-label="Usuń lek"
+            onClick={(ev) => {
+              ev.stopPropagation();
+              openDeleteConfirm();
+            }}
+            className="inline-flex items-center rounded text-slate-400 hover:text-red-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
+          >
+            <TrashIcon />
+          </button>
+          <button
+            type="button"
+            aria-expanded={expanded}
+            aria-label="Pokaż szczegóły"
+            onClick={(ev) => {
+              ev.stopPropagation();
+              toggleExpanded();
+            }}
+            className="inline-flex items-center rounded text-slate-400 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+          >
+            <ChevronIcon expanded={expanded} />
+          </button>
+        </span>
       </div>
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -220,6 +244,17 @@ export function CabinetCard({ entry }: CabinetCardProps) {
           </div>
         </dl>
       )}
+      <ConfirmDialog
+        open={confirmingDelete}
+        title="Usuń lek"
+        message={deleteMessage}
+        note={deleteNote}
+        confirmLabel="Usuń"
+        onConfirm={confirmDelete}
+        onCancel={closeDeleteConfirm}
+        destructive
+        pending={deletePending}
+      />
     </div>
   );
 }

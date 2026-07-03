@@ -1,4 +1,4 @@
-import { apiJson } from "@/lib/api-client";
+import { apiFetch, apiJson } from "@/lib/api-client";
 
 export interface ProductOut {
   name: string;
@@ -175,4 +175,9 @@ export function setUsage(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
+}
+
+export async function deleteEntry(id: string): Promise<void> {
+  const res = await apiFetch(`/cabinet/entries/${id}`, { method: "DELETE" });
+  if (!res.ok) throw res;
 }
