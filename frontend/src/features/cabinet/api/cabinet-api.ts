@@ -177,6 +177,22 @@ export function setUsage(
   });
 }
 
+export interface UpdateQuantityPayload {
+  package_count: number;
+  partial_tablet_count?: number | null;
+}
+
+export function updateQuantity(
+  id: string,
+  payload: UpdateQuantityPayload,
+): Promise<CabinetEntryOut> {
+  return apiJson<CabinetEntryOut>(`/cabinet/entries/${id}/quantity`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function deleteEntry(id: string): Promise<void> {
   const res = await apiFetch(`/cabinet/entries/${id}`, { method: "DELETE" });
   if (!res.ok) throw res;

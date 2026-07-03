@@ -35,6 +35,14 @@ export function CabinetCard({ entry }: CabinetCardProps) {
     deletePending,
     deleteMessage,
     deleteNote,
+    incrementPackage,
+    decrementPackage,
+    mutationPending,
+    editingPartial,
+    openPartialEdit,
+    closePartialEdit,
+    savePartialTablet,
+    partialError,
   } = useCabinetEntry(entry);
 
   return (
@@ -105,9 +113,84 @@ export function CabinetCard({ entry }: CabinetCardProps) {
       </div>
 
       <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-300">
-        <div className="flex gap-1">
-          <dt className="text-slate-400">Opak.:</dt>
-          <dd>{entry.package_count}</dd>
+        <div
+          className="flex flex-col gap-1"
+          onClick={(ev) => ev.stopPropagation()}
+        >
+          <div className="flex items-center gap-1">
+            <dt className="text-slate-400">Opak.:</dt>
+            <button
+              type="button"
+              aria-label="Zmniejsz liczbę opakowań"
+              disabled={mutationPending || entry.package_count <= 0}
+              onClick={decrementPackage}
+              className="inline-flex h-6 w-6 items-center justify-center rounded border border-slate-600 text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+            >
+              −
+            </button>
+            <dd className="w-6 text-center">{entry.package_count}</dd>
+            <button
+              type="button"
+              aria-label="Zwiększ liczbę opakowań"
+              disabled={mutationPending}
+              onClick={incrementPackage}
+              className="inline-flex h-6 w-6 items-center justify-center rounded border border-slate-600 text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+            >
+              +
+            </button>
+          </div>
+          {entry.is_tablet_based && (
+            <div>
+              {editingPartial ? (
+                <form
+                  onSubmit={(ev) => {
+                    ev.preventDefault();
+                    const input = ev.currentTarget.elements.namedItem(
+                      "partial",
+                    ) as HTMLInputElement;
+                    savePartialTablet(input.value);
+                  }}
+                  className="flex items-center gap-1"
+                >
+                  <input
+                    name="partial"
+                    type="number"
+                    min={1}
+                    defaultValue={entry.partial_tablet_count ?? ""}
+                    placeholder="Pełne opak."
+                    className="w-20 rounded border border-slate-600 bg-slate-700 px-1 py-0.5 text-xs text-white"
+                  />
+                  <button
+                    type="submit"
+                    disabled={mutationPending}
+                    className="text-xs text-blue-400 hover:text-blue-300 disabled:opacity-50"
+                  >
+                    Zapisz
+                  </button>
+                  <button
+                    type="button"
+                    onClick={closePartialEdit}
+                    className="text-xs text-slate-400 hover:text-white"
+                  >
+                    Anuluj
+                  </button>
+                </form>
+              ) : (
+                <button
+                  type="button"
+                  onClick={openPartialEdit}
+                  className="text-xs text-blue-400 hover:text-blue-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                >
+                  {entry.partial_tablet_count != null
+                    ? `Luźne: ${entry.partial_tablet_count} szt.`
+                    : "Ustaw luźne tabletki"}
+                </button>
+              )}
+              {partialError && (
+                <p className="text-xs text-red-400">{partialError}</p>
+              )}
+            </div>
+          )}
         </div>
         <div className="flex gap-1">
           <dt className="text-slate-400">Sztuki:</dt>

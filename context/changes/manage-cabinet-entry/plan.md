@@ -400,18 +400,18 @@ No schema migration required — `cabinet_entries.package_count` already has the
 
 #### Automated
 
-- [ ] 4.1 Build passes: `cd frontend && npm run build`
-- [ ] 4.2 Lint passes: `cd frontend && npm run lint`
-- [ ] 4.3 Format clean: `cd frontend && npx prettier --check src/`
+- [x] 4.1 Build passes: `cd frontend && npm run build`
+- [x] 4.2 Lint passes: `cd frontend && npm run lint`
+- [x] 4.3 Format clean: `cd frontend && npx prettier --check src/`
 
 #### Manual
 
-- [ ] 4.4 −/+ adjusts package count; list refetches; badge/status update
-- [ ] 4.5 Partial-tablet edit/clear works for tablet entries, hidden for non-tablet
-- [ ] 4.6 Uncategorised entry 1 → 0 confirms then deletes; cancel leaves at 1
-- [ ] 4.7 Important/used entry decrements to 0 and stays (no dialog)
-- [ ] 4.8 Rapid −/+ clicks lose no decrements; steppers disable while a mutation is in flight
-- [ ] 4.9 Consistent on desktop row and mobile card
+- [x] 4.4 −/+ adjusts package count; list refetches; badge/status update
+- [x] 4.5 Partial-tablet edit/clear works for tablet entries, hidden for non-tablet
+- [x] 4.6 Uncategorised entry 1 → 0 confirms then deletes; cancel leaves at 1
+- [x] 4.7 Important/used entry decrements to 0 and stays (no dialog)
+- [x] 4.8 Rapid −/+ clicks lose no decrements; steppers disable while a mutation is in flight
+- [x] 4.9 Consistent on desktop row and mobile card
 
 ### Phase 5: E2E — manage/delete spec + teardown
 
