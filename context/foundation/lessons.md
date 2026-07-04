@@ -6,6 +6,18 @@ note. Newest first.
 
 ---
 
+## L-007 — Render services here are manually configured, not Blueprint-managed
+
+**Context**: Surfaced after the `spa-refresh-fallback` change (2026-07-04) shipped a `routes` rewrite rule in `render.yaml`, but production still returned "Not Found" on refresh of deep routes.
+
+**The rule**:
+
+- The `home-medicine-cabinet-frontend` and `home-medicine-cabinet-backend` services on Render were created manually through the dashboard, not via "New > Blueprint Instance". This means `render.yaml` is **not** synced automatically — routes, env vars, and build/start commands defined there are inert until mirrored by hand.
+- Any future change to `render.yaml` must also be applied directly in the Render dashboard for the affected service, or it will silently not take effect in production.
+- When prod behavior doesn't match `render.yaml`, check the Render dashboard settings first — don't assume the repo config is authoritative for this project.
+
+---
+
 ## L-006 — Keep all imports at the top of the file
 
 **Context**: Surfaced in `dosage-tracking` Phase 3 review (2026-06-26) when the calc tests appended a second import block mid-file (`backend/tests/cabinet/test_service.py`), suppressed with `# noqa: E402`.
