@@ -331,12 +331,12 @@ the rewrite must be applied once in the dashboard — see Phase 1, change 2.
 
 #### Automated
 
-- [x] 2.1 Unit tests pass: `cd frontend && npm run test:run`
-- [x] 2.2 Type check passes: `cd frontend && npm run typecheck`
-- [x] 2.3 Lint passes: `cd frontend && npm run lint`
-- [x] 2.4 Build succeeds: `cd frontend && npm run build`
+- [x] 2.1 Unit tests pass: `cd frontend && npm run test:run` — c8770e2
+- [x] 2.2 Type check passes: `cd frontend && npm run typecheck` — c8770e2
+- [x] 2.3 Lint passes: `cd frontend && npm run lint` — c8770e2
+- [x] 2.4 Build succeeds: `cd frontend && npm run build` — c8770e2
 
 #### Manual
 
-- [x] 2.5 `/nonexistent` renders the Polish 404 page with a working home link
-- [x] 2.6 `/nonexistent` while unauthenticated shows the 404 (no redirect to `/login`)
+- [x] 2.5 `/nonexistent` renders the Polish 404 page with a working home link — c8770e2
+- [x] 2.6 `/nonexistent` while unauthenticated shows the 404 (no redirect to `/login`) — c8770e2
