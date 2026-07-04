@@ -508,13 +508,13 @@ bug into an oracle).
 
 #### Automated
 
-- [ ] 2.1 Transport suite passes: `npm run test:run`
-- [ ] 2.2 Build still passes: `npm run build`
-- [ ] 2.3 Lint passes: `npm run lint`
+- [x] 2.1 Transport suite passes: `npm run test:run`
+- [x] 2.2 Build still passes: `npm run build`
+- [x] 2.3 Lint passes: `npm run lint`
 
 #### Manual
 
-- [ ] 2.4 Mutation sanity: breaking `/auth/` skip or `throw res` fails a test
+- [x] 2.4 Mutation sanity: breaking `/auth/` skip or `throw res` fails a test
 
 ### Phase 3: Feature Fetcher Tests + Cookbook
 
