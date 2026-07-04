@@ -63,6 +63,11 @@ the app.
   rewrites, so `/*` does not clobber real asset requests. The static service
   serves only the frontend — API calls go to `VITE_API_URL` (the separate backend
   service) — so no `/api` exclusion is needed.
+- Accepted tradeoff: a *deleted* hashed asset (e.g. an old tab requesting
+  `/assets/index-<oldhash>.js` after a redeploy) no longer exists, so the catch-all
+  serves `index.html` (HTTP 200, `text/html`) instead of a clean 404 — surfacing as
+  a confusing MIME/parse error in that stale tab. Low impact here (infrequent
+  deploys, small surface); no mitigation planned.
 - The catch-all must be a **top-level** route (sibling of the layout routes), not
   a child of `ProtectedLayout`, so a 404 does not get pushed through the auth gate
   and redirected to `/login`.
@@ -135,7 +140,7 @@ a redirect) so the URL is preserved.
 #### 2. Document the dashboard fallback
 
 **File**: `context/foundation/infrastructure.md` (Operational Story / Getting
-Started section) — or the frontend deploy notes if preferred.
+Started section).
 
 **Intent**: Record that the SPA rewrite must also be applied in the Render
 dashboard if the static site was created manually rather than from the Blueprint,
@@ -153,10 +158,26 @@ so the fix isn't silently ineffective. Note the exact dashboard values.
 
 #### Manual Verification:
 
+> Note on what proves what: `vite preview` does history-fallback automatically
+> and never reads `render.yaml` (Current State, above), so the local preview step
+> only confirms the **production bundle can client-route to a deep path** — it
+> passes identically with or without the rewrite and does **not** validate the
+> rewrite. The rewrite itself is validated ONLY by the live steps (1.5, 1.6).
+> "Valid YAML" (1.2) is likewise not "valid Render Blueprint" — hence the
+> pre-deploy eyeball step below.
+
+- Pre-deploy eyeball: confirm the new `routes:` block is nested under the
+  `home-medicine-cabinet-frontend` static service (correct indentation) and uses
+  Render's exact key names (`type: rewrite`, `source`, `destination`) before
+  pushing — a mis-nested/mistyped block parses as valid YAML but silently does
+  nothing.
 - `cd frontend && npm run build && npm run preview`, then hard-navigate to
-  `http://localhost:4173/cabinet` and refresh — the app loads (no 404).
+  `http://localhost:4173/cabinet` and refresh — the app loads (no 404). This
+  confirms the production bundle client-routes to a deep path; it does not
+  validate the rewrite.
 - After deploy, refreshing `/cabinet` (and other deep routes) on the live Render
-  URL loads the app instead of Render's 404.
+  URL loads the app instead of Render's 404. **This is the primary validation of
+  the rewrite.**
 - The rewrite rule is confirmed present in the Render dashboard (Blueprint-synced
   or manually applied per the documented step).
 
@@ -185,10 +206,26 @@ screen instead of React Router's default English error.
 message and a `Link` back into the app (`/`). App-level (not feature-scoped)
 because it is domain-agnostic.
 
-**Contract**: `export function NotFoundPage()` returning a centered layout with
-Polish copy and a `react-router-dom` `Link` to `/`. Follow the styling/idiom of
-`dashboard-page.tsx` (Tailwind utilities, Polish text). Standalone shell — do not
-require `AppLayout`/auth, since a 404 may be hit while unauthenticated.
+**Contract**: `export function NotFoundPage()` returning a standalone centered
+layout with Polish copy and a `react-router-dom` `Link` to `/`. Standalone shell
+— do **not** require `AppLayout`/auth (`AppLayout` pulls in the auth-coupled
+`LogoutButton`, `app-layout.tsx:6,43`), since a 404 may be hit while
+unauthenticated. Since `AppLayout` is removed, the page must supply its own shell;
+match the app's dark theme rather than `dashboard-page.tsx` (which is only
+`<AppLayout><Link/></AppLayout>` once the layout is gone):
+
+- Root: a full-height, flex-centered container on the app's dark background —
+  `flex min-h-screen flex-col items-center justify-center bg-slate-900 px-6 text-center`
+  (mirrors `AppLayout`'s `bg-slate-900`, `app-layout.tsx:17`).
+- Heading: Polish `<h1>` (e.g. "Nie znaleziono strony") in a prominent size with
+  light text — `text-2xl font-semibold text-white`.
+- Optional supporting `<p>` line in `text-slate-400`.
+- `Link to="/"` styled as a call-to-action with the app's blue accent
+  (`text-blue-500`, `focus:ring-blue-500` idiom from `app-layout.tsx`), Polish
+  label (e.g. "Wróć do strony głównej").
+
+These classes are a concrete starting point, not a hard spec — adjust to keep
+visual parity with the rest of the app.
 
 #### 2. Register the catch-all route
 
@@ -285,9 +322,10 @@ the rewrite must be applied once in the dashboard — see Phase 1, change 2.
 
 #### Manual
 
-- [ ] 1.3 `vite preview` deep-route refresh loads the app (no 404)
-- [ ] 1.4 Live Render URL: refreshing deep routes loads the app
-- [ ] 1.5 Rewrite rule confirmed present in the Render dashboard
+- [ ] 1.3 Pre-deploy eyeball: `routes:` block nested under the static service with Render's exact key names
+- [ ] 1.4 `vite preview` confirms the production bundle client-routes to a deep path (no 404; not rewrite validation)
+- [ ] 1.5 Live Render URL: refreshing deep routes loads the app (primary rewrite validation)
+- [ ] 1.6 Rewrite rule confirmed present in the Render dashboard
 
 ### Phase 2: Polish Catch-All 404 Route
 
