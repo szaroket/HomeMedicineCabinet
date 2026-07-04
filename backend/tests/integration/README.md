@@ -47,5 +47,6 @@ transaction, so all writes are invisible to other tests and vanish on teardown.
 
 ## CI status
 
-Excluded from CI (`--ignore=tests/integration`) until test-plan Phase 4 wires
-a Postgres service container into the GitHub Actions workflow.
+Runs in CI via the `backend-integration` job in `.github/workflows/ci-cd.yml`.
+Postgres is supplied by testcontainers, not a GitHub `services:` container —
+the job just needs the Docker daemon (present on `ubuntu-latest`).

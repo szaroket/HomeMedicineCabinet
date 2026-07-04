@@ -6,8 +6,9 @@
 >
 > Refresh: re-run `/10x-test-plan --refresh` when stale (see §8).
 >
-> Last updated: 2026-06-30 (reconciled with implementation: S-05 dosage and
-> F-04 CI shipped; §2 Risk #6, §3 Phase 4, §4, §5, §7 updated)
+> Last updated: 2026-07-04 (reconciled with implementation: S-05 dosage, F-04 CI,
+> and §3 Phase 4 quality-gates-wiring shipped; §2 Risk #6, §3 Phase 4, §4, §5,
+> §6.2, §7 updated)
 
 ## 1. Strategy
 
@@ -79,7 +80,7 @@ orchestrator updates Status as artifacts appear on disk.
 | 1 | Backend business-logic + CRUD safety net | Harden the hottest backend surface so a change can't silently break data, corrupt totals, or cross account boundaries. | #1, #3, #4, #5 | unit + integration | change opened | context/changes/testing-backend-safety-net/ |
 | 2 | Frontend critical-path E2E | Lock the crucial user journeys (login → add → see; display/filter cabinet) so they can't break unnoticed. Bootstraps Playwright. | #2, #1 | e2e | not started | — |
 | 3 | Frontend data-seam unit tests | Verify the API-calling layer (typed fetchers, request/response shape, error handling) cheaply. Bootstraps Vitest. Narrow by design. | #2, #1 | unit | implementing | context/changes/frontend-data-seam-tests/ |
-| 4 | Quality-gates wiring | Close the remaining CI gaps: wire the **frontend-unit** and **e2e** jobs into `ci-cd.yml` (the e2e job is currently a TODO stub). Lint/typecheck/backend-test/build gates already ship via F-04. | #1–#6 | gates | not started | — |
+| 4 | Quality-gates wiring | Close the remaining CI gaps: wire the **frontend-unit** and **e2e** jobs into `ci-cd.yml` (the e2e job was previously disabled). Lint/typecheck/backend-test/build gates already ship via F-04. | #1–#6 | gates | complete | context/changes/quality-gates-wiring/ |
 
 **Status vocabulary** (fixed — parser literals): `not started` → `change opened`
 → `researched` → `planned` → `implementing` → `complete`.
@@ -109,7 +110,7 @@ tooling is deliberately omitted (see §7).
 | backend coverage | coverage | ≥7.14 | run via `uv run pytest`; CI-gated, not local-gated |
 | frontend unit | Vitest + React Testing Library | Vitest 4.1.9; RTL/jest-dom/user-event installed, unused this phase | bootstrapped by §3 Phase 3 via a `test` block in `frontend/vite.config.ts`; scoped to the API layer (`src/lib/api-client.ts`, `features/*/api/`) |
 | e2e | Playwright | none yet — see §3 Phase 2 | planned in tech-stack.md; no `playwright.config.ts` / `frontend/e2e/` exists; Phase 2 bootstraps it + `auth.setup.ts` |
-| CI gates | GitHub Actions | shipped (F-04) — see §3 Phase 4 for the gap | `.github/workflows/ci-cd.yml` exists (F-04 `ci-cd-wiring`, archived `2026-06-29-ci-cd-wiring`): jobs for pip-audit, npm audit, pre-commit (ruff/eslint/tsc), backend pytest+coverage (`--ignore=tests/db`), frontend build, pyright. Frontend-unit job absent; e2e job is a TODO stub pending Phase 2/3 |
+| CI gates | GitHub Actions | shipped (F-04 + §3 Phase 4) | `.github/workflows/ci-cd.yml` exists (F-04 `ci-cd-wiring`, archived `2026-06-29-ci-cd-wiring`; gaps closed by `quality-gates-wiring`): jobs for pip-audit, npm audit, pre-commit (ruff/eslint/tsc), backend pytest+coverage (`--ignore=tests/db --ignore=tests/integration`), frontend build, pyright, frontend-unit (Vitest), frontend-typecheck (`tsc -b`), backend-integration (testcontainers), frontend-e2e (Playwright, secrets-gated) |
 
 **Stack grounding tools (current session):**
 - Docs: Context7 / framework docs MCP — none; not available in current session; checked: 2026-06-16
@@ -127,8 +128,10 @@ phase lands; before that, the gate is `planned`.
 |------|-------|-----------|---------|
 | lint + typecheck (ruff; eslint + tsc; pyright) | local (pre-commit) + CI | **enforced now** (CI pre-commit + pyright jobs, F-04) | syntactic / type / format drift |
 | backend unit + integration | local + CI | **enforced now** (CI runs pytest+coverage, `--ignore=tests/db`); suite hardened by §3 Phase 1 | backend logic, CRUD, ownership, and calc regressions |
-| frontend unit (API layer) | local + CI | required after §3 Phase 3 (CI job not yet added) | request/response shape + error-handling regressions at the seam |
-| e2e on critical flows | CI on PR | required after §3 Phase 2 (CI job exists as a TODO stub) | broken critical user journeys (add / display cabinet) |
+| frontend unit (API layer) | local + CI | **enforced now** (CI `frontend-unit` job, §3 Phase 4) | request/response shape + error-handling regressions at the seam |
+| frontend typecheck (`tsc -b`) | local (implicit in build) + CI | **enforced now** (CI `frontend-typecheck` job, §3 Phase 4) | type errors surfaced as a discrete, fast gate symmetric with `backend-typecheck` |
+| backend integration (DB-backed, testcontainers) | local + CI | **enforced now** (CI `backend-integration` job, §3 Phase 4) | real SQL path, filters, ownership, usage-seam regressions |
+| e2e on critical flows | CI on PR | **enforced now** (CI `frontend-e2e` job, §3 Phase 4; secrets-gated, fails fast if unconfigured) | broken critical user journeys (add / display cabinet) |
 | post-edit hook | local (agent loop) | optional (later module) | regressions at edit time |
 | visual diff / multimodal review | CI on PR | optional — deliberately out of scope (see §7) | rendering regressions |
 | pre-prod smoke | between merge + prod | optional | environment-specific failures (Render cold start) |
@@ -161,7 +164,7 @@ Two distinct tiers both called "integration" — file each kind in the right pla
 - Use when the risk lives in a real SQL path that mocks cannot reproduce (FTS `to_tsquery`, `DISTINCT ON`, generated columns, ownership scoping).
 - Fixtures are in `backend/tests/integration/conftest.py`; see `tests/integration/README.md` for prerequisites and isolation model.
 - Run locally: `cd backend && uv run pytest tests/integration` (Docker must be running).
-- Excluded from CI (`--ignore=tests/integration`) until test-plan Phase 4.
+- Now runs in CI via the `backend-integration` job (testcontainers provisions Postgres; no `services:` container needed), wired by test-plan Phase 4 (`quality-gates-wiring`).
 
 ### 6.3 Adding an e2e test
 
