@@ -184,6 +184,9 @@ describe("setUsage", () => {
     const { path, init } = callInfo(vi.mocked(fetch).mock.calls[0]);
     expect(path).toBe("/cabinet/entries/entry-1/usage");
     expect(init?.method).toBe("PATCH");
+    expect(new Headers(init?.headers).get("Content-Type")).toBe(
+      "application/json",
+    );
     expect(init?.body).toBe(JSON.stringify(payload));
   });
 });
@@ -198,6 +201,9 @@ describe("updateQuantity", () => {
     const { path, init } = callInfo(vi.mocked(fetch).mock.calls[0]);
     expect(path).toBe("/cabinet/entries/entry-1/quantity");
     expect(init?.method).toBe("PATCH");
+    expect(new Headers(init?.headers).get("Content-Type")).toBe(
+      "application/json",
+    );
     expect(init?.body).toBe(JSON.stringify(payload));
   });
 });

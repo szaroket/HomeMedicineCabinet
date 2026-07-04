@@ -43,6 +43,9 @@ describe("login", () => {
     const { path, init } = callInfo(vi.mocked(fetch).mock.calls[0]);
     expect(path).toBe("/auth/login");
     expect(init?.method).toBe("POST");
+    expect(new Headers(init?.headers).get("Content-Type")).toBe(
+      "application/json",
+    );
     expect(init?.body).toBe(JSON.stringify(payload));
   });
 });
