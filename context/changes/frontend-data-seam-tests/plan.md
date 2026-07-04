@@ -520,12 +520,12 @@ bug into an oracle).
 
 #### Automated
 
-- [x] 3.1 Full suite passes: `npm run test:run`
-- [x] 3.2 Build passes: `npm run build`
-- [x] 3.3 Lint passes: `npm run lint`
-- [x] 3.4 Format check passes: `npx prettier --check src/`
+- [x] 3.1 Full suite passes: `npm run test:run` — 0e9efad
+- [x] 3.2 Build passes: `npm run build` — 0e9efad
+- [x] 3.3 Lint passes: `npm run lint` — 0e9efad
+- [x] 3.4 Format check passes: `npx prettier --check src/` — 0e9efad
 
 #### Manual
 
-- [x] 3.5 Cookbook §6.4 reads as a followable recipe
-- [x] 3.6 Suite runtime is fast (under a few seconds)
+- [x] 3.5 Cookbook §6.4 reads as a followable recipe — 0e9efad
+- [x] 3.6 Suite runtime is fast (under a few seconds) — 0e9efad
