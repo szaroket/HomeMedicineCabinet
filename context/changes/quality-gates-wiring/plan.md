@@ -354,6 +354,17 @@ exists yet — no automated gate on PRs," which is stale since F-04.
 
 **Contract**: `status: complete`, `updated:` to the implementation date.
 
+#### 5. `deployment.md` E2E secrets + branch protection (addendum)
+
+**File**: `docs/reference/deployment.md`
+
+**Intent**: The reference said "The E2E job is scaffolded but disabled" — stale
+once e2e is wired, exactly parallel to the AGENTS.md stale-note fix.
+
+**Contract**: Add the five E2E secrets to the secrets table, an "E2E secrets
+prerequisite" section, and the four new branch-protection check names. (Added
+during implementation; recorded here so the plan matches what shipped.)
+
 ### Success Criteria:
 
 #### Automated Verification:
