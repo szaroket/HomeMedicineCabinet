@@ -78,7 +78,7 @@ orchestrator updates Status as artifacts appear on disk.
 |---|------------|-----------------|----------------|------------|--------|----------------|
 | 1 | Backend business-logic + CRUD safety net | Harden the hottest backend surface so a change can't silently break data, corrupt totals, or cross account boundaries. | #1, #3, #4, #5 | unit + integration | change opened | context/changes/testing-backend-safety-net/ |
 | 2 | Frontend critical-path E2E | Lock the crucial user journeys (login → add → see; display/filter cabinet) so they can't break unnoticed. Bootstraps Playwright. | #2, #1 | e2e | not started | — |
-| 3 | Frontend data-seam unit tests | Verify the API-calling layer (typed fetchers, request/response shape, error handling) cheaply. Bootstraps Vitest. Narrow by design. | #2, #1 | unit | not started | — |
+| 3 | Frontend data-seam unit tests | Verify the API-calling layer (typed fetchers, request/response shape, error handling) cheaply. Bootstraps Vitest. Narrow by design. | #2, #1 | unit | implementing | context/changes/frontend-data-seam-tests/ |
 | 4 | Quality-gates wiring | Close the remaining CI gaps: wire the **frontend-unit** and **e2e** jobs into `ci-cd.yml` (the e2e job is currently a TODO stub). Lint/typecheck/backend-test/build gates already ship via F-04. | #1–#6 | gates | not started | — |
 
 **Status vocabulary** (fixed — parser literals): `not started` → `change opened`
@@ -107,7 +107,7 @@ tooling is deliberately omitted (see §7).
 | backend unit + integration | pytest + pytest-asyncio | pytest ≥8.0, asyncio ≥0.24 | 17 test files across domains (`auth`, `cabinet`, `medicines`, `users`, `registry`, `core`, `db`); `httpx.AsyncClient` as the FastAPI test client; shared fixtures in `backend/tests/conftest.py` |
 | backend mocking | pytest-mock + `unittest.mock` | pytest-mock ≥3.15 | always pass `spec=`; `autospec=True` for patched functions (AGENTS.md) |
 | backend coverage | coverage | ≥7.14 | run via `uv run pytest`; CI-gated, not local-gated |
-| frontend unit | Vitest + React Testing Library | none yet — see §3 Phase 3 | planned in tech-stack.md; no `vitest.config.ts` exists; Phase 3 bootstraps it, scoped to the API layer |
+| frontend unit | Vitest + React Testing Library | Vitest 4.1.9; RTL/jest-dom/user-event installed, unused this phase | bootstrapped by §3 Phase 3 via a `test` block in `frontend/vite.config.ts`; scoped to the API layer (`src/lib/api-client.ts`, `features/*/api/`) |
 | e2e | Playwright | none yet — see §3 Phase 2 | planned in tech-stack.md; no `playwright.config.ts` / `frontend/e2e/` exists; Phase 2 bootstraps it + `auth.setup.ts` |
 | CI gates | GitHub Actions | shipped (F-04) — see §3 Phase 4 for the gap | `.github/workflows/ci-cd.yml` exists (F-04 `ci-cd-wiring`, archived `2026-06-29-ci-cd-wiring`): jobs for pip-audit, npm audit, pre-commit (ruff/eslint/tsc), backend pytest+coverage (`--ignore=tests/db`), frontend build, pyright. Frontend-unit job absent; e2e job is a TODO stub pending Phase 2/3 |
 
@@ -169,7 +169,33 @@ Two distinct tiers both called "integration" — file each kind in the right pla
 
 ### 6.4 Adding a frontend unit test (API-calling layer)
 
-- TBD — see §3 Phase 3. (Will bootstrap `vitest.config.ts`; scoped to typed fetchers / request-response handling in `features/<feature>/api/`, not presentational components.)
+- **Location**: colocated as `*.test.ts` next to the source it covers —
+  `src/lib/api-client.test.ts`, `src/features/<feature>/api/<feature>-api.test.ts`.
+  Shared helpers live in `src/test/` (`setup.ts`, `api-test-utils.ts`).
+- **Runner**: Vitest, `environment: "jsdom"`, config lives in a `test` block in
+  `frontend/vite.config.ts` (not a separate `vitest.config.ts`). Run locally:
+  `cd frontend && npm run test:run` (or `npm test` for watch mode).
+- **Pattern**: `vi.stubGlobal("fetch", vi.fn())` in a `beforeEach`; seed
+  responses with `jsonResponse(body, { status? })` from
+  `src/test/api-test-utils.ts` — a **real** `Response` (not a typed stub), so
+  `error instanceof Response` is exercised faithfully. Assert the request side
+  via `callInfo(fetch.mock.calls[n])`, which strips the computed `BASE` prefix
+  so path assertions read as `/cabinet/entries?status=valid` rather than an
+  absolute URL.
+- **What to assert**: request shape (URL/query string, method, headers, JSON
+  body) and error propagation (`throw res` on `!ok`, `AuthError` on failed
+  refresh) — not response-shape mapping; the fetchers are thin pass-throughs
+  so happy-path returns need only one representative fixture per fetcher.
+- **Reference tests**: `frontend/src/lib/api-client.test.ts` (transport: bearer
+  attach, 401→refresh→retry, `/auth/` skip, single-flight `refreshOnce`);
+  `frontend/src/features/cabinet/api/cabinet-api.test.ts` (densest URL
+  building — `encodeURIComponent`, conditional params, `below_minimum` →
+  `"true"`, POST/PATCH/DELETE bodies).
+- **Isolation gotcha**: the `refreshing` single-flight latch in
+  `api-client.ts` only self-resets via `.finally` when its promise settles —
+  every refresh `fetch` mock in a test must **resolve** (never reject or
+  hang), even for the failed-refresh case (resolve with a non-`ok` `Response`),
+  or the latch leaks into the next test.
 
 ### 6.5 Adding a test for a cross-domain flow (facade)
 
@@ -180,6 +206,25 @@ Two distinct tiers both called "integration" — file each kind in the right pla
 ### 6.6 Per-rollout-phase notes
 
 (Filled in as phases land — `/10x-implement` appends 2–3 lines capturing anything surprising a phase taught.)
+
+**Phase 3 (Frontend data-seam unit tests, 2026-07-04):**
+- **`tsc -b` + test files.** `npm run build` runs `tsc -b`, which type-checks
+  `*.test.ts` too; without `"vitest/globals"` / `"@testing-library/jest-dom"`
+  in `compilerOptions.types` the build breaks on `describe`/`expect`/matcher
+  calls. Verify `npm run build` explicitly after bootstrapping — it's the
+  most likely regression, not the test run itself.
+- **Single-flight latch reset.** `refreshOnce`'s `refreshing` latch has no
+  exported reset hook; it only clears via `.finally` when its promise
+  settles. Every refresh mock (including the failed-refresh case) must
+  *resolve* — a rejecting/never-resolving mock leaks the latch across tests.
+- **`below_minimum` edge.** `listEntries` serializes `below_minimum` as the
+  literal string `"true"` only when truthy — `false` omits the param
+  entirely (not `"false"`); worth its own test, not folded into the
+  all-params-together case.
+- **`Response` is real, not a stub.** `jsonResponse()` returns
+  `new Response(...)` (jsdom/undici supplies the global) so
+  `error instanceof Response` — the contract `query-client.ts` depends on —
+  is exercised for real, not simulated with a plain object.
 
 **Phase 5 (Risk #5 + #6, 2026-06-30):**
 - **Unique-constraint trap in parity tests.** When seeding multiple entries for the same user + registry, passing an explicit `expiry_date` to every call overrides the factory counter and triggers `uq_cabinet_entries_user_med_expiry`. Omit the override and let the counter handle it, or use a distinct registry per group.
