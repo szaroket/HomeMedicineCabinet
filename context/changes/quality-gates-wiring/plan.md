@@ -420,16 +420,16 @@ strings are gone.
 
 #### Automated
 
-- [x] 1.1 Workflow YAML parses without error
-- [x] 1.2 `frontend/package.json` has a `typecheck` script; `npm run typecheck` passes locally
-- [x] 1.3 `npm run test:run` passes locally
-- [x] 1.4 `uv run pytest tests/integration` passes locally with Docker running
+- [x] 1.1 Workflow YAML parses without error — 0a372c9
+- [x] 1.2 `frontend/package.json` has a `typecheck` script; `npm run typecheck` passes locally — 0a372c9
+- [x] 1.3 `npm run test:run` passes locally — 0a372c9
+- [x] 1.4 `uv run pytest tests/integration` passes locally with Docker running — 0a372c9
 
 #### Manual
 
-- [ ] 1.5 The three secret-free jobs appear and pass in CI with no secret config
-- [ ] 1.6 backend-integration log shows testcontainers start/teardown of postgres:17-alpine
-- [ ] 1.7 The three jobs run in parallel with existing gates
+- [x] 1.5 The three secret-free jobs appear and pass in CI with no secret config
+- [x] 1.6 backend-integration log shows testcontainers start/teardown of postgres:17-alpine
+- [x] 1.7 The three jobs run in parallel with existing gates
 
 ### Phase 2: E2E job wiring
 
