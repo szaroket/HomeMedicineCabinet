@@ -60,9 +60,15 @@ deliberate mismatch is caught and a corrected match registers successfully.
 Split the registration schema into two: a credentials schema (email + password) that
 remains the API payload contract, and a form schema that extends it with
 `confirmPassword` plus a cross-field `.refine()` for the match. Narrow the API and
-mutation input types to the credentials type so TypeScript guarantees
-`confirmPassword` never reaches the network. Add the field to the form and strip the
-confirm value before calling `mutate`. Cover the match logic with a schema unit test.
+mutation input types to the credentials type to *document* the intended payload
+shape — note that this type narrowing does **not** by itself prevent the leak
+(passing a form-values variable to a credentials-typed param compiles cleanly;
+excess-property checks fire only on fresh object literals, and `JSON.stringify`
+serializes every own key at runtime). The actual guard is stripping the confirm
+value at the call site by running the form values through the credentials schema's
+`.parse()` (zod drops unknown keys), and locking that strip with an automated
+assertion. Add the field to the form. Cover both the match logic and the strip with
+a schema unit test.
 
 ## Phase 1: Confirm-password field on registration
 
@@ -81,29 +87,31 @@ match rule — all frontend.
 preserving a credentials-only type for the API payload, so the confirm value is
 structurally excluded from what gets sent to the backend.
 
-**Contract**:
-- Keep a credentials schema (email + password min-8) — this is the API payload
-  shape. Export its inferred type (e.g. `RegisterCredentials`).
-- Add a form schema that extends the credentials schema with
+**Contract** (naming pinned — do not vary):
+- Keep the existing `registerSchema` (email + password min-8) as the **credentials
+  schema** — this is the API payload shape. Its inferred type stays `RegisterValues`.
+- Add `registerFormSchema` that extends `registerSchema` with
   `confirmPassword: z.string()` and a `.refine()` asserting
   `password === confirmPassword`, attaching the error to `path: ["confirmPassword"]`
   with a Polish message (e.g. "Hasła muszą być takie same"). Export its inferred
-  type (e.g. `RegisterFormValues`).
-- The existing `registerSchema` / `RegisterValues` names may be reused for the
-  credentials pair to minimize churn, provided the form uses the new extended
-  schema and downstream payload types resolve to email+password only.
+  type as `RegisterFormValues`.
+- Net: `registerSchema`/`RegisterValues` = credentials pair (unchanged names, so
+  downstream churn is minimal); `registerFormSchema`/`RegisterFormValues` = form pair.
 
 #### 2. API + mutation payload types
 
 **File**: `frontend/src/features/auth/api/auth-api.ts` and
 `frontend/src/features/auth/api/auth-queries.ts`
 
-**Intent**: Narrow the register request/mutation input to the credentials type so
-`confirmPassword` cannot be serialized into the POST body.
+**Intent**: Narrow the register request/mutation input to the credentials type to
+document the payload shape as email+password. (This narrowing is documentation, not
+enforcement — the runtime strip in Contract #3 is what actually keeps `confirmPassword`
+out of the POST body.)
 
-**Contract**: `register(data: RegisterCredentials)` in `auth-api.ts`; `useRegister`
-mutation input typed as `RegisterCredentials` in `auth-queries.ts`. No behavior
-change beyond the type narrowing.
+**Contract**: `register(data: RegisterValues)` in `auth-api.ts`; `useRegister`
+mutation input typed as `RegisterValues` in `auth-queries.ts` (these types stay as
+they are today — the credentials pair). No behavior change beyond keeping the input
+typed as the credentials pair.
 
 #### 3. Register form field
 
@@ -113,22 +121,30 @@ change beyond the type narrowing.
 validation error, and pass only credentials to the mutation.
 
 **Contract**:
-- Resolver switches to the form schema; form values typed as `RegisterFormValues`.
+- Resolver switches to `registerFormSchema`; form values typed as `RegisterFormValues`.
 - New input: `id="confirmPassword"`, matching `htmlFor` label "Powtórz hasło",
   `type="password"`, `autoComplete="new-password"`, styled like the existing inputs;
   render `errors.confirmPassword?.message` in the same red-text pattern.
-- In `onSubmit`, pass `{ email, password }` to `mutate` (drop `confirmPassword`).
+- In `onSubmit`, pass the credentials schema's `.parse(values)` result to `mutate`
+  (e.g. `mutate(registerSchema.parse(values))`). Zod strips unknown keys, so
+  `confirmPassword` is provably excluded from the POST body — this, not the type
+  narrowing, is the leak guard.
 - Leave default RHF validation mode as-is (submit-then-live-revalidate).
 
 #### 4. Schema unit test
 
 **File**: `frontend/src/features/auth/schemas/auth-schemas.test.ts` (new)
 
-**Intent**: Lock the match rule so a regression can't silently drop it.
+**Intent**: Lock the match rule *and* the payload strip so a regression can't
+silently drop either.
 
 **Contract**: Vitest tests parsing the register form schema — a mismatched
 `confirmPassword` fails with the error on the `confirmPassword` path; an identical
-`confirmPassword` (with valid email + min-8 password) passes.
+`confirmPassword` (with valid email + min-8 password) passes. Plus a strip assertion:
+running a form-shaped object (`{email, password, confirmPassword}`) through the
+credentials schema's `.parse()` returns an object with no `confirmPassword` key —
+proving the `onSubmit` strip keeps the confirm value out of the payload. Covered by
+the same `npm test` run (success criterion 1.4).
 
 ### Success Criteria:
 

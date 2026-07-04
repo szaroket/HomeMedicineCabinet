@@ -4,8 +4,8 @@
 - **Plan**: context/changes/auth-polish/plan.md
 - **Mode**: Deep
 - **Date**: 2026-07-04
-- **Verdict**: REVISE
-- **Findings**: 0 critical, 1 warning, 1 observation
+- **Verdict**: REVISE → SOUND (both findings fixed 2026-07-04)
+- **Findings**: 0 critical, 1 warning, 1 observation (all triaged: 2 fixed)
 
 ## Verdicts
 
@@ -40,7 +40,7 @@
   - Tradeoff: The one line that matters stays untested; a future edit to `mutate(values)` silently reintroduces the leak.
   - Confidence: HIGH — accurate, but leaves a manual-only safety net.
   - Blind spot: None significant.
-- **Decision**: PENDING
+- **Decision**: FIXED via Fix A — corrected the false type-guarantee rationale (Implementation Approach + Contract #2), switched `onSubmit` to `mutate(registerSchema.parse(values))` (Contract #3), and added an automated strip assertion to the schema unit test (Contract #4, covered by 1.4).
 
 ### F2 — Credentials-type naming is left ambiguous between contracts
 
@@ -50,4 +50,4 @@
 - **Location**: Phase 1 Contracts #1 and #2
 - **Detail**: Contract #1 says the existing `registerSchema` / `RegisterValues` names "may be reused for the credentials pair." Contract #2 then hardcodes the API type as `RegisterCredentials`. If the implementer takes the reuse option, `RegisterCredentials` never exists and Contract #2's instruction dangles; if they mint `RegisterCredentials`, Contract #1's reuse note is dead. Harmless but forces a guess.
 - **Fix**: Pin one naming. Simplest: keep `registerSchema`/`RegisterValues` as the credentials pair and name the extended one `registerFormSchema`/`RegisterFormValues`; update Contract #2 to reference `RegisterValues`, not `RegisterCredentials`.
-- **Decision**: PENDING
+- **Decision**: FIXED via Fix in plan — pinned `registerSchema`/`RegisterValues` (credentials) and `registerFormSchema`/`RegisterFormValues` (form) across Contracts #1, #2, #3.
