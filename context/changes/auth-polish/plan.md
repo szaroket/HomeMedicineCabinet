@@ -186,6 +186,23 @@ considering the slice done.
 4. Submit → expect navigation to `/` and, in DevTools Network, a request body with
    only `email` + `password`.
 
+## Addenda
+
+### A1 — Submit button disabled on confirm-mismatch (2026-07-04)
+
+Contract #3 said "Leave default RHF validation mode as-is" and implicitly pinned the
+submit button to the existing `disabled={isPending}` pattern (as in `login-form.tsx`).
+The implementation went further: the button is
+`disabled={isPending || !!errors.confirmPassword}` with an added
+`disabled:hover:bg-blue-600` style (`register-form.tsx:101-102`, commit 33f284c).
+
+**Accepted as an addendum (impl-review F1, Fix A).** It's a benign UX improvement:
+RHF errors are empty before the first submit so the button starts enabled, and live
+re-validation clears the error after a fix (criterion 1.6 holds). Known tradeoffs
+kept intentionally: register/login buttons stay slightly inconsistent, and the
+disable is asymmetric (it keys only on `confirmPassword`, not email/password — zod
+re-blocks those on submit regardless).
+
 ## Migration Notes
 
 None — no schema/data/backend changes.
