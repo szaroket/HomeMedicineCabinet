@@ -3,7 +3,7 @@ project: "Home Medicine Cabinet"
 version: 1
 status: draft
 created: 2026-06-03
-updated: 2026-06-30
+updated: 2026-07-04
 prd_version: 1
 main_goal: low-complexity
 top_blocker: skills
@@ -36,7 +36,7 @@ A single adult can't reliably track their home medication inventory — what the
 | S-02 | cabinet-view-and-search      | view cabinet as a filterable, sortable, paginated list; search by name or active ingredient; see route of administration and leaflet/specification links on each entry | S-01 | US-03, FR-004, FR-006, FR-011, FR-012 | done |
 | S-04 | important-category           | mark a medication as "important", set the global minimum package count, and see an attention badge when stock falls below minimum or medication is expiring/expired | S-02 | FR-013, FR-014, FR-020 (partial) | done |
 | S-05 | dosage-tracking              | assign a tablet-based medication to the "used" category with a dosage schedule and optional end date; see the estimated finish date or sufficiency indicator; non-tablet medications marked used for date tracking only | S-02 | US-04, FR-015, FR-016, FR-017, FR-018 | done |
-| S-03 | manage-cabinet-entry         | increment or decrement package count, update partial tablet count, and delete an entry with confirmation; important/used entries stay at zero so the user can restock | S-02, S-04 | FR-005 | proposed |
+| S-03 | manage-cabinet-entry         | increment or decrement package count, update partial tablet count, and delete an entry with confirmation; important/used entries stay at zero so the user can restock | S-02, S-04 | FR-005 | done |
 | S-06 | notifications-and-badges     | see a notification bell with unread count; notification center lists expiry alerts, below-minimum important stock, and used medications at risk of running out; configure expiry and close-to-finish thresholds in settings; dismiss individual notifications | S-03, S-05 | US-02, US-05, FR-007, FR-008, FR-019, FR-020 | proposed |
 | S-07 | dashboard                    | land on a dashboard showing summary counts (total / valid / expiring soon / expired / out-of-stock) with clickable links to the cabinet list pre-filtered to each status | S-06 | FR-009 | proposed |
 | F-01b | auth-polish                 | (foundation) confirm-password field on the registration form so users cannot submit a typo in their password | F-01 | FR-001 | proposed |
@@ -228,7 +228,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** The category-aware zero behaviour is the only state-dependent branch; sequencing after S-04 means the category state is already queryable when this slice is implemented, avoiding a conditional stub.
-- **Status:** proposed
+- **Status:** done
 
 ### S-06: Notifications and badges
 
@@ -304,3 +304,4 @@ _(none — all questions resolved before roadmap finalisation)_
 - **S-08: user can view and use the cabinet add flow and medicine list on a mobile-width screen without layout breakage; the desktop experience is preserved unchanged** — Archived 2026-06-29 → `context/archive/2026-06-17-mobile-responsive-cabinet/`. Lesson: —.
 - **F-05: (foundation) structured logging across the FastAPI backend — central config, request/response middleware, consistent levels, meaningful logs at service/crud boundaries, no secrets/PII logged** — Archived 2026-06-30 → `context/archive/2026-06-29-backend-logging/`. Lesson: —.
 - **F-04: (foundation) GitHub Actions workflow auto-deploys backend and frontend to Render on merge to main; deploy hook URLs and `RENDER_API_KEY` stored as GitHub Secrets.** — Archived 2026-06-30 → `context/archive/2026-06-29-ci-cd-wiring/`. Lesson: —.
+- **S-03: user can increment or decrement package count, update the partial tablet count of an opened package, and delete an entry with explicit confirmation; decrementing to zero deletes non-categorised entries (with confirmation pop-up) and keeps important/used entries at zero so the user can restock.** — Archived 2026-07-04 → `context/archive/2026-07-02-manage-cabinet-entry/`. Lesson: —.

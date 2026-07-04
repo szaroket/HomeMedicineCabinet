@@ -1,10 +1,10 @@
 ---
 change_id: manage-cabinet-entry
 title: Manage cabinet entry
-status: impl_reviewed
+status: archived
 created: 2026-07-02
-updated: 2026-07-03
-archived_at: null
+updated: 2026-07-04
+archived_at: 2026-07-04T13:04:33Z
 ---
 
 ## Notes
