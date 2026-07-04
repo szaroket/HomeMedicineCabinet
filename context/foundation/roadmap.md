@@ -42,6 +42,7 @@ A single adult can't reliably track their home medication inventory — what the
 | F-01b | auth-polish                 | (foundation) confirm-password field on the registration form so users cannot submit a typo in their password | F-01 | FR-001 | proposed |
 | F-05 | backend-logging              | (foundation) structured logging across the FastAPI backend — central config, request/response middleware, consistent levels, meaningful logs at service/crud boundaries, no secrets/PII logged | F-01, F-02 | NFR (observability — baseline gap) | done |
 | F-06 | spa-refresh-fallback        | (foundation) refreshing or deep-linking any client-side route on the deployed Render static site serves the app instead of a 404 | F-04 | NFR (data persists across sessions and devices — stable deployed environment) | proposed |
+| S-09 | delete-user-account          | delete their own account and all associated data (cabinet entries, preferences) permanently, after explicit confirmation | F-01, F-02 | Access Control, NFR data-isolation | proposed |
 
 ## Streams
 
@@ -57,6 +58,7 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 | C      | Cabinet management   | `S-04` → `S-03`                                | Branches from S-02; S-03 needs category-aware zero behaviour from S-04        |
 | D      | Dosage tracking      | `S-05`                                         | Branches from S-02 in parallel with Stream C                                  |
 | E      | Alerts & dashboard   | `S-06` → `S-07`                                | Joins Streams C and D at S-06; completes the full notification loop           |
+| F′     | Account lifecycle    | `F-01` → `S-09`                                | Standalone account-management addition; depends only on auth + data layer, runnable any time after F-02 |
 
 ## Baseline
 
@@ -254,6 +256,19 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Risk:** Dashboard depends on S-06 because the out-of-stock count (FR-009) requires the badge computation logic from S-06. Sequencing last keeps the dashboard query simple — all classification and badge logic is already in place and the counts are a straightforward aggregation.
 - **Status:** proposed
 
+### S-09: Delete user account
+
+- **Outcome:** user can delete their own account from a settings/account screen, behind an explicit confirmation step (e.g. type-to-confirm or a confirmation dialog); on confirmation, the Supabase Auth user and all associated data (cabinet entries, user preferences, dismissed notifications) are permanently deleted; the user is logged out and returned to the entry screen.
+- **Change ID:** delete-user-account
+- **PRD refs:** Access Control section, NFR (per-account data isolation)
+- **Prerequisites:** F-01, F-02
+- **Parallel with:** any slice — standalone account-management addition
+- **Blockers:** —
+- **Unknowns:**
+  - Whether deletion cascades via DB foreign keys or requires explicit per-table cleanup before removing the Supabase Auth user. Block: no — resolve during `/10x-plan`.
+- **Risk:** Irreversible operation — confirmation UX must make the consequence unambiguous. Cascade deletion must be verified against every table keyed by user id to avoid orphaned rows.
+- **Status:** proposed
+
 ## Backlog Handoff
 
 | Roadmap ID | Change ID                    | Suggested issue title                                                         | Ready for `/10x-plan` | Notes                             |
@@ -272,6 +287,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-03       | manage-cabinet-entry         | Feature: manage cabinet entry (package count, partial tablet, delete)         | no                    | Depends on S-02, S-04             |
 | S-06       | notifications-and-badges     | Feature: in-app notifications + threshold settings + out-of-stock badges      | no                    | Depends on S-03, S-05             |
 | S-07       | dashboard                    | Feature: dashboard with summary counts and filter links                       | no                    | Depends on S-06                   |
+| S-09       | delete-user-account          | Feature: delete user account with confirmation and cascading data cleanup     | yes                   | Depends on F-01, F-02; run `/10x-plan delete-user-account` |
 
 ## Open Roadmap Questions
 
