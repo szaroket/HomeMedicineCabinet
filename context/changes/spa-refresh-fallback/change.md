@@ -1,9 +1,9 @@
 ---
-change_id: manage-cabinet-entry
-title: Manage cabinet entry
+change_id: spa-refresh-fallback
+title: Spa refresh fallback
 status: impl_reviewed
-created: 2026-07-02
-updated: 2026-07-03
+created: 2026-07-04
+updated: 2026-07-04
 archived_at: null
 ---
 

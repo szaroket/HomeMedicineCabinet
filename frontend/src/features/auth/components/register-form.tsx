@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { registerSchema } from "@/features/auth/schemas/auth-schemas";
+import {
+  registerSchema,
+  registerFormSchema,
+} from "@/features/auth/schemas/auth-schemas";
 import { useRegister } from "@/features/auth/api/auth-queries";
 import { useNavigate } from "react-router-dom";
-import type { RegisterValues } from "@/features/auth/schemas/auth-schemas";
+import type { RegisterFormValues } from "@/features/auth/schemas/auth-schemas";
 
 export function RegisterForm() {
   const navigate = useNavigate();
@@ -14,11 +17,13 @@ export function RegisterForm() {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<RegisterValues>({ resolver: zodResolver(registerSchema) });
+  } = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerFormSchema),
+  });
 
-  function onSubmit(values: RegisterValues) {
+  function onSubmit(values: RegisterFormValues) {
     setServerError(null);
-    mutate(values, {
+    mutate(registerSchema.parse(values), {
       onSuccess: () => navigate("/"),
       onError: (err) => {
         const status = err instanceof Response ? err.status : null;
@@ -68,12 +73,33 @@ export function RegisterForm() {
         )}
       </div>
 
+      <div className="flex flex-col gap-1">
+        <label
+          htmlFor="confirmPassword"
+          className="text-sm font-medium text-slate-300"
+        >
+          Powtórz hasło
+        </label>
+        <input
+          id="confirmPassword"
+          type="password"
+          autoComplete="new-password"
+          className="rounded border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          {...register("confirmPassword")}
+        />
+        {errors.confirmPassword && (
+          <p className="text-xs text-red-400">
+            {errors.confirmPassword.message}
+          </p>
+        )}
+      </div>
+
       {serverError && <p className="text-sm text-red-400">{serverError}</p>}
 
       <button
         type="submit"
-        disabled={isPending}
-        className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50"
+        disabled={isPending || !!errors.confirmPassword}
+        className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50 disabled:hover:bg-blue-600"
       >
         {isPending ? "Rejestracja…" : "Zarejestruj się"}
       </button>

@@ -1,10 +1,10 @@
 ---
 change_id: frontend-data-seam-tests
 title: Frontend data-seam unit tests (API-calling layer, bootstraps Vitest)
-status: impl_reviewed
+status: archived
 created: 2026-07-03
 updated: 2026-07-04
-archived_at: null
+archived_at: 2026-07-04T13:08:43Z
 ---
 
 ## Notes

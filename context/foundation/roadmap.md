@@ -3,7 +3,7 @@ project: "Home Medicine Cabinet"
 version: 1
 status: draft
 created: 2026-06-03
-updated: 2026-06-30
+updated: 2026-07-04
 prd_version: 1
 main_goal: low-complexity
 top_blocker: skills
@@ -36,12 +36,13 @@ A single adult can't reliably track their home medication inventory — what the
 | S-02 | cabinet-view-and-search      | view cabinet as a filterable, sortable, paginated list; search by name or active ingredient; see route of administration and leaflet/specification links on each entry | S-01 | US-03, FR-004, FR-006, FR-011, FR-012 | done |
 | S-04 | important-category           | mark a medication as "important", set the global minimum package count, and see an attention badge when stock falls below minimum or medication is expiring/expired | S-02 | FR-013, FR-014, FR-020 (partial) | done |
 | S-05 | dosage-tracking              | assign a tablet-based medication to the "used" category with a dosage schedule and optional end date; see the estimated finish date or sufficiency indicator; non-tablet medications marked used for date tracking only | S-02 | US-04, FR-015, FR-016, FR-017, FR-018 | done |
-| S-03 | manage-cabinet-entry         | increment or decrement package count, update partial tablet count, and delete an entry with confirmation; important/used entries stay at zero so the user can restock | S-02, S-04 | FR-005 | proposed |
+| S-03 | manage-cabinet-entry         | increment or decrement package count, update partial tablet count, and delete an entry with confirmation; important/used entries stay at zero so the user can restock | S-02, S-04 | FR-005 | done |
 | S-06 | notifications-and-badges     | see a notification bell with unread count; notification center lists expiry alerts, below-minimum important stock, and used medications at risk of running out; configure expiry and close-to-finish thresholds in settings; dismiss individual notifications | S-03, S-05 | US-02, US-05, FR-007, FR-008, FR-019, FR-020 | proposed |
 | S-07 | dashboard                    | land on a dashboard showing summary counts (total / valid / expiring soon / expired / out-of-stock) with clickable links to the cabinet list pre-filtered to each status | S-06 | FR-009 | proposed |
 | F-01b | auth-polish                 | (foundation) confirm-password field on the registration form so users cannot submit a typo in their password | F-01 | FR-001 | proposed |
 | F-05 | backend-logging              | (foundation) structured logging across the FastAPI backend — central config, request/response middleware, consistent levels, meaningful logs at service/crud boundaries, no secrets/PII logged | F-01, F-02 | NFR (observability — baseline gap) | done |
 | F-06 | spa-refresh-fallback        | (foundation) refreshing or deep-linking any client-side route on the deployed Render static site serves the app instead of a 404 | F-04 | NFR (data persists across sessions and devices — stable deployed environment) | proposed |
+| S-09 | delete-user-account          | delete their own account and all associated data (cabinet entries, preferences) permanently, after explicit confirmation | F-01, F-02 | Access Control, NFR data-isolation | proposed |
 
 ## Streams
 
@@ -57,6 +58,7 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 | C      | Cabinet management   | `S-04` → `S-03`                                | Branches from S-02; S-03 needs category-aware zero behaviour from S-04        |
 | D      | Dosage tracking      | `S-05`                                         | Branches from S-02 in parallel with Stream C                                  |
 | E      | Alerts & dashboard   | `S-06` → `S-07`                                | Joins Streams C and D at S-06; completes the full notification loop           |
+| F′     | Account lifecycle    | `F-01` → `S-09`                                | Standalone account-management addition; depends only on auth + data layer, runnable any time after F-02 |
 
 ## Baseline
 
@@ -228,7 +230,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** The category-aware zero behaviour is the only state-dependent branch; sequencing after S-04 means the category state is already queryable when this slice is implemented, avoiding a conditional stub.
-- **Status:** proposed
+- **Status:** done
 
 ### S-06: Notifications and badges
 
@@ -254,6 +256,19 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Risk:** Dashboard depends on S-06 because the out-of-stock count (FR-009) requires the badge computation logic from S-06. Sequencing last keeps the dashboard query simple — all classification and badge logic is already in place and the counts are a straightforward aggregation.
 - **Status:** proposed
 
+### S-09: Delete user account
+
+- **Outcome:** user can delete their own account from a settings/account screen, behind an explicit confirmation step (e.g. type-to-confirm or a confirmation dialog); on confirmation, the Supabase Auth user and all associated data (cabinet entries, user preferences, dismissed notifications) are permanently deleted; the user is logged out and returned to the entry screen.
+- **Change ID:** delete-user-account
+- **PRD refs:** Access Control section, NFR (per-account data isolation)
+- **Prerequisites:** F-01, F-02
+- **Parallel with:** any slice — standalone account-management addition
+- **Blockers:** —
+- **Unknowns:**
+  - Whether deletion cascades via DB foreign keys or requires explicit per-table cleanup before removing the Supabase Auth user. Block: no — resolve during `/10x-plan`.
+- **Risk:** Irreversible operation — confirmation UX must make the consequence unambiguous. Cascade deletion must be verified against every table keyed by user id to avoid orphaned rows.
+- **Status:** proposed
+
 ## Backlog Handoff
 
 | Roadmap ID | Change ID                    | Suggested issue title                                                         | Ready for `/10x-plan` | Notes                             |
@@ -272,6 +287,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-03       | manage-cabinet-entry         | Feature: manage cabinet entry (package count, partial tablet, delete)         | no                    | Depends on S-02, S-04             |
 | S-06       | notifications-and-badges     | Feature: in-app notifications + threshold settings + out-of-stock badges      | no                    | Depends on S-03, S-05             |
 | S-07       | dashboard                    | Feature: dashboard with summary counts and filter links                       | no                    | Depends on S-06                   |
+| S-09       | delete-user-account          | Feature: delete user account with confirmation and cascading data cleanup     | yes                   | Depends on F-01, F-02; run `/10x-plan delete-user-account` |
 
 ## Open Roadmap Questions
 
@@ -304,3 +320,4 @@ _(none — all questions resolved before roadmap finalisation)_
 - **S-08: user can view and use the cabinet add flow and medicine list on a mobile-width screen without layout breakage; the desktop experience is preserved unchanged** — Archived 2026-06-29 → `context/archive/2026-06-17-mobile-responsive-cabinet/`. Lesson: —.
 - **F-05: (foundation) structured logging across the FastAPI backend — central config, request/response middleware, consistent levels, meaningful logs at service/crud boundaries, no secrets/PII logged** — Archived 2026-06-30 → `context/archive/2026-06-29-backend-logging/`. Lesson: —.
 - **F-04: (foundation) GitHub Actions workflow auto-deploys backend and frontend to Render on merge to main; deploy hook URLs and `RENDER_API_KEY` stored as GitHub Secrets.** — Archived 2026-06-30 → `context/archive/2026-06-29-ci-cd-wiring/`. Lesson: —.
+- **S-03: user can increment or decrement package count, update the partial tablet count of an opened package, and delete an entry with explicit confirmation; decrementing to zero deletes non-categorised entries (with confirmation pop-up) and keeps important/used entries at zero so the user can restock.** — Archived 2026-07-04 → `context/archive/2026-07-02-manage-cabinet-entry/`. Lesson: —.

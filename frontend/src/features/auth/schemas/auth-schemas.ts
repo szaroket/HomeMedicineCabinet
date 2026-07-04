@@ -10,5 +10,15 @@ export const registerSchema = z.object({
   password: z.string().min(8, "Hasło musi mieć co najmniej 8 znaków"),
 });
 
+export const registerFormSchema = registerSchema
+  .extend({
+    confirmPassword: z.string(),
+  })
+  .refine((values) => values.password === values.confirmPassword, {
+    message: "Hasła muszą być takie same",
+    path: ["confirmPassword"],
+  });
+
 export type LoginValues = z.infer<typeof loginSchema>;
 export type RegisterValues = z.infer<typeof registerSchema>;
+export type RegisterFormValues = z.infer<typeof registerFormSchema>;
