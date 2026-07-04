@@ -1,7 +1,7 @@
 ---
 change_id: auth-polish
 title: Auth polish
-status: new
+status: planned
 created: 2026-07-04
 updated: 2026-07-04
 archived_at: null
