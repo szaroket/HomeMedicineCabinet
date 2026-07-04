@@ -7,6 +7,7 @@ import { DashboardPage } from "@/features/dashboard/components/dashboard-page";
 import { CabinetPage } from "@/features/cabinet/components/cabinet-page";
 import { AddMedicationPage } from "@/features/cabinet/components/add-medication-page";
 import { SettingsPage } from "@/features/settings/components/settings-page";
+import { NotFoundPage } from "@/app/components/not-found-page";
 
 export const router = createBrowserRouter([
   {
@@ -25,4 +26,5 @@ export const router = createBrowserRouter([
       { path: "/settings", element: <SettingsPage /> },
     ],
   },
+  { path: "*", element: <NotFoundPage /> },
 ]);

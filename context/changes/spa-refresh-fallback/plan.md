@@ -317,13 +317,13 @@ the rewrite must be applied once in the dashboard — see Phase 1, change 2.
 
 #### Automated
 
-- [x] 1.1 Frontend build still succeeds: `cd frontend && npm run build`
-- [x] 1.2 `render.yaml` is valid YAML (parses without error)
+- [x] 1.1 Frontend build still succeeds: `cd frontend && npm run build` — 5cb182a
+- [x] 1.2 `render.yaml` is valid YAML (parses without error) — 5cb182a
 
 #### Manual
 
-- [x] 1.3 Pre-deploy eyeball: `routes:` block nested under the static service with Render's exact key names
-- [x] 1.4 `vite preview` confirms the production bundle client-routes to a deep path (no 404; not rewrite validation)
+- [x] 1.3 Pre-deploy eyeball: `routes:` block nested under the static service with Render's exact key names — 5cb182a
+- [x] 1.4 `vite preview` confirms the production bundle client-routes to a deep path (no 404; not rewrite validation) — 5cb182a
 - [ ] 1.5 Live Render URL: refreshing deep routes loads the app (primary rewrite validation)
 - [ ] 1.6 Rewrite rule confirmed present in the Render dashboard
 
@@ -331,12 +331,12 @@ the rewrite must be applied once in the dashboard — see Phase 1, change 2.
 
 #### Automated
 
-- [ ] 2.1 Unit tests pass: `cd frontend && npm run test:run`
-- [ ] 2.2 Type check passes: `cd frontend && npm run typecheck`
-- [ ] 2.3 Lint passes: `cd frontend && npm run lint`
-- [ ] 2.4 Build succeeds: `cd frontend && npm run build`
+- [x] 2.1 Unit tests pass: `cd frontend && npm run test:run`
+- [x] 2.2 Type check passes: `cd frontend && npm run typecheck`
+- [x] 2.3 Lint passes: `cd frontend && npm run lint`
+- [x] 2.4 Build succeeds: `cd frontend && npm run build`
 
 #### Manual
 
-- [ ] 2.5 `/nonexistent` renders the Polish 404 page with a working home link
-- [ ] 2.6 `/nonexistent` while unauthenticated shows the 404 (no redirect to `/login`)
+- [x] 2.5 `/nonexistent` renders the Polish 404 page with a working home link
+- [x] 2.6 `/nonexistent` while unauthenticated shows the 404 (no redirect to `/login`)
