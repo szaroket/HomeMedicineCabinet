@@ -52,10 +52,10 @@ App runs at the URL Vite prints (default `http://localhost:5173`).
 
 ### Mandatory Requirements
 - [x] Access control mechanism appropriate for the application type (e.g., login screen)
-- [ ] Data management — creating, reading, updating, and deleting items (CRUD) in a way that makes sense for the application domain
+- [x] Data management — creating, reading, updating, and deleting items (CRUD) in a way that makes sense for the application domain
 - [x] Business logic (with or without AI - OpenRouter is just one integration option)
 - [x] Context documents (e.g., prd.md, infrastructure.md, roadmap.md)
-- [ ] Tests — at least one test verifying functionality from the user's perspective
+- [x] Tests — at least one test verifying functionality from the user's perspective
 - [x] CI/CD pipeline — building the application and verifying quality automatically
 
 #### Optional (preferred):
