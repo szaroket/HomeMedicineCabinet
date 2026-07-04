@@ -6,9 +6,12 @@
 >
 > Refresh: re-run `/10x-test-plan --refresh` when stale (see §8).
 >
-> Last updated: 2026-07-04 (reconciled with implementation: S-05 dosage, F-04 CI,
-> and §3 Phase 4 quality-gates-wiring shipped; §2 Risk #6, §3 Phase 4, §4, §5,
-> §6.2, §7 updated)
+> Last updated: 2026-07-04 (refresh `test-plan-refresh-2026-07-04`: all four
+> rollout phases shipped + archived — §3 Phases 1–3 reconciled to `complete`
+> and folders repointed to archive; §4 frontend now `meaningful` (Vitest +
+> Playwright), backend 17→24 files; §2 added Risk #7 (S-09 account delete, top
+> new risk) + #8 (S-06 notifications); §3 added gated Phases 5–6; §8 dates
+> bumped)
 
 ## 1. Strategy
 
@@ -48,6 +51,8 @@ research's job, see §1 principle #3).
 | 4 | Cabinet filter/search/status returns the wrong set — wrong valid/expiring/expired classification, broken filter intersection, or search misses matches at the pharmacy. | Medium | High | PRD FR-004, FR-006, FR-020; roadmap S-02 (done); hot-spot dir `backend/app/api/v1/cabinet/` (35 commits/30d) |
 | 5 | Cross-account leak / wrong-owner write — a user reads or writes another user's cabinet (sees someone else's meds, or an add/edit lands on the wrong account). | High | Low-Med | PRD NFR (per-account data isolation) + guardrail; interview Q1; hot-spot dir `backend/app/api/v1/auth/` (15 commits/30d), `backend/app/api/v1/cabinet/` (35 commits/30d) — *abuse / IDOR row* |
 | 6 | Dosage finish-date / sufficiency miscalc — a "used" medication tells the user they have enough supply when they don't, and they run out mid-course (or a run-out alert fails to fire). | High | Medium | PRD FR-016, FR-017, FR-019 + guardrail; interview Q1; roadmap S-05 (**shipped**, archived `2026-06-25-dosage-tracking`); calc already unit-tested (`tests/cabinet/test_service.py`) |
+| 7 | **Account-delete leaves orphaned data or deletes the wrong account** — a user deletes their account (S-09) but a user-keyed table (cabinet entries, user preferences, dismissed notifications) is missed, leaving orphaned rows; or the delete is not strictly self-only. Irreversible, no undo. | High | Medium | roadmap S-09 (**proposed** — unshipped) + Unknown "cascade via FK vs explicit cleanup"; PRD Access Control + per-account data-isolation NFR; refresh interview (user's #1 worry) — *abuse / IDOR + data-loss row* |
+| 8 | **Dismissed notification re-fires or thresholds ignored** — a dismissed alert (S-06) reappears before its condition clears and re-triggers, or configured expiry / close-to-finish thresholds don't gate which alerts appear; page-load computation surfaces the wrong or a missing alert set. | Medium | Medium | roadmap S-06 (**proposed** — unshipped) + risk note (`dismissed_notifications` must be DB-backed, not client-side) |
 
 **Impact × Likelihood rubric.** Both axes are coarse High / Medium / Low.
 High impact = user loses access, data, or money. High likelihood = area
@@ -56,7 +61,12 @@ first (#1, #2). #5 is High-impact × Low-likelihood (no incident yet, auth
 currently works) but is retained because it never surfaces from happy-path
 tests. #6 (S-05 dosage) **shipped** on 2026-06-25 and its pure calc functions
 already carry unit coverage; the residual risk is now the integration/usage
-path, not the arithmetic — see §3 note.
+path, not the arithmetic — see §3 note. **#7 and #8 target unshipped slices**
+(S-09, S-06 are roadmap `proposed`): the risk rows are documented now as
+evidence-based forward risks, but their rollout phases are **gated on the
+feature shipping** — no test code can be written until the code exists (§3
+Phases 5–6). #7 is the top new risk (irreversible data loss + ownership); it
+never surfaces from a happy-path self-delete test, exactly like #5.
 
 ### Risk Response Guidance
 
@@ -68,6 +78,8 @@ path, not the arithmetic — see §3 note.
 | #4 | A seeded cabinet plus filter/search/sort/status inputs returns exactly the expected entry set (membership, not just count). | "Filter returned rows ⇒ correct rows"; filter intersection vs union semantics. | Status classification thresholds; filter combination semantics (FR-004). | integration | Asserting count only; happy-path single-filter only. |
 | #5 | A request for user A's resource by user B is rejected or empty; a write authenticates *and* verifies ownership. | "Logged-in ⇒ authorized" — authentication is not ownership. | Where `user_id`/ownership scoping is enforced; whether it is per-query or relies on RLS only. | integration (two users) | Testing only the happy-path owner; trusting RLS without an app-layer assertion. |
 | #6 | Known dosage inputs produce the known finish-date / sufficiency result per FR-016/017. | "Pure calc is tested ⇒ the risk is closed" — the usage-assignment + display path (mark-used → persist → resolve) is the untested seam now. | The calc lives in `daily_consumption_rate` / `days_of_supply_from_rate` (already unit-tested); ground the `PATCH /entries/{id}/usage` path, persistence, and per-week / partial-pack / non-tablet edges. | integration (usage path); unit edges already covered | Re-testing the already-covered pure formula; mirroring the formula instead of an independent oracle. |
+| #7 | Deleting user A removes A's rows from **every** user-keyed table *and* the Supabase Auth user; user B's data is untouched; a second user cannot trigger deletion of A's account. | "200 OK ⇒ all data gone" — an orphaned table nobody listed still holds rows; "authenticated ⇒ may delete this account" — deletion must be strictly self-only. | Whether deletion cascades via DB FK or explicit per-table cleanup; the **full** set of user-keyed tables; where the Supabase Auth user is deleted; ownership enforcement on the endpoint. | integration (two users, testcontainers) asserting row-absence across all tables + cross-user isolation | Asserting only the Auth user is gone; happy-path self-delete only; trusting FK cascade without verifying each table individually. |
+| #8 | A dismissed notification does not re-fire until its condition clears and re-triggers; configured thresholds gate the alert set; a seeded cabinet yields the correct alert *membership*. | "A dismiss row exists ⇒ it won't re-fire" — suppression depends on the condition match key, not mere row existence; "an alert appeared ⇒ it's the right one." | The `dismissed_notifications` record shape and its match key; where page-load computation runs; the threshold-config source. | integration (seed → dismiss → recompute) + unit on threshold classification | Oracle copied from the computation code; single-notification happy path only. |
 
 ## 3. Phased Rollout
 
@@ -77,13 +89,35 @@ orchestrator updates Status as artifacts appear on disk.
 
 | # | Phase name | Goal (one line) | Risks covered | Test types | Status | Change folder |
 |---|------------|-----------------|----------------|------------|--------|----------------|
-| 1 | Backend business-logic + CRUD safety net | Harden the hottest backend surface so a change can't silently break data, corrupt totals, or cross account boundaries. | #1, #3, #4, #5 | unit + integration | change opened | context/changes/testing-backend-safety-net/ |
-| 2 | Frontend critical-path E2E | Lock the crucial user journeys (login → add → see; display/filter cabinet) so they can't break unnoticed. Bootstraps Playwright. | #2, #1 | e2e | not started | — |
-| 3 | Frontend data-seam unit tests | Verify the API-calling layer (typed fetchers, request/response shape, error handling) cheaply. Bootstraps Vitest. Narrow by design. | #2, #1 | unit | implementing | context/changes/frontend-data-seam-tests/ |
-| 4 | Quality-gates wiring | Close the remaining CI gaps: wire the **frontend-unit** and **e2e** jobs into `ci-cd.yml` (the e2e job was previously disabled). Lint/typecheck/backend-test/build gates already ship via F-04. | #1–#6 | gates | complete | context/changes/quality-gates-wiring/ |
+| 1 | Backend business-logic + CRUD safety net | Harden the hottest backend surface so a change can't silently break data, corrupt totals, or cross account boundaries. | #1, #3, #4, #5 | unit + integration | complete | context/archive/2026-06-16-testing-backend-safety-net/ |
+| 2 | Frontend critical-path E2E | Lock the crucial user journeys (login → add → see; display/filter cabinet) so they can't break unnoticed. Bootstraps Playwright. | #2, #1 | e2e | complete | context/archive/2026-07-01-critical-path-e2e/ |
+| 3 | Frontend data-seam unit tests | Verify the API-calling layer (typed fetchers, request/response shape, error handling) cheaply. Bootstraps Vitest. Narrow by design. | #2, #1 | unit | complete | context/archive/2026-07-03-frontend-data-seam-tests/ |
+| 4 | Quality-gates wiring | Close the remaining CI gaps: wire the **frontend-unit** and **e2e** jobs into `ci-cd.yml` (the e2e job was previously disabled). Lint/typecheck/backend-test/build gates already ship via F-04. | #1–#6 | gates | complete | context/archive/2026-07-04-quality-gates-wiring/ |
+| 5 | Account-deletion safety net (S-09) | When S-09 ships: prove account deletion is complete (no orphaned rows in any user-keyed table) and strictly self-only. | #7 | integration | not started | — (gated on S-09 — see note) |
+| 6 | Notification idempotency (S-06) | When S-06 ships: prove dismissed alerts don't re-fire until re-triggered and that thresholds gate the alert set. | #8 | integration + unit | not started | — (gated on S-06 — see note) |
 
 **Status vocabulary** (fixed — parser literals): `not started` → `change opened`
 → `researched` → `planned` → `implementing` → `complete`.
+
+**Phases 1–4 shipped (reconciled 2026-07-04).** The original four-phase rollout
+is complete: all four change folders are archived under `context/archive/`. The
+frontend now carries a real Vitest suite and a Playwright e2e suite; the backend
+suite grew to 24 files including a DB-backed `tests/integration/cabinet/` tier.
+§3 status labels and change-folder pointers were reconciled from disk during
+refresh `test-plan-refresh-2026-07-04`.
+
+**Phases 5–6 are gated on unshipped slices.** S-09 (delete-user-account) and
+S-06 (notifications-and-badges) are roadmap `proposed` — no test code can be
+written until the features exist. When either slice lands, open its rollout
+phase via `/10x-new` and let `/10x-research` ground the real deletion / dismissal
+path. Until then these phases stay `not started`; `/10x-research` on Phase 5/6
+before the slice ships will correctly report "feature not yet implemented."
+
+**Watch item (not a rollout phase).** A parked bug — "login requires a manual
+page refresh to reach the user page" (stale auth-state race, roadmap Parked
+section, reported 2026-07-03) — is a known defect with no regression test. It
+was deliberately left out of the §2 risk map during refresh (not selected as a
+top risk); revisit as its own change if it recurs after the S-06/S-07 work.
 
 **Risk #6 status (was deferred, now shipped).** Roadmap slice S-05 (dosage
 finish-date / sufficiency) **shipped** on 2026-06-25 (archived
@@ -99,17 +133,18 @@ runs — flag it for `/10x-research` rather than opening a separate phase.
 
 ## 4. Stack
 
-The classic test base for this project. Backend has a meaningful suite;
-the frontend has none yet and is bootstrapped by Phases 2–3. AI-native
-tooling is deliberately omitted (see §7).
+The classic test base for this project. As of the 2026-07-04 refresh, **both
+backend and frontend carry a meaningful suite** (the rollout's Phases 1–3
+bootstrapped the frontend; the "frontend has none yet" state is historical).
+AI-native tooling is deliberately omitted (see §7).
 
 | Layer | Tool | Version | Notes |
 |-------|------|---------|-------|
-| backend unit + integration | pytest + pytest-asyncio | pytest ≥8.0, asyncio ≥0.24 | 17 test files across domains (`auth`, `cabinet`, `medicines`, `users`, `registry`, `core`, `db`); `httpx.AsyncClient` as the FastAPI test client; shared fixtures in `backend/tests/conftest.py` |
+| backend unit + integration | pytest + pytest-asyncio | pytest ≥8.0, asyncio ≥0.24 | **24 test files** across domains (`auth`, `cabinet`, `medicines`, `users`, `registry`, `core`, `db`) plus a DB-backed `tests/integration/cabinet/` tier (`test_add_entry`, `test_filters`, `test_list_entries`, `test_ownership`, `test_quantity`, `test_usage`); `httpx.AsyncClient` as the FastAPI test client; shared fixtures in `backend/tests/conftest.py` |
 | backend mocking | pytest-mock + `unittest.mock` | pytest-mock ≥3.15 | always pass `spec=`; `autospec=True` for patched functions (AGENTS.md) |
 | backend coverage | coverage | ≥7.14 | run via `uv run pytest`; CI-gated, not local-gated |
-| frontend unit | Vitest + React Testing Library | Vitest 4.1.9; RTL/jest-dom/user-event installed, unused this phase | bootstrapped by §3 Phase 3 via a `test` block in `frontend/vite.config.ts`; scoped to the API layer (`src/lib/api-client.ts`, `features/*/api/`) |
-| e2e | Playwright | none yet — see §3 Phase 2 | planned in tech-stack.md; no `playwright.config.ts` / `frontend/e2e/` exists; Phase 2 bootstraps it + `auth.setup.ts` |
+| frontend unit | Vitest + React Testing Library | Vitest 4.1.9 | **shipped** (§3 Phase 3): `test` block in `frontend/vite.config.ts`, `environment: "jsdom"`; suite covers the API/seam layer — `src/lib/api-client.test.ts`, `features/cabinet/api/cabinet-api.test.ts`, `features/auth/api/auth-api.test.ts`, `features/settings/api/settings-api.test.ts`, `features/auth/schemas/auth-schemas.test.ts`; helpers in `src/test/` |
+| e2e | Playwright | **shipped** (§3 Phase 2) | `frontend/playwright.config.ts` + `frontend/e2e/` with `auth.setup.ts`, `manage-cabinet-entry.spec.ts`, `seed.spec.ts`, `helpers.ts`, `test-account.ts`, and a `teardown` |
 | CI gates | GitHub Actions | shipped (F-04 + §3 Phase 4) | `.github/workflows/ci-cd.yml` exists (F-04 `ci-cd-wiring`, archived `2026-06-29-ci-cd-wiring`; gaps closed by `quality-gates-wiring`): jobs for pip-audit, npm audit, pre-commit (ruff/eslint/tsc), backend pytest+coverage (`--ignore=tests/db --ignore=tests/integration`), frontend build, pyright, frontend-unit (Vitest), frontend-typecheck (`tsc -b`), backend-integration (testcontainers), frontend-e2e (Playwright, secrets-gated) |
 
 **Stack grounding tools (current session):**
@@ -168,7 +203,19 @@ Two distinct tiers both called "integration" — file each kind in the right pla
 
 ### 6.3 Adding an e2e test
 
-- TBD — see §3 Phase 2. (Will bootstrap `playwright.config.ts`, `frontend/e2e/`, and `auth.setup.ts`.)
+- **Location**: `frontend/e2e/<flow>.spec.ts`; config in `frontend/playwright.config.ts`.
+- **Auth**: reuse the stored session from `frontend/e2e/auth.setup.ts` (a setup
+  project dependency) rather than logging in per test.
+- **Locators**: `getByRole` / `getByLabel` / `getByText` first; `getByTestId`
+  only when a11y attributes are ambiguous — never CSS/XPath (CLAUDE.md `/10x-e2e`).
+- **Waiting**: never `page.waitForTimeout()`; wait on state (`toBeVisible()`,
+  `waitForURL()`, `waitForResponse()`).
+- **Independence + cleanup**: each spec seeds its own data with a unique id
+  (timestamp suffix) and tears it down; see `frontend/e2e/seed.spec.ts`,
+  `helpers.ts`, `test-account.ts`, and the `teardown` project.
+- **Reference test**: `frontend/e2e/manage-cabinet-entry.spec.ts`.
+- **Full workflow**: use the `/10x-e2e` skill (risk → seed → generate → review
+  against the five anti-patterns → verify).
 
 ### 6.4 Adding a frontend unit test (API-calling layer)
 
@@ -247,8 +294,8 @@ contributors should respect these unless the underlying assumption changes.
 
 ## 8. Freshness Ledger
 
-- Strategy (§1–§5) last reviewed: 2026-06-30 (reconciled with implementation)
-- Stack versions last verified: 2026-06-30
+- Strategy (§1–§5) last reviewed: 2026-07-04 (refresh — rollout reconciled complete; Risks #7/#8 added)
+- Stack versions last verified: 2026-07-04
 - AI-native tool references last verified: 2026-06-16
 
 Refresh (`/10x-test-plan --refresh`) when:
