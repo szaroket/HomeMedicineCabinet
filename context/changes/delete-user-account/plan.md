@@ -106,7 +106,12 @@ success-path session teardown + redirect.
   changed for Supabase. If Supabase delete fails after the local commit → return
   a 5xx account-deletion error; the auth user survives but its local data is
   gone and will be re-provisioned empty on next login (idempotent). Do not
-  attempt to "roll back" the local delete.
+  attempt to "roll back" the local delete. **Client-side half-state**: because
+  the local rows are already gone on this 5xx, the frontend must also tear down
+  the session and redirect to `/login` (not keep the user authenticated over
+  destroyed state) — see Phase 3 §2/§3. The 503 local-DB-failure case is the
+  opposite: nothing was deleted, so the session is kept and the user stays on the
+  page.
 - **Service-role key is server-only**: it must live solely in backend env/config,
   never be sent to or referenced by the frontend, and never be logged. It is a
   separate credential from `supabase_anon_key` and grants full admin access.
@@ -136,6 +141,29 @@ documented in the class docstring `Attributes:` block (Google style, per repo
 convention). Loaded from env like the other Supabase settings. Also add the key
 to `.env.example` / deployment env docs if such a file exists; note in the plan
 that Render env vars must be set by hand (L-007).
+
+**⚠ Import-time blast radius**: `settings = Settings()` is a module-level
+singleton (`config.py:53`) evaluated at import. A required field with no default
+raises `ValidationError` at test-collection time everywhere the app is imported.
+CI supplies only three Supabase vars inline (see §4) — without wiring this key
+into those jobs, **every backend CI job crashes on import**. §4 is not optional.
+
+#### 4. CI env wiring for the new required key
+
+**File**: `.github/workflows/ci-cd.yml`
+
+**Intent**: Provide `SUPABASE_SERVICE_ROLE_KEY` to every backend job that imports
+app code, so the new required config field does not crash test collection.
+
+**Contract**: Add `SUPABASE_SERVICE_ROLE_KEY: "placeholder"` to both inline
+`env:` blocks — unit tests (`ci-cd.yml:93-97`) and integration tests
+(`ci-cd.yml:208-212`). For the e2e job, add `SUPABASE_SERVICE_ROLE_KEY:
+${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}` to the job `env:` (`ci-cd.yml:220-225`)
+**and** add `SUPABASE_SERVICE_ROLE_KEY` to the required-secrets presence loop
+(`ci-cd.yml:232`). A placeholder value is fine for unit/integration because the
+Supabase admin client is mocked in tests; the e2e job needs the real secret set
+in the repo. `backend-typecheck` runs `pyright` without importing app runtime, so
+no env change is needed there.
 
 #### 2. Supabase admin client + delete operation
 
@@ -177,6 +205,9 @@ message (e.g. "Failed to delete account."), placed alongside `UserDatabaseError`
   `AccountDeletionError`; admin client is created with the service-role key.
 - Config loads with the new field present: `cd backend && uv run python -c "from app.core.config import settings"`
   (run from PowerShell if it touches TLS; here it only parses env).
+- CI env wiring: `SUPABASE_SERVICE_ROLE_KEY` is present in the unit-test and
+  integration `env:` blocks and in the e2e job env + required-secrets loop of
+  `ci-cd.yml`, so no backend job crashes at import on the new required field.
 
 #### Manual Verification:
 
@@ -208,10 +239,9 @@ HTTP status mapping.
 **Contract**: `delete_by_user(session: AsyncSession, user_id: uuid.UUID) -> None`
 issuing a `delete(CabinetEntry).where(col(CabinetEntry.user_id) == user_id)`.
 Wrap the `execute` in `try/except SQLAlchemyError` per L-004, log with
-`exc_info=True`, raise `CabinetDatabaseError from exc`. Commit boundary is owned
-by the facade (see facade contract) — this function executes the delete on the
-shared session and does not independently commit; follow whichever pattern the
-facade uses for a single atomic local transaction.
+`exc_info=True`, raise `CabinetDatabaseError from exc`. **Executes the delete on
+the shared session only — no `commit`, no `persist`.** The facade wraps this call
+in the single `persist(session)` block that owns the commit (see facade contract).
 
 #### 2. Users local-rows delete
 
@@ -222,9 +252,9 @@ before parent), on the shared session.
 
 **Contract**: `delete_user_rows(session: AsyncSession, user_id: uuid.UUID) -> None`
 executing `delete(UserPreferences).where(user_id == ...)` then
-`delete(User).where(id == ...)`. L-004 wrapping → `UserDatabaseError`. Same
-commit-ownership note as cabinet: the facade controls the single commit so all
-local deletes land atomically.
+`delete(User).where(id == ...)`. L-004 wrapping → `UserDatabaseError`. **No
+`commit`, no `persist`** — same commit-ownership as cabinet: the facade's single
+`persist(session)` block owns the commit so all local deletes land atomically.
 
 #### 3. Users delete-account facade
 
@@ -234,12 +264,17 @@ local deletes land atomically.
 allowed to call cabinet crud + users crud + the Supabase admin operation.
 
 **Contract**: `delete_account(session: AsyncSession, user_id: uuid.UUID) -> None`.
-Order: (1) local deletes as one atomic unit — `cabinet.crud.delete_by_user`,
-`users.crud.delete_user_rows`, then a single `commit` (use `persist`/session
-transaction so a failure rolls back and nothing is half-deleted); (2) on local
-success, `supabase_auth.delete_user(str(user_id))`. Propagates
-`CabinetDatabaseError` / `UserDatabaseError` (→ 503) and `AccountDeletionError`
-(→ 5xx) to the router. Log start and completion with the user id.
+Order: (1) local deletes as one atomic unit — wrap **both** crud calls in a
+**single** `async with persist(session):` with **no instance arguments** (the
+`persist` refresh loop is then a harmless no-op; it still flushes + commits on
+clean exit and rolls back on any exception — `connector.py:40`). Inside the
+block, call `cabinet.crud.delete_by_user` then `users.crud.delete_user_rows`
+(child-before-parent, so no FK violation at flush/commit). Do **not** nest a
+per-crud `persist` — that would commit each delete separately and break
+atomicity. (2) on local success (after the `persist` block commits), call
+`supabase_auth.delete_user(str(user_id))`. Propagates `CabinetDatabaseError` /
+`UserDatabaseError` (→ 503) and `AccountDeletionError` (→ 502) to the router. Log
+start and completion with the user id.
 
 #### 4. Delete-account endpoint
 
@@ -251,9 +286,9 @@ success, `supabase_auth.delete_user(str(user_id))`. Propagates
 (router already carries `dependencies=[Security(get_current_user)]`). Handler
 takes `current_user: CurrentUser = Security(get_current_user)` + session, calls
 `facade.delete_account(session, current_user.id)`. Map `UserDatabaseError` /
-`CabinetDatabaseError` → 503; `AccountDeletionError` → 502 (upstream Supabase
-failure) or 500 — pick one and keep consistent with existing mapping style; any
-other exception → 500 via the existing `logger.exception` fallback pattern.
+`CabinetDatabaseError` → 503; `AccountDeletionError` → **502 Bad Gateway** (an
+upstream Supabase admin failure is a bad response from a dependency); any other
+exception → 500 via the existing `logger.exception` fallback pattern.
 
 ### Success Criteria:
 
@@ -267,7 +302,7 @@ other exception → 500 via the existing `logger.exception` fallback pattern.
 - Integration tests pass: `cd backend && uv run pytest tests/integration` —
   `DELETE /api/v1/users/me` returns 204 on success (Supabase admin mocked),
   requires auth (401 without token), and maps `UserDatabaseError` → 503 and
-  `AccountDeletionError` → its chosen 5xx.
+  `AccountDeletionError` → 502.
 - Backend typecheck passes (project's configured typecheck command).
 
 #### Manual Verification:
@@ -309,10 +344,18 @@ existing `logout()` shape in `auth-api.ts`.
 **Intent**: Provide a `useDeleteAccount` mutation that tears down the session on
 success.
 
-**Contract**: `useDeleteAccount()` — `useMutation({ mutationFn: deleteAccount })`;
-on success call `useAuth().clearSession()` and `queryClient.clear()` so no stale
-protected data survives. Navigation is done by the component (mirrors
-`LogoutButton`, which navigates in `onSettled`).
+**Contract**: `useDeleteAccount()` — `useMutation({ mutationFn: deleteAccount })`.
+Tear down the client session in **both** terminal states, not just success: the
+local rows are already destroyed once the request reaches the server, so an
+`AccountDeletionError` (5xx: Supabase delete failed *after* the local commit)
+must not leave the user authenticated over half-deleted state. Put
+`clearSession()` + `queryClient.clear()` in a place that runs on both success and
+this 5xx (e.g. `onSettled`, or a shared teardown called from both `onSuccess` and
+the 5xx branch of `onError`). Navigation is done by the component (mirrors
+`LogoutButton`, which navigates in `onSettled`). Distinguish the 5xx
+account-deletion case from other errors (e.g. 503 local-DB failure, where nothing
+was deleted and the session must be **kept**) so teardown only fires when data was
+actually destroyed — branch on the response status.
 
 #### 3. Delete-account section + confirm dialog
 
@@ -334,8 +377,15 @@ enables; on confirm, run the mutation and redirect.
 - On mutation success: navigate to `/login` (component-level `useNavigate`) and
   surface the "Konto zostało usunięte." notice on the login screen — pass via
   router state or a lightweight mechanism consistent with existing patterns.
-- On error: show a Polish error message (e.g. "Nie udało się usunąć konta.")
-  and keep the user on the page.
+- On error, branch on the status:
+  - **5xx `AccountDeletionError`** (local data already deleted, only the Supabase
+    auth user survives): tear down the session and redirect to `/login` (same as
+    success), surfacing a "Konto zostało częściowo usunięte — zaloguj się
+    ponownie, aby dokończyć." notice. Re-login is idempotent and re-triggering the
+    delete completes it, so this is the safe recovery path.
+  - **503 / other errors** (nothing was deleted): show a Polish error (e.g. "Nie
+    udało się usunąć konta.") and keep the user on the page with their session
+    intact.
 
 ### Success Criteria:
 
@@ -375,7 +425,7 @@ passes, pause for manual confirmation.
 ### Integration Tests:
 
 - `DELETE /api/v1/users/me`: 204 on success (Supabase admin mocked), 401 without
-  auth, 503 on `UserDatabaseError`, chosen 5xx on `AccountDeletionError`.
+  auth, 503 on `UserDatabaseError`, 502 on `AccountDeletionError`.
 
 ### Manual Testing Steps:
 
@@ -398,7 +448,12 @@ per table.
 No schema migration. Cascade is performed in application code, so existing data
 and the DB schema are unchanged. The only new operational requirement is setting
 `SUPABASE_SERVICE_ROLE_KEY` in every backend environment (local `.env` and the
-Render backend service dashboard — L-007), kept server-side only.
+Render backend service dashboard — L-007), kept server-side only. Because the
+config field is required and `Settings()` is a module-level singleton evaluated
+at import, the key must also be present in every CI backend job: placeholder
+values in the unit + integration `env:` blocks and a real `SUPABASE_SERVICE_ROLE_KEY`
+secret for the e2e job (`ci-cd.yml`). Missing it turns CI red as an import crash,
+not a test failure.
 
 ## References
 
@@ -423,6 +478,7 @@ Render backend service dashboard — L-007), kept server-side only.
 - [ ] 1.1 Linting passes (ruff check + format)
 - [ ] 1.2 Unit tests pass for `delete_user` (success, `AuthApiError → AccountDeletionError`, admin client uses service-role key)
 - [ ] 1.3 Config loads with the new `supabase_service_role_key` field
+- [ ] 1.6 `SUPABASE_SERVICE_ROLE_KEY` wired into ci-cd.yml unit + integration `env:` blocks and e2e job env + secrets loop (no import-time crash)
 
 #### Manual
 
@@ -435,7 +491,7 @@ Render backend service dashboard — L-007), kept server-side only.
 
 - [ ] 2.1 Linting passes (ruff check + format)
 - [ ] 2.2 Unit tests pass for `delete_by_user`, `delete_user_rows`, and facade ordering
-- [ ] 2.3 Integration tests pass for `DELETE /api/v1/users/me` (204, 401, 503, 5xx mapping)
+- [ ] 2.3 Integration tests pass for `DELETE /api/v1/users/me` (204, 401, 503, 502 mapping)
 - [ ] 2.4 Backend typecheck passes
 
 #### Manual

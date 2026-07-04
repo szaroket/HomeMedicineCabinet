@@ -4,8 +4,8 @@
 - **Plan**: context/changes/delete-user-account/plan.md
 - **Mode**: Deep
 - **Date**: 2026-07-04
-- **Verdict**: REVISE
-- **Findings**: 1 critical, 1 warning, 2 observations
+- **Verdict**: REVISE → SOUND (all 4 findings fixed in triage 2026-07-04)
+- **Findings**: 1 critical, 1 warning, 2 observations (all FIXED)
 
 ## Verdicts
 
@@ -14,8 +14,8 @@
 | End-State Alignment | PASS |
 | Lean Execution | PASS |
 | Architectural Fitness | PASS |
-| Blind Spots | FAIL |
-| Plan Completeness | WARNING |
+| Blind Spots | FAIL → PASS (F1, F2 fixed) |
+| Plan Completeness | WARNING → PASS (F3, F4 fixed) |
 
 ## Grounding
 
@@ -63,7 +63,7 @@ Verified: FK declared without `ondelete` (users/models.py:29, cabinet/models.py:
   - Confidence: HIGH.
   - Blind spot: Need a test asserting the "unset key" path errors cleanly rather
     than leaking a stack trace.
-- **Decision**: PENDING
+- **Decision**: FIXED via Fix A
 
 ### F2 — Post-commit Supabase failure leaves client authenticated over half-deleted local state
 
@@ -94,7 +94,7 @@ Verified: FK declared without `ondelete` (users/models.py:29, cabinet/models.py:
     row; not exhaustively swept.
   - Blind spot: Behavior of non-preferences protected endpoints when the local
     users row is missing is unverified.
-- **Decision**: PENDING
+- **Decision**: FIXED via Fix
 
 ### F3 — Unresolved HTTP status for AccountDeletionError
 
@@ -109,7 +109,7 @@ Verified: FK declared without `ondelete` (users/models.py:29, cabinet/models.py:
 - **Fix**: Decide now — 502 Bad Gateway is the honest choice (an upstream Supabase
   admin failure is a bad response from a dependency). Lock it into the router
   contract and 2.3.
-- **Decision**: PENDING
+- **Decision**: FIXED — locked in 502
 
 ### F4 — `persist` fit + commit-ownership underspecified for bulk deletes
 
@@ -131,4 +131,4 @@ Verified: FK declared without `ondelete` (users/models.py:29, cabinet/models.py:
 - **Fix**: In the facade contract, state explicitly: single `persist(session)` (no
   instances) around both crud deletes; crud fns execute+wrap per L-004 but never
   commit; deletes are child-before-parent so no FK error is expected at commit.
-- **Decision**: PENDING
+- **Decision**: FIXED via Fix
