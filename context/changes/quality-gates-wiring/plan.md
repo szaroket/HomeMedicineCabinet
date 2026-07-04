@@ -449,7 +449,7 @@ strings are gone.
 
 #### Automated
 
-- [x] 3.1 No stale strings remain (rg check over test-plan.md, integration README, AGENTS.md)
+- [x] 3.1 No stale strings remain (rg check over test-plan.md, integration README, AGENTS.md) — 4645dfd
 
 #### Manual
 
