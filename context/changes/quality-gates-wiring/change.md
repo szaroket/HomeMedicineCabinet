@@ -1,7 +1,7 @@
 ---
 change_id: quality-gates-wiring
 title: Wire frontend-unit and e2e jobs into CI to close the remaining gates
-status: implementing
+status: complete
 created: 2026-07-04
 updated: 2026-07-04
 archived_at: null
