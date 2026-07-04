@@ -317,13 +317,13 @@ the rewrite must be applied once in the dashboard — see Phase 1, change 2.
 
 #### Automated
 
-- [ ] 1.1 Frontend build still succeeds: `cd frontend && npm run build`
-- [ ] 1.2 `render.yaml` is valid YAML (parses without error)
+- [x] 1.1 Frontend build still succeeds: `cd frontend && npm run build`
+- [x] 1.2 `render.yaml` is valid YAML (parses without error)
 
 #### Manual
 
-- [ ] 1.3 Pre-deploy eyeball: `routes:` block nested under the static service with Render's exact key names
-- [ ] 1.4 `vite preview` confirms the production bundle client-routes to a deep path (no 404; not rewrite validation)
+- [x] 1.3 Pre-deploy eyeball: `routes:` block nested under the static service with Render's exact key names
+- [x] 1.4 `vite preview` confirms the production bundle client-routes to a deep path (no 404; not rewrite validation)
 - [ ] 1.5 Live Render URL: refreshing deep routes loads the app (primary rewrite validation)
 - [ ] 1.6 Rewrite rule confirmed present in the Render dashboard
 
