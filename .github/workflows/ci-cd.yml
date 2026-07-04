@@ -211,13 +211,43 @@ jobs:
           SUPABASE_ANON_KEY: "placeholder"
         run: uv run pytest tests/integration
 
-  # TODO: enable once frontend/e2e specs + playwright.config exist
   frontend-e2e:
     name: Frontend E2E Tests
     runs-on: ubuntu-latest
-    if: false
+    concurrency:
+      group: e2e-shared-supabase
+      cancel-in-progress: false
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
+      E2E_DATABASE_URL: ${{ secrets.E2E_DATABASE_URL }}
     steps:
       - uses: actions/checkout@v7
+
+      - name: Verify required E2E secrets are present
+        run: |
+          missing=()
+          for name in DATABASE_URL SUPABASE_URL SUPABASE_ANON_KEY E2E_TEST_PASSWORD E2E_DATABASE_URL; do
+            [ -z "${!name}" ] && missing+=("$name")
+          done
+          if [ ${#missing[@]} -ne 0 ]; then
+            echo "::error::Missing required E2E secret(s): ${missing[*]}"
+            exit 1
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # SHA-pinned: 3rd-party action (supply-chain); GitHub-owned actions use major tags
+
+      - name: Install backend deps
+        working-directory: backend
+        run: uv sync --all-groups
 
       - name: Set up Node
         uses: actions/setup-node@v6
@@ -232,19 +262,21 @@ jobs:
 
       - name: Install Playwright browsers
         working-directory: frontend
-        run: npx playwright install --with-deps
-
-      - name: Start backend
-        working-directory: backend
-        run: uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 &
-
-      - name: Start frontend
-        working-directory: frontend
-        run: npm run dev &
+        run: npx playwright install --with-deps chromium
 
       - name: Run Playwright tests
         working-directory: frontend
         run: npx playwright test
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+          retention-days: 7
 
   deploy:
     name: Deploy to Render
@@ -259,6 +291,7 @@ jobs:
       - frontend-unit
       - frontend-typecheck
       - backend-integration
+      - frontend-e2e
 
     steps:
       - name: Deploy backend

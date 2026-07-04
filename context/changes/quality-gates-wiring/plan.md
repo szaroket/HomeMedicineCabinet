@@ -427,16 +427,16 @@ strings are gone.
 
 #### Manual
 
-- [x] 1.5 The three secret-free jobs appear and pass in CI with no secret config
-- [x] 1.6 backend-integration log shows testcontainers start/teardown of postgres:17-alpine
-- [x] 1.7 The three jobs run in parallel with existing gates
+- [x] 1.5 The three secret-free jobs appear and pass in CI with no secret config — 32fb569
+- [x] 1.6 backend-integration log shows testcontainers start/teardown of postgres:17-alpine — 32fb569
+- [x] 1.7 The three jobs run in parallel with existing gates — 32fb569
 
 ### Phase 2: E2E job wiring
 
 #### Automated
 
-- [ ] 2.1 Workflow YAML parses without error after edits
-- [ ] 2.2 Preflight shell script passes `bash -n`
+- [x] 2.1 Workflow YAML parses without error after edits
+- [x] 2.2 Preflight shell script passes `bash -n`
 
 #### Manual
 
