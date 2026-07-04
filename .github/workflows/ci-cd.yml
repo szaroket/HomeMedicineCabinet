@@ -143,6 +143,74 @@ jobs:
         working-directory: backend
         run: uv run pyright
 
+  frontend-unit:
+    name: Frontend Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run unit tests
+        working-directory: frontend
+        run: npm run test:run
+
+  frontend-typecheck:
+    name: Frontend Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run typecheck
+        working-directory: frontend
+        run: npm run typecheck
+
+  backend-integration:
+    name: Backend Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # SHA-pinned: 3rd-party action (supply-chain); GitHub-owned actions use major tags
+
+      - name: Install backend deps
+        working-directory: backend
+        run: uv sync --all-groups
+
+      - name: Run integration tests
+        working-directory: backend
+        env:
+          DATABASE_URL: "postgresql+asyncpg://user:pass@localhost/testdb"
+          SUPABASE_URL: "https://placeholder.supabase.co"
+          SUPABASE_ANON_KEY: "placeholder"
+        run: uv run pytest tests/integration
+
   # TODO: enable once frontend/e2e specs + playwright.config exist
   frontend-e2e:
     name: Frontend E2E Tests
@@ -188,6 +256,9 @@ jobs:
       - backend-tests
       - frontend-build
       - backend-typecheck
+      - frontend-unit
+      - frontend-typecheck
+      - backend-integration
 
     steps:
       - name: Deploy backend

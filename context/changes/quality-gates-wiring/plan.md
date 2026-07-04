@@ -420,10 +420,10 @@ strings are gone.
 
 #### Automated
 
-- [ ] 1.1 Workflow YAML parses without error
-- [ ] 1.2 `frontend/package.json` has a `typecheck` script; `npm run typecheck` passes locally
-- [ ] 1.3 `npm run test:run` passes locally
-- [ ] 1.4 `uv run pytest tests/integration` passes locally with Docker running
+- [x] 1.1 Workflow YAML parses without error
+- [x] 1.2 `frontend/package.json` has a `typecheck` script; `npm run typecheck` passes locally
+- [x] 1.3 `npm run test:run` passes locally
+- [x] 1.4 `uv run pytest tests/integration` passes locally with Docker running
 
 #### Manual
 
