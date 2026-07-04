@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { CabinetEntryOut } from "@/features/cabinet/api/cabinet-api";
 import { useSetUsage } from "@/features/cabinet/api/cabinet-queries";
@@ -20,7 +20,7 @@ export function UsageEditForm({ entry, onClose }: UsageEditFormProps) {
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     formState: { errors },
   } = useForm<UsageValues>({
     resolver: zodResolver(usageSchema),
@@ -35,7 +35,9 @@ export function UsageEditForm({ entry, onClose }: UsageEditFormProps) {
     },
   });
 
-  const isUsed = watch("is_used");
+  // useWatch (not the watch() function) so React Compiler can memoize this
+  // component instead of skipping it (react-hooks/incompatible-library).
+  const isUsed = useWatch({ control, name: "is_used" });
 
   function onSubmit(values: UsageValues) {
     const payload = values.is_used

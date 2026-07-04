@@ -1,10 +1,10 @@
 ---
 change_id: backend-logging
 title: Backend logging
-status: impl_reviewed
+status: archived
 created: 2026-06-29
-updated: 2026-06-29
-archived_at: null
+updated: 2026-06-30
+archived_at: 2026-06-30T00:00:00Z
 ---
 
 ## Notes

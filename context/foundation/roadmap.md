@@ -3,7 +3,7 @@ project: "Home Medicine Cabinet"
 version: 1
 status: draft
 created: 2026-06-03
-updated: 2026-06-29
+updated: 2026-06-30
 prd_version: 1
 main_goal: low-complexity
 top_blocker: skills
@@ -30,7 +30,7 @@ A single adult can't reliably track their home medication inventory — what the
 | F-01 | auth-scaffold                | (foundation) auth entry screen in place; register/login/logout UI wired to Supabase Auth, plus FastAPI route protection                              | Supabase project created | FR-001, FR-002, Access Control | done    |
 | F-02 | data-layer-scaffold          | (foundation) SQLModel models, Supabase PostgreSQL connection, and Alembic migration tooling ready                                                    | Supabase project created | FR-003, FR-010, NFR data-isolation | done |
 | F-03 | registry-import              | (foundation) Polish medicines XML dataset loaded into PostgreSQL and queryable for autocomplete                                                       | F-02             | FR-003, FR-011, FR-012            | done |
-| F-04 | ci-cd-wiring                 | (foundation) GitHub Actions auto-deploys backend and frontend to Render on merge to main                                                             | —                | NFR persist-across-sessions       | ready    |
+| F-04 | ci-cd-wiring                 | (foundation) GitHub Actions auto-deploys backend and frontend to Render on merge to main                                                             | —                | NFR persist-across-sessions       | done    |
 | S-01 | add-medication-from-registry | add a medication by searching the Polish registry autocomplete, choosing tablet count, entering package count and expiry date; entry appears in cabinet with correct status; duplicate entries merge per dedup rule | F-01, F-02, F-03 | US-01, FR-003, FR-010, FR-022 | done |
 | S-08 | mobile-responsive-cabinet    | view and use the cabinet add flow and list on a mobile-width screen without layout breakage; desktop experience is preserved unchanged                                                                              | S-01             | NFR (responsive design)       | done |
 | S-02 | cabinet-view-and-search      | view cabinet as a filterable, sortable, paginated list; search by name or active ingredient; see route of administration and leaflet/specification links on each entry | S-01 | US-03, FR-004, FR-006, FR-011, FR-012 | done |
@@ -40,7 +40,8 @@ A single adult can't reliably track their home medication inventory — what the
 | S-06 | notifications-and-badges     | see a notification bell with unread count; notification center lists expiry alerts, below-minimum important stock, and used medications at risk of running out; configure expiry and close-to-finish thresholds in settings; dismiss individual notifications | S-03, S-05 | US-02, US-05, FR-007, FR-008, FR-019, FR-020 | proposed |
 | S-07 | dashboard                    | land on a dashboard showing summary counts (total / valid / expiring soon / expired / out-of-stock) with clickable links to the cabinet list pre-filtered to each status | S-06 | FR-009 | proposed |
 | F-01b | auth-polish                 | (foundation) confirm-password field on the registration form so users cannot submit a typo in their password | F-01 | FR-001 | proposed |
-| F-05 | backend-logging              | (foundation) structured logging across the FastAPI backend — central config, request/response middleware, consistent levels, meaningful logs at service/crud boundaries, no secrets/PII logged | F-01, F-02 | NFR (observability — baseline gap) | proposed |
+| F-05 | backend-logging              | (foundation) structured logging across the FastAPI backend — central config, request/response middleware, consistent levels, meaningful logs at service/crud boundaries, no secrets/PII logged | F-01, F-02 | NFR (observability — baseline gap) | done |
+| F-06 | spa-refresh-fallback        | (foundation) refreshing or deep-linking any client-side route on the deployed Render static site serves the app instead of a 404 | F-04 | NFR (data persists across sessions and devices — stable deployed environment) | proposed |
 
 ## Streams
 
@@ -51,6 +52,7 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 | A      | Core trunk           | `F-01` → `F-02` → `F-03` → `S-01` → `S-02`   | Main dependency spine; north star (S-01) sits as early as Prerequisites allow |
 | A′     | Mobile polish        | `S-01` → `S-08`                                | Branches from S-01 in parallel with S-02; scoped to responsive layout only    |
 | B      | CI/CD                | `F-04`                                         | Standalone; run in parallel with Stream A from day one                        |
+| B″     | Deploy correctness   | `F-04` → `F-06`                                | SPA refresh/deep-link fallback on the Render static host; runnable any time after deploy exists |
 | B′     | Observability        | `F-05`                                         | Standalone backend hardening; depends only on the backend skeleton (F-01, F-02), runnable any time |
 | C      | Cabinet management   | `S-04` → `S-03`                                | Branches from S-02; S-03 needs category-aware zero behaviour from S-04        |
 | D      | Dosage tracking      | `S-05`                                         | Branches from S-02 in parallel with Stream C                                  |
@@ -122,7 +124,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** `render.yaml` already defines both services; wiring GitHub Actions is low-risk. Cold-start behaviour on the free Render tier is a known accepted trade-off (see `context/foundation/infrastructure.md`).
-- **Status:** ready
+- **Status:** done
 
 ### F-05: Backend logging
 
@@ -137,6 +139,21 @@ Foundations below assume these are present and do NOT re-scaffold them.
   - Log format target: structured JSON (machine-parseable, Render-friendly) vs. human-readable console. Default to JSON in deployed environments and console in local dev, switchable via config. — Owner: developer. Block: no (implementation choice).
   - Whether to adopt a library (`structlog`) or wrap stdlib `logging`. Block: no — resolve during `/10x-plan`.
 - **Risk:** Low. The main pitfall is leaking secrets/PII (auth tokens, emails) into logs — the plan must define a redaction/allow-list rule and verify it in tests. Introducing logging via the existing `create_app()` middleware seam keeps the change centralised and avoids scattering logging concerns across domains.
+- **Status:** done
+
+### F-06: SPA refresh fallback
+
+- **Outcome:** (foundation) On the deployed Render static site, refreshing the browser or opening a deep link to any client-side route (e.g. `/cabinet`, `/dashboard`) serves the SPA and lands the user on the correct in-app view, instead of returning Render's 404 page. The React Router app (`frontend/src/app/router.tsx`) currently owns all routing client-side; the Render static service (`render.yaml`) has no rewrite rule, so any non-`/` request that misses a built file 404s. Fix is a catch-all rewrite to `/index.html` on the static service (the standard SPA fallback), verified against the live Render URL for both a refresh on a deep route and a cold deep-link.
+- **Change ID:** spa-refresh-fallback
+- **PRD refs:** NFR (data persists across sessions and devices — implies the deployed app is usable via refresh/bookmark, not just first-load navigation)
+- **Unlocks:** reliable use of every user-facing slice on the deployed MVP — without the fallback, any refresh or shared/bookmarked link on a deep route breaks the app for real users
+- **Prerequisites:** F-04 (a Render deploy must exist to configure and verify the rewrite against)
+- **Parallel with:** any slice — infra/config-only change with no schema or app-code impact
+- **Blockers:** —
+- **Unknowns:**
+  - Exact Render config surface for a static-service rewrite (`routes:` block in `render.yaml` vs. dashboard "Redirects/Rewrites" rule). Both are viable; prefer the `render.yaml` `routes` rewrite so the fix is version-controlled. Block: no — resolve during `/10x-plan`.
+  - Confirm the rewrite does not shadow real static assets (hashed JS/CSS, favicon) — a `/*` → `/index.html` rewrite must only apply as a fallback for unmatched paths. Block: no.
+- **Risk:** Low and well-understood (standard SPA hosting requirement). The only pitfall is a misconfigured rewrite that intercepts asset requests and returns HTML for JS/CSS; verifying against the live URL (refresh on a deep route + a fresh deep-link + assets still load) closes it.
 - **Status:** proposed
 
 ## Slices
@@ -246,6 +263,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | F-03       | registry-import              | Registry import: Polish medicines XML → PostgreSQL                            | no                    | Depends on F-02                   |
 | F-04       | ci-cd-wiring                 | CI/CD: GitHub Actions → Render deploy hooks                                   | yes                   | Run `/10x-plan ci-cd-wiring`      |
 | F-05       | backend-logging              | Backend logging: structured logging + request middleware + redaction         | yes                   | Depends on F-01, F-02; run `/10x-plan backend-logging` |
+| F-06       | spa-refresh-fallback         | Deploy fix: SPA refresh/deep-link fallback on Render static site (`/*` → `/index.html`) | yes         | Depends on F-04; run `/10x-plan spa-refresh-fallback` |
 | S-01       | add-medication-from-registry | Feature: add medication from Polish registry (autocomplete + add flow + dedup)| no                    | Depends on F-01, F-02, F-03       |
 | S-08       | mobile-responsive-cabinet    | Feature: mobile-responsive cabinet add flow and list                          | yes                   | Depends on S-01; parallel with S-02; run `/10x-plan mobile-responsive-cabinet` |
 | S-02       | cabinet-view-and-search      | Feature: cabinet list with filter, sort, search, and entry details            | no                    | Depends on S-01                   |
@@ -261,6 +279,7 @@ _(none — all questions resolved before roadmap finalisation)_
 
 ## Parked
 
+- **Bug: login requires a manual page refresh to reach the user page** — Reported 2026-07-03: entering correct email/password does not navigate to the user page after login; the login form just re-renders (looks like it "refreshes" back to itself), and this repeats on a second attempt — a full browser page reload is needed before login succeeds. Suspect area: post-login redirect/auth-state handling in the frontend (F-01 auth scaffold) — likely a stale auth-state race (token/session not yet propagated to the router/guard before the redirect fires) rather than a backend issue. Why parked: not yet scoped as a change; needs a `/10x-frame` or bug-triage pass to confirm root cause before planning a fix. Revisit before or alongside S-06/S-07 — do not let it block S-03.
 - **Daily dataset update via GitHub Actions workflow** — Why parked: explicitly deferred to v2 by the user; the one-off import script (F-03) covers MVP needs. Revisit when dataset staleness becomes a real user pain point.
 - **Inline PDF preview for drug leaflet and specification** — Why parked: PRD §Non-Goals (v2 item); links only for MVP (FR-012).
 - **Native mobile app (iOS/Android)** — Why parked: PRD §Non-Goals; web-only for MVP.
@@ -283,3 +302,5 @@ _(none — all questions resolved before roadmap finalisation)_
 - **S-04: user can mark a cabinet entry as "important", set a global minimum package count, and see an attention badge on entries that fall below the minimum or are expiring/expired; the badge clears automatically when the condition resolves.** — Archived 2026-06-25 → `context/archive/2026-06-16-important-category/`. Lesson: —.
 - **S-05: user can assign a tablet-based medication to the "used" category with a dosage schedule and optional end date; see the estimated finish date or sufficiency indicator; non-tablet medications marked used for date tracking only** — Archived 2026-06-29 → `context/archive/2026-06-25-dosage-tracking/`. Lesson: —.
 - **S-08: user can view and use the cabinet add flow and medicine list on a mobile-width screen without layout breakage; the desktop experience is preserved unchanged** — Archived 2026-06-29 → `context/archive/2026-06-17-mobile-responsive-cabinet/`. Lesson: —.
+- **F-05: (foundation) structured logging across the FastAPI backend — central config, request/response middleware, consistent levels, meaningful logs at service/crud boundaries, no secrets/PII logged** — Archived 2026-06-30 → `context/archive/2026-06-29-backend-logging/`. Lesson: —.
+- **F-04: (foundation) GitHub Actions workflow auto-deploys backend and frontend to Render on merge to main; deploy hook URLs and `RENDER_API_KEY` stored as GitHub Secrets.** — Archived 2026-06-30 → `context/archive/2026-06-29-ci-cd-wiring/`. Lesson: —.

@@ -541,3 +541,23 @@ async def update_entry_counts(
         )
         raise CabinetDatabaseError() from exc
     return entry
+
+
+async def delete_entry(session: AsyncSession, entry: CabinetEntry) -> None:
+    """Delete a cabinet entry and commit.
+
+    Args:
+        session (AsyncSession): Active async database session.
+        entry (CabinetEntry): The CabinetEntry to delete.
+
+    Raises:
+        CabinetDatabaseError: If the delete or commit fails.
+    """
+    try:
+        await session.delete(entry)
+        await session.commit()
+    except SQLAlchemyError as exc:
+        logger.error(
+            "Failed to delete cabinet entry %s: %s", entry.id, exc, exc_info=True
+        )
+        raise CabinetDatabaseError() from exc

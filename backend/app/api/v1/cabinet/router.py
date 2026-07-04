@@ -16,6 +16,7 @@ from app.api.v1.cabinet.schemas import (
     CabinetListParams,
     CabinetPageOut,
     SetImportantRequest,
+    UpdateQuantityRequest,
     UsageFields,
 )
 from app.api.v1.auth.types import CurrentUser
@@ -172,6 +173,89 @@ async def set_entry_importance(
         ) from exc
     except Exception as exc:
         logger.exception("Unexpected error when toggling entry importance: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred.",
+        ) from exc
+
+
+@router.delete(
+    "/entries/{entry_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_entry(
+    entry_id: uuid.UUID,
+    current_user: CurrentUser = Security(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> None:
+    """Delete a cabinet entry owned by the current user."""
+    try:
+        await cabinet_service.delete_entry(
+            session=session,
+            user_id=current_user.id,
+            entry_id=entry_id,
+        )
+    except EntryNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=exc.message
+        ) from exc
+    except (CabinetDatabaseError, UserDatabaseError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=exc.message
+        ) from exc
+    except CabinetError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
+        ) from exc
+    except Exception as exc:
+        logger.exception("Unexpected error when deleting entry: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred.",
+        ) from exc
+
+
+@router.patch(
+    "/entries/{entry_id}/quantity",
+    response_model=CabinetEntryOut,
+)
+async def set_entry_quantity(
+    entry_id: uuid.UUID,
+    data: UpdateQuantityRequest,
+    current_user: CurrentUser = Security(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> CabinetEntryOut:
+    """Set the absolute package and partial-tablet counts on a cabinet entry owned by the current user."""
+    try:
+        return await cabinet_facade.set_entry_quantity(
+            session=session,
+            user_id=current_user.id,
+            entry_id=entry_id,
+            package_count=data.package_count,
+            partial_tablet_count=data.partial_tablet_count,
+        )
+    except (EntryNotFoundError, MedicationNotFoundError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=exc.message
+        ) from exc
+    except (InvalidPackageCountError, InvalidPartialTabletCountError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=exc.message
+        ) from exc
+    except (CabinetDatabaseError, UserDatabaseError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=exc.message
+        ) from exc
+    except CabinetInvariantError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message
+        ) from exc
+    except CabinetError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
+        ) from exc
+    except Exception as exc:
+        logger.exception("Unexpected error when setting entry quantity: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred.",

@@ -44,8 +44,14 @@ export function ProductAutocomplete({ onSelect, onClear, selected }: Props) {
 
   return (
     <div className="relative flex flex-col gap-1">
-      <label className="text-sm font-medium text-blue-400">Nazwa leku</label>
+      <label
+        htmlFor="product-name"
+        className="text-sm font-medium text-blue-400"
+      >
+        Nazwa leku
+      </label>
       <input
+        id="product-name"
         type="text"
         value={query}
         onChange={handleChange}

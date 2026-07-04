@@ -319,7 +319,7 @@ Correct the health-check path and document the deploy prerequisites so a first R
 #### Manual
 
 - [x] 3.3 `RENDER_DEPLOY_HOOK_BACKEND` / `RENDER_DEPLOY_HOOK_FRONTEND` set in GitHub secrets
-- [ ] 3.4 Publishing a test release triggers the `deploy` job in `ci-cd.yml`; both curl steps succeed and both services redeploy
+- [x] 3.4 Publishing a test release triggers the `deploy` job in `ci-cd.yml`; both curl steps succeed and both services redeploy
 - [x] 3.5 A PR does not run the `deploy` job — a83be89
 
 ### Phase 4: Fix & document render.yaml
@@ -333,5 +333,5 @@ Correct the health-check path and document the deploy prerequisites so a first R
 
 #### Manual
 
-- [ ] 4.5 Render deploy passes health check against `/api/v1/health/`
-- [ ] 4.6 A contributor can follow `docs/reference/deployment.md` to set secrets + env vars and deploy
+- [x] 4.5 Render deploy passes health check against `/api/v1/health/`
+- [x] 4.6 A contributor can follow `docs/reference/deployment.md` to set secrets + env vars and deploy

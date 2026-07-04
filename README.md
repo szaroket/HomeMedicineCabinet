@@ -45,18 +45,18 @@ App runs at the URL Vite prints (default `http://localhost:5173`).
 - [`context/foundation/prd.md`](context/foundation/prd.md) — product requirements
 - [`context/foundation/tech-stack.md`](context/foundation/tech-stack.md) — tech stack
 - [`context/foundation/infrastructure.md`](context/foundation/infrastructure.md) — deployment platform
-- [`context\foundation\roadmap.md`](context\foundation\roadmap.md) — implementation roadmap
+- [`context/foundation/roadmap.md`](context\foundation\roadmap.md) — implementation roadmap
 - [`docs/reference/deployment.md`](docs/reference/deployment.md) — CI/CD setup and release procedure
 
 ## Requitements
 
 ### Mandatory Requirements
-- [ ] Access control mechanism appropriate for the application type (e.g., login screen)
+- [x] Access control mechanism appropriate for the application type (e.g., login screen)
 - [ ] Data management — creating, reading, updating, and deleting items (CRUD) in a way that makes sense for the application domain
-- [ ] Business logic (with or without AI - OpenRouter is just one integration option)
-- [ ] Context documents (e.g., prd.md, infrastructure.md, roadmap.md)
+- [x] Business logic (with or without AI - OpenRouter is just one integration option)
+- [x] Context documents (e.g., prd.md, infrastructure.md, roadmap.md)
 - [ ] Tests — at least one test verifying functionality from the user's perspective
-- [ ] CI/CD pipeline — building the application and verifying quality automatically
+- [x] CI/CD pipeline — building the application and verifying quality automatically
 
 #### Optional (preferred):
 - [ ] Project available at a public URL, in the App Store, or as an installable package (if the application type does not allow this, omit this from the project description)

@@ -17,10 +17,14 @@ export function VariantSelect({ product, selectedId, onChange }: Props) {
 
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-sm font-medium text-blue-400">
+      <label
+        htmlFor="variant-select"
+        className="text-sm font-medium text-blue-400"
+      >
         Rozmiar opakowania
       </label>
       <select
+        id="variant-select"
         value={selectedId}
         onChange={(e) => {
           const v = variants?.find((x) => x.id === e.target.value);
