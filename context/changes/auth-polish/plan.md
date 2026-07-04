@@ -205,10 +205,10 @@ None — no schema/data/backend changes.
 
 #### Automated
 
-- [ ] 1.1 Type check + build passes: `npm run build`
-- [ ] 1.2 Lint passes: `npm run lint`
-- [ ] 1.3 Format check passes: `npx prettier --check src/`
-- [ ] 1.4 Schema unit test passes: `npm test`
+- [x] 1.1 Type check + build passes: `npm run build`
+- [x] 1.2 Lint passes: `npm run lint`
+- [x] 1.3 Format check passes: `npx prettier --check src/`
+- [x] 1.4 Schema unit test passes: `npm test`
 
 #### Manual
 
