@@ -1,10 +1,10 @@
 ---
 change_id: auth-polish
 title: Auth polish
-status: impl_reviewed
+status: archived
 created: 2026-07-04
 updated: 2026-07-04
-archived_at: null
+archived_at: 2026-07-04T21:00:49Z
 ---
 
 ## Notes
