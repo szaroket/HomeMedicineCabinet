@@ -435,13 +435,13 @@ strings are gone.
 
 #### Automated
 
-- [x] 2.1 Workflow YAML parses without error after edits
-- [x] 2.2 Preflight shell script passes `bash -n`
+- [x] 2.1 Workflow YAML parses without error after edits — e5fcc22
+- [x] 2.2 Preflight shell script passes `bash -n` — e5fcc22
 
 #### Manual
 
-- [ ] 2.3 With secrets set, frontend-e2e runs green; Playwright boots both servers; teardown sweeps rows
-- [ ] 2.4 With a secret unset, the job fails fast at preflight naming the missing secret
+- [x] 2.3 With secrets set, frontend-e2e runs green; Playwright boots both servers; teardown sweeps rows
+- [x] 2.4 With a secret unset, the job fails fast at preflight naming the missing secret
 - [ ] 2.5 On induced failure, the Playwright report artifact uploads
 - [ ] 2.6 deploy waits on frontend-e2e before starting
 
