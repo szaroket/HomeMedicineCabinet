@@ -103,6 +103,7 @@ The developer deployed FastAPI to Render's free tier, thrilled by the $0 cost. F
    - Add environment variable: `VITE_API_URL=<your-render-web-service-url>`
 4. **Update FastAPI CORS** to allow the Render Static Site URL (`.onrender.com` domain) in `allow_origins`.
 5. **Wire GitHub Actions**: add `RENDER_API_KEY` and service IDs to GitHub Secrets; use the Render deploy hook URL (`https://api.render.com/deploy/<hook-id>?key=<key>`) in your CI pipeline's deploy step.
+6. **SPA history-fallback rewrite**: `render.yaml` defines a `routes:` rewrite (`/*` → `/index.html`) on the static service so client-side routes (e.g. `/cabinet`) survive a refresh instead of hitting Render's static 404. If the Static Site was created manually in the dashboard rather than synced from this Blueprint, `render.yaml` alone won't apply it — set it once manually: **Static Site → Redirects/Rewrites → source `/*`, destination `/index.html`, action Rewrite**.
 
 ## Out of Scope
 
