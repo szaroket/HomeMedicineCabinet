@@ -205,14 +205,14 @@ None — no schema/data/backend changes.
 
 #### Automated
 
-- [x] 1.1 Type check + build passes: `npm run build`
-- [x] 1.2 Lint passes: `npm run lint`
-- [x] 1.3 Format check passes: `npx prettier --check src/`
-- [x] 1.4 Schema unit test passes: `npm test`
+- [x] 1.1 Type check + build passes: `npm run build` — 33f284c
+- [x] 1.2 Lint passes: `npm run lint` — 33f284c
+- [x] 1.3 Format check passes: `npx prettier --check src/` — 33f284c
+- [x] 1.4 Schema unit test passes: `npm test` — 33f284c
 
 #### Manual
 
-- [ ] 1.5 Mismatched passwords show the Polish error and block submission
-- [ ] 1.6 Correcting the confirm field clears the error live
-- [ ] 1.7 Matching valid registration submits and navigates to `/`
-- [ ] 1.8 `/auth/register` request body contains only `email` + `password`
+- [x] 1.5 Mismatched passwords show the Polish error and block submission — 33f284c
+- [x] 1.6 Correcting the confirm field clears the error live — 33f284c
+- [x] 1.7 Matching valid registration submits and navigates to `/` — 33f284c
+- [x] 1.8 `/auth/register` request body contains only `email` + `password` — 33f284c
