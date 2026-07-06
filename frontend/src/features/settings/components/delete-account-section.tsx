@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/store";
 import { useDeleteAccount } from "@/features/settings/api/settings-queries";
 
@@ -9,6 +9,14 @@ export function DeleteAccountSection() {
   const [confirmValue, setConfirmValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const inputId = useId();
+  const headingId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Move focus into the dialog when it opens so keyboard/AT users land on the
+  // confirm field and the Escape handler below receives the key events.
+  useEffect(() => {
+    if (open) inputRef.current?.focus();
+  }, [open]);
 
   const canConfirm = confirmValue === user?.email;
 
@@ -65,10 +73,17 @@ export function DeleteAccountSection() {
           <div
             role="dialog"
             aria-modal="true"
+            aria-labelledby={headingId}
             className="w-full max-w-sm rounded-lg border border-slate-600 bg-slate-800 p-6 shadow-xl"
             onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") closeDialog();
+            }}
           >
-            <h2 className="mb-3 text-lg font-semibold text-white">
+            <h2
+              id={headingId}
+              className="mb-3 text-lg font-semibold text-white"
+            >
               Usuń konto
             </h2>
             <p className="text-sm text-slate-300">
@@ -85,6 +100,7 @@ export function DeleteAccountSection() {
               </label>
               <input
                 id={inputId}
+                ref={inputRef}
                 type="email"
                 value={confirmValue}
                 onChange={(event) => setConfirmValue(event.target.value)}

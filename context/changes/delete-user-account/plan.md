@@ -394,6 +394,22 @@ enables; on confirm, run the mutation and redirect.
     udało się usunąć konta.") and keep the user on the page with their session
     intact.
 
+> **Addendum (impl):** As built, both terminal states redirect to a dedicated
+> `/account-deleted` page (not `/login`) via a **hard** `window.location.href`
+> rather than a router `navigate()`, and teardown in `useDeleteAccount` uses a
+> new storage-only `clearStoredToken()` (`features/auth/store`) instead of
+> `clearSession()`. Reason: `ProtectedLayout` renders its own
+> `<Navigate to="/login" replace />` the instant the token *React state* flips
+> null, which races a client-side navigate and flashes the login screen.
+> `clearStoredToken()` clears storage without touching React state, and the hard
+> redirect remounts the whole app — so there is no stale state to clean up. The
+> partial-deletion (502 `AccountDeletionError`) notice is passed via a
+> `?partial=1` query param on `/account-deleted`, not router state. The success
+> notice lives on the `/account-deleted` page itself. Status branching lives in
+> the hook (`onSuccess` + `onError` 502 → teardown; 503/other → keep session)
+> and the component (redirect targets); see `settings-queries.ts:32-44` and
+> `delete-account-section.tsx:27-43` for the inline rationale.
+
 ### Success Criteria:
 
 #### Automated Verification:
