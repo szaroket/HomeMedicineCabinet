@@ -6,6 +6,7 @@ import {
   type UpdatePreferencesPayload,
 } from "@/features/settings/api/settings-api";
 import { clearStoredToken } from "@/features/auth/store";
+import { AuthError } from "@/lib/errors";
 
 export const settingsKeys = {
   preferences: () => ["settings", "preferences"] as const,
@@ -45,7 +46,7 @@ export function useUpdatePreferences() {
 export function useDeleteAccount() {
   const queryClient = useQueryClient();
 
-  return useMutation<void, Response>({
+  return useMutation<void, Response | AuthError>({
     mutationFn: deleteAccount,
     onSuccess: () => {
       clearStoredToken();

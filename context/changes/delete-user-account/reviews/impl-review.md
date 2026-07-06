@@ -40,7 +40,7 @@
 - **Location**: backend/tests/integration/users/test_delete_account.py
 - **Detail**: On a 502 (Supabase delete fails after local commit) the auth identity + refresh-token cookie survive; recovery relies on re-login idempotently re-provisioning empty rows and the user re-triggering delete. That documented recovery loop is not directly exercised — the integration suite covers 204 / 401 / 503 / 502 mapping but not "re-login after 502, then re-delete succeeds."
 - **Fix**: Add an integration test asserting a user can re-login after a 502 and a second delete completes to 204 (idempotent recovery).
-- **Decision**: PENDING
+- **Decision**: FIXED — added `test_delete_account_idempotent_recovery_after_502` in backend/tests/integration/users/test_delete_account.py (side_effect [AccountDeletionError, None]; asserts 502 → local rows gone → re-provision same identity → re-delete 204). Ruff clean; execution blocked locally by L-001 OpenSSL applink crash (whole integration suite), to be verified in CI.
 
 ### F2 — Broadest log sink on the admin delete path
 
@@ -50,7 +50,7 @@
 - **Location**: backend/app/db/supabase_auth.py:87-89
 - **Detail**: Generic `except Exception` logs with `exc_info=True` on the admin (service-role) path. Verified safe today — supabase-py/httpx exceptions do not embed the Authorization header/key in message or traceback locals. Flagged only because it is the widest log sink on the sensitive path; worth an eye if the Supabase client changes its exception surface.
 - **Fix**: None required. Keep the note; no key currently leaks.
-- **Decision**: PENDING
+- **Decision**: SKIPPED — accepted as-is; no key leaks today, no change warranted.
 
 ### F3 — useDeleteAccount error type narrower than reality
 
@@ -60,4 +60,4 @@
 - **Location**: frontend/src/features/settings/api/settings-queries.ts:48
 - **Detail**: Typed `useMutation<void, Response>`, but `apiFetch` can also reject with `AuthError` (refresh failure), not a `Response`. Behavior is correct — the `instanceof Response` guard skips teardown and the global `AuthError` subscriber handles it — the declared error type is just narrower than the real union. Cosmetic.
 - **Fix**: Widen the mutation error type to `Response | AuthError` (or `unknown`) to match runtime.
-- **Decision**: PENDING
+- **Decision**: FIXED — `useMutation<void, Response | AuthError>` + `import { AuthError } from "@/lib/errors"` in settings-queries.ts. ESLint + tsc --noEmit clean.
