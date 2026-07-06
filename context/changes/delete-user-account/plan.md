@@ -510,10 +510,10 @@ not a test failure.
 
 #### Automated
 
-- [ ] 3.1 Build passes (`npm run build`)
-- [ ] 3.2 Lint passes (`npm run lint`)
-- [ ] 3.3 Format check passes (prettier)
-- [ ] 3.4 Unit test passes for the email-type-to-confirm gate
+- [x] 3.1 Build passes (`npm run build`)
+- [x] 3.2 Lint passes (`npm run lint`)
+- [x] 3.3 Format check passes (prettier)
+- [x] 3.4 Unit test passes for the email-type-to-confirm gate
 
 #### Manual
 

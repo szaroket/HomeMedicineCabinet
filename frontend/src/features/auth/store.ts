@@ -86,3 +86,12 @@ export function getStoredToken(): string | null {
 export function setStoredToken(token: string): void {
   localStorage.setItem(TOKEN_KEY, token);
 }
+
+// Clears the token without touching React state. Callers that are about to do
+// a hard browser redirect (e.g. account deletion) use this instead of
+// `clearSession()` — flipping React state first would re-render ProtectedLayout
+// with a null token and flash its own client-side `<Navigate to="/login" />`
+// before the hard redirect takes over.
+export function clearStoredToken(): void {
+  localStorage.removeItem(TOKEN_KEY);
+}
