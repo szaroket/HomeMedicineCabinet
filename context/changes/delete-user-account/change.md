@@ -1,7 +1,7 @@
 ---
 change_id: delete-user-account
 title: Delete user account
-status: implemented
+status: impl_reviewed
 created: 2026-07-04
 updated: 2026-07-06
 archived_at: null
