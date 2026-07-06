@@ -489,15 +489,15 @@ not a test failure.
 
 #### Automated
 
-- [x] 2.1 Linting passes (ruff check + format)
-- [x] 2.2 Unit tests pass for `delete_by_user`, `delete_user_rows`, and facade ordering
-- [x] 2.3 Integration tests pass for `DELETE /api/v1/users/me` (204, 401, 503, 502 mapping)
-- [x] 2.4 Backend typecheck passes
+- [x] 2.1 Linting passes (ruff check + format) — bf15ceb
+- [x] 2.2 Unit tests pass for `delete_by_user`, `delete_user_rows`, and facade ordering — bf15ceb
+- [x] 2.3 Integration tests pass for `DELETE /api/v1/users/me` (204, 401, 503, 502 mapping) — bf15ceb
+- [x] 2.4 Backend typecheck passes — bf15ceb
 
 #### Manual
 
-- [x] 2.5 Real DB + Supabase: account rows removed, Supabase Auth user removed, `medication_registry` untouched
-- [x] 2.6 Re-login with deleted credentials fails
+- [x] 2.5 Real DB + Supabase: account rows removed, Supabase Auth user removed, `medication_registry` untouched — bf15ceb
+- [x] 2.6 Re-login with deleted credentials fails — bf15ceb
 
 ### Phase 3: Frontend — Settings delete-account UX
 
