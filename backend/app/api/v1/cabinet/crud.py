@@ -4,7 +4,7 @@ import logging
 import uuid
 from datetime import date, timedelta
 
-from sqlalchemy import Float, Integer, case, cast, func, literal, select, text
+from sqlalchemy import Float, Integer, case, cast, delete, func, literal, select, text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlmodel import col
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -559,5 +559,32 @@ async def delete_entry(session: AsyncSession, entry: CabinetEntry) -> None:
     except SQLAlchemyError as exc:
         logger.error(
             "Failed to delete cabinet entry %s: %s", entry.id, exc, exc_info=True
+        )
+        raise CabinetDatabaseError() from exc
+
+
+async def delete_by_user(session: AsyncSession, user_id: uuid.UUID) -> None:
+    """Delete all cabinet entries owned by a user, on the shared session.
+
+    Executes the delete statement only — no commit, no persist. Callers own
+    the transaction (see the users-domain facade's account-deletion flow).
+
+    Args:
+        session (AsyncSession): Active async database session.
+        user_id (uuid.UUID): UUID of the user whose entries are being removed.
+
+    Raises:
+        CabinetDatabaseError: If the delete statement fails.
+    """
+    try:
+        await session.execute(
+            delete(CabinetEntry).where(col(CabinetEntry.user_id) == user_id)
+        )
+    except SQLAlchemyError as exc:
+        logger.error(
+            "Failed to delete cabinet entries for user %s: %s",
+            user_id,
+            exc,
+            exc_info=True,
         )
         raise CabinetDatabaseError() from exc

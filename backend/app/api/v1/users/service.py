@@ -78,6 +78,19 @@ async def update_preferences(
     )
 
 
+async def delete_user_rows(session: AsyncSession, user_id: uuid.UUID) -> None:
+    """Delete a user's preferences row and users row, on the shared session.
+
+    Args:
+        session (AsyncSession): Active async database session.
+        user_id (uuid.UUID): UUID of the user being deleted.
+
+    Raises:
+        UserDatabaseError: If either delete statement fails.
+    """
+    await crud.delete_user_rows(session=session, user_id=user_id)
+
+
 async def get_effective_preferences(
     session: AsyncSession,
     user_id: uuid.UUID,

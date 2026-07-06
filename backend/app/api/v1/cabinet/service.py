@@ -1038,6 +1038,19 @@ async def delete_entry(
     await crud.delete_entry(session=session, entry=entry)
 
 
+async def delete_by_user(session: AsyncSession, user_id: uuid.UUID) -> None:
+    """Delete all cabinet entries owned by a user, on the shared session.
+
+    Args:
+        session (AsyncSession): Active async database session.
+        user_id (uuid.UUID): UUID of the user whose entries are being removed.
+
+    Raises:
+        CabinetDatabaseError: If the delete statement fails.
+    """
+    await crud.delete_by_user(session=session, user_id=user_id)
+
+
 async def _merge_and_commit(
     *,
     session: AsyncSession,

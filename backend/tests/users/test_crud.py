@@ -8,6 +8,7 @@ from sqlalchemy import Result
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.v1.users.crud import (
+    delete_user_rows,
     get_user_preferences,
     insert_preferences,
     update_min_package_count,
@@ -158,5 +159,28 @@ class TestInsertPreferences:
         ):
             with pytest.raises(UserDatabaseError) as exc_info:
                 await insert_preferences(session=mock_session, prefs=prefs)
+
+        assert exc_info.value.__cause__ is original
+
+
+class TestDeleteUserRows:
+    async def test_success_issues_both_delete_statements(self, mock_session: AsyncMock):
+        await delete_user_rows(mock_session, _USER_ID)
+
+        assert mock_session.execute.call_count == 2
+        mock_session.commit.assert_not_called()
+
+    async def test_db_error_raises_user_database_error(self, mock_session: AsyncMock):
+        mock_session.execute.side_effect = SQLAlchemyError("lock timeout")
+
+        with pytest.raises(UserDatabaseError):
+            await delete_user_rows(mock_session, _USER_ID)
+
+    async def test_db_error_is_chained(self, mock_session: AsyncMock):
+        original = SQLAlchemyError("lock timeout")
+        mock_session.execute.side_effect = original
+
+        with pytest.raises(UserDatabaseError) as exc_info:
+            await delete_user_rows(mock_session, _USER_ID)
 
         assert exc_info.value.__cause__ is original

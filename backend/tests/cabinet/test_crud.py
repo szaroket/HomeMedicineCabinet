@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.api.v1.cabinet.crud import (
     _build_base_query,
+    delete_by_user,
     delete_entry,
     find_entry,
     get_registry_by_id,
@@ -316,3 +317,28 @@ class TestDeleteEntry:
 
         with pytest.raises(CabinetDatabaseError):
             await delete_entry(mock_session, entry)
+
+
+class TestDeleteByUser:
+    async def test_success_issues_delete_statement(self, mock_session: AsyncMock):
+        await delete_by_user(mock_session, _USER_ID)
+
+        mock_session.execute.assert_called_once()
+        mock_session.commit.assert_not_called()
+
+    async def test_db_error_raises_cabinet_database_error(
+        self, mock_session: AsyncMock
+    ):
+        mock_session.execute.side_effect = SQLAlchemyError("lock timeout")
+
+        with pytest.raises(CabinetDatabaseError):
+            await delete_by_user(mock_session, _USER_ID)
+
+    async def test_db_error_is_chained(self, mock_session: AsyncMock):
+        original = SQLAlchemyError("lock timeout")
+        mock_session.execute.side_effect = original
+
+        with pytest.raises(CabinetDatabaseError) as exc_info:
+            await delete_by_user(mock_session, _USER_ID)
+
+        assert exc_info.value.__cause__ is original
