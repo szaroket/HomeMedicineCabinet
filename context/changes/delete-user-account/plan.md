@@ -276,6 +276,13 @@ atomicity. (2) on local success (after the `persist` block commits), call
 `UserDatabaseError` (→ 503) and `AccountDeletionError` (→ 502) to the router. Log
 start and completion with the user id.
 
+> **Addendum (impl):** As built, the facade calls thin pass-through wrappers in
+> each domain's `service.py` (`cabinet_service.delete_by_user`,
+> `users_service.delete_user_rows`) rather than reaching into `crud` directly.
+> This keeps the router/facade → service → crud chain uniform and is
+> AGENTS-compliant (the facade may call foreign services or cruds); `persist`
+> commit-ownership is unchanged (the wrappers do not commit).
+
 #### 4. Delete-account endpoint
 
 **File**: `backend/app/api/v1/users/router.py`

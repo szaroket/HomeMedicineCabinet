@@ -32,7 +32,7 @@
   - Tradeoff: One new seeded-DB test file; can't be re-run from the agent's Bash shell (L-001), only PowerShell/CI.
   - Confidence: HIGH — the fixture pattern already exists in tests/integration/cabinet/.
   - Blind spot: Haven't confirmed a `seed_preferences` fixture exists; may need to insert the prefs row inline.
-- **Decision**: PENDING
+- **Decision**: FIXED — added `tests/integration/users/test_delete_account.py` (2 tests: cascade + registry survival; other-user isolation). `seed_user_preferences` fixture existed, used directly. Ruff + collection pass; full run is CI/PowerShell-only (L-001).
 
 ### F2 — Facade calls service wrappers, not crud as the plan specified
 
@@ -42,4 +42,4 @@
 - **Location**: backend/app/api/v1/users/facade.py:41-44, cabinet/service.py:1041, users/service.py:81
 - **Detail**: Phase 2 §3 said the facade would "call cabinet.crud.delete_by_user then users.crud.delete_user_rows". The implementation instead added two thin pass-through service functions and routes facade → service → crud (service.py + test_service.py were unplanned edits). This is fully AGENTS-compliant — line 72 permits the facade to call "services or cruds from other domains," and keeping the router/facade → service → crud chain uniform is arguably cleaner than reaching into a foreign crud. The persist() commit-ownership the plan cared about is preserved (wrappers don't commit). Benign, arguably an improvement; noted only so the plan text isn't mistaken for ground truth later.
 - **Fix**: None required. Optionally add a one-line addendum to Phase 2 §3 noting the facade calls the service layer.
-- **Decision**: PENDING
+- **Decision**: FIXED — added an "Addendum (impl)" note under Phase 2 §3 in plan.md recording that the facade calls service wrappers, not crud directly.
