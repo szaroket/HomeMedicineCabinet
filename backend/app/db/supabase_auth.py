@@ -5,11 +5,11 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from supabase import Client
-    from supabase_auth.types import AuthResponse
+from supabase import AuthApiError, create_client
 
+from app.core.config import settings
 from app.utilities.errors import (
+    AccountDeletionError,
     DuplicateEmailError,
     InvalidCredentialsError,
     InvalidEmailError,
@@ -19,9 +19,14 @@ from app.utilities.errors import (
     WeakPasswordError,
 )
 
+if TYPE_CHECKING:
+    from supabase import Client
+    from supabase_auth.types import AuthResponse
+
 logger = logging.getLogger("app.db.supabase_auth")
 
 _client: "Client | None" = None
+_admin_client: "Client | None" = None
 
 
 def get_supabase() -> "Client":
@@ -32,12 +37,56 @@ def get_supabase() -> "Client":
     """
     global _client
     if _client is None:
-        from supabase import create_client
-
-        from app.core.config import settings
-
         _client = create_client(settings.supabase_url, settings.supabase_anon_key)
     return _client
+
+
+def get_supabase_admin() -> "Client":
+    """Return the module-level Supabase admin client, initialising it on first call.
+
+    The admin client is authenticated with the service-role key and can
+    perform privileged operations (e.g. `auth.admin.delete_user`). It is kept
+    separate from the anon client returned by `get_supabase` and must never be
+    exposed to the frontend.
+
+    Returns:
+        Client: The shared, lazily created service-role ``supabase-py`` client instance.
+    """
+    global _admin_client
+    if _admin_client is None:
+        _admin_client = create_client(
+            settings.supabase_url, settings.supabase_service_role_key
+        )
+    return _admin_client
+
+
+def delete_user(user_id: str) -> None:
+    """Delete a Supabase Auth user via the admin API, mapping failures to domain errors.
+
+    A missing auth user (already deleted) is treated as a benign, idempotent
+    no-op rather than an error.
+
+    Args:
+        user_id (str): The Supabase Auth user id to delete.
+
+    Raises:
+        AccountDeletionError: If Supabase rejects the deletion for any reason
+            other than the user already being gone.
+    """
+    try:
+        get_supabase_admin().auth.admin.delete_user(user_id)
+    except AuthApiError as exc:
+        if exc.status == 404:
+            logger.warning(
+                "Supabase delete_user: user %s already absent (treated as deleted)",
+                user_id,
+            )
+            return
+        logger.error("Supabase delete_user failed (code=%s): %s", exc.code, exc)
+        raise AccountDeletionError() from exc
+    except Exception as exc:
+        logger.error("Unexpected error during delete_user: %s", exc, exc_info=True)
+        raise AccountDeletionError() from exc
 
 
 def sign_up(email: str, password: str) -> "AuthResponse":
@@ -57,8 +106,6 @@ def sign_up(email: str, password: str) -> "AuthResponse":
         InvalidEmailError: If the email is invalid or not authorised.
         RegistrationError: If Supabase rejects the sign-up for any other reason.
     """
-    from supabase import AuthApiError
-
     try:
         return get_supabase().auth.sign_up({"email": email, "password": password})
     except AuthApiError as e:
@@ -91,8 +138,6 @@ def sign_in_with_password(email: str, password: str) -> "AuthResponse":
         RateLimitError: If Supabase rate-limits the request.
         InvalidCredentialsError: If the email/password combination is incorrect.
     """
-    from supabase import AuthApiError
-
     try:
         return get_supabase().auth.sign_in_with_password(
             {"email": email, "password": password}
@@ -120,8 +165,6 @@ def refresh_session(refresh_token: str) -> "AuthResponse":
         RateLimitError: If Supabase rate-limits the request.
         SessionExpiredError: If the refresh token is invalid or expired.
     """
-    from supabase import AuthApiError
-
     try:
         return get_supabase().auth.refresh_session(refresh_token)
     except AuthApiError as e:

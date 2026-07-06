@@ -24,6 +24,7 @@ from app.api.v1.cabinet.service import (
     compute_usage_view,
     daily_consumption_rate,
     days_of_supply_from_rate,
+    delete_by_user,
     delete_entry,
     is_below_minimum,
     list_entries,
@@ -1649,3 +1650,14 @@ class TestDeleteEntry:
             await delete_entry(
                 session=mock_session, user_id=_USER_ID, entry_id=_ENTRY_ID
             )
+
+
+class TestDeleteByUser:
+    async def test_delegates_to_crud(self, mock_session: AsyncMock, mock_crud):
+        mock_crud.delete_by_user = AsyncMock(return_value=None)
+
+        await delete_by_user(session=mock_session, user_id=_USER_ID)
+
+        mock_crud.delete_by_user.assert_called_once_with(
+            session=mock_session, user_id=_USER_ID
+        )

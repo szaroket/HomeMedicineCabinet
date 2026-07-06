@@ -12,6 +12,9 @@ class Settings(BaseSettings):
         database_url (str): Async Postgres connection string (asyncpg).
         supabase_url (str): Base URL of the Supabase project (e.g. https://xxx.supabase.co).
         supabase_anon_key (str): Supabase anon/public API key.
+        supabase_service_role_key (str): Supabase service-role API key. Grants
+            full admin access (e.g. `auth.admin.delete_user`); server-only,
+            never sent to or referenced by the frontend, never logged.
         jwt_audience (str): Expected `aud` claim in Supabase JWTs.
         jwt_algorithms (list[str]): Allowed signing algorithms for JWT verification.
         auth_cookie_name (str): Name of the refresh-token cookie.
@@ -28,6 +31,7 @@ class Settings(BaseSettings):
     database_url: str
     supabase_url: str
     supabase_anon_key: str
+    supabase_service_role_key: str
 
     jwt_audience: str = "authenticated"
     jwt_algorithms: list[str] = ["ES256", "RS256"]

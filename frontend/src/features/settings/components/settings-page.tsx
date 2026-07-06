@@ -10,6 +10,7 @@ import {
   updatePreferencesSchema,
   type UpdatePreferencesFormValues,
 } from "@/features/settings/schemas/settings-schemas";
+import { DeleteAccountSection } from "@/features/settings/components/delete-account-section";
 
 export function SettingsPage() {
   const { data: prefs, isLoading, isError } = usePreferences();
@@ -113,6 +114,8 @@ export function SettingsPage() {
             </button>
           </form>
         )}
+
+        <DeleteAccountSection />
       </div>
     </AppLayout>
   );
