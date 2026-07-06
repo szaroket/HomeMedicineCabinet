@@ -1,4 +1,4 @@
-import { apiJson } from "@/lib/api-client";
+import { apiJson, apiFetch } from "@/lib/api-client";
 
 export interface UserPreferences {
   expiry_threshold_days: number;
@@ -22,4 +22,9 @@ export function updatePreferences(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
+}
+
+export async function deleteAccount(): Promise<void> {
+  const res = await apiFetch("/users/me", { method: "DELETE" });
+  if (!res.ok) throw res;
 }

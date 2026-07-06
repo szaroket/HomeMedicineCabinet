@@ -1,10 +1,10 @@
 ---
-change_id: spa-refresh-fallback
-title: Spa refresh fallback
-status: impl_reviewed
+change_id: auth-polish
+title: Auth polish
+status: archived
 created: 2026-07-04
 updated: 2026-07-04
-archived_at: null
+archived_at: 2026-07-04T21:00:49Z
 ---
 
 ## Notes

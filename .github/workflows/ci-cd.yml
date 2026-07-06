@@ -94,6 +94,7 @@ jobs:
           DATABASE_URL: "postgresql+asyncpg://user:pass@localhost/testdb"
           SUPABASE_URL: "https://placeholder.supabase.co"
           SUPABASE_ANON_KEY: "placeholder"
+          SUPABASE_SERVICE_ROLE_KEY: "placeholder"
         run: uv run coverage run -m pytest --ignore=tests/db --ignore=tests/integration
 
       - name: Check coverage threshold
@@ -209,6 +210,7 @@ jobs:
           DATABASE_URL: "postgresql+asyncpg://user:pass@localhost/testdb"
           SUPABASE_URL: "https://placeholder.supabase.co"
           SUPABASE_ANON_KEY: "placeholder"
+          SUPABASE_SERVICE_ROLE_KEY: "placeholder"
         run: uv run pytest tests/integration
 
   frontend-e2e:
@@ -221,6 +223,7 @@ jobs:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
       E2E_DATABASE_URL: ${{ secrets.E2E_DATABASE_URL }}
     steps:
@@ -229,7 +232,7 @@ jobs:
       - name: Verify required E2E secrets are present
         run: |
           missing=()
-          for name in DATABASE_URL SUPABASE_URL SUPABASE_ANON_KEY E2E_TEST_PASSWORD E2E_DATABASE_URL; do
+          for name in DATABASE_URL SUPABASE_URL SUPABASE_ANON_KEY SUPABASE_SERVICE_ROLE_KEY E2E_TEST_PASSWORD E2E_DATABASE_URL; do
             [ -z "${!name}" ] && missing+=("$name")
           done
           if [ ${#missing[@]} -ne 0 ]; then

@@ -7,7 +7,11 @@ from pytest_mock import MockerFixture
 
 from app.api.v1.users.models import UserPreferences
 from app.api.v1.users.schemas import UserPreferencesOut
-from app.api.v1.users.service import get_effective_preferences, update_preferences
+from app.api.v1.users.service import (
+    delete_user_rows,
+    get_effective_preferences,
+    update_preferences,
+)
 from app.utilities.const import (
     DEFAULT_CLOSE_TO_FINISH_THRESHOLD_DAYS,
     DEFAULT_EXPIRY_THRESHOLD_DAYS,
@@ -110,3 +114,18 @@ class TestUpdatePreferences:
         assert isinstance(result, UserPreferencesOut)
         assert result.min_package_count == 5
         insert_mock.assert_awaited_once()
+
+
+class TestDeleteUserRows:
+    async def test_delegates_to_crud(
+        self, mock_session: AsyncMock, mocker: MockerFixture
+    ):
+        crud_mock = mocker.patch(
+            "app.api.v1.users.service.crud.delete_user_rows",
+            autospec=True,
+            return_value=None,
+        )
+
+        await delete_user_rows(session=mock_session, user_id=_USER_ID)
+
+        crud_mock.assert_awaited_once_with(session=mock_session, user_id=_USER_ID)

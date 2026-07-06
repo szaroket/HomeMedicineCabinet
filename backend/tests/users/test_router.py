@@ -10,9 +10,14 @@ from app.utilities.const import (
     DEFAULT_CLOSE_TO_FINISH_THRESHOLD_DAYS,
     DEFAULT_EXPIRY_THRESHOLD_DAYS,
 )
-from app.utilities.errors import UserDatabaseError
+from app.utilities.errors import (
+    AccountDeletionError,
+    CabinetDatabaseError,
+    UserDatabaseError,
+)
 
 PREFERENCES_URL = "/api/v1/users/preferences"
+DELETE_ACCOUNT_URL = "/api/v1/users/me"
 
 _STORED_PREFS = UserPreferencesOut(
     expiry_threshold_days=14,
@@ -115,3 +120,64 @@ class TestPatchPreferencesEndpoint:
             status.HTTP_401_UNAUTHORIZED,
             status.HTTP_403_FORBIDDEN,
         )
+
+
+class TestDeleteAccountEndpoint:
+    async def test_missing_token_returns_401_or_403(self, client: AsyncClient):
+        response = await client.delete(DELETE_ACCOUNT_URL)
+        assert response.status_code in (
+            status.HTTP_401_UNAUTHORIZED,
+            status.HTTP_403_FORBIDDEN,
+        )
+
+    async def test_success_returns_204(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.users.router.users_facade.delete_account",
+            autospec=True,
+            return_value=None,
+        )
+
+        response = await authed_client.delete(DELETE_ACCOUNT_URL)
+
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    async def test_user_database_error_returns_503(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.users.router.users_facade.delete_account",
+            autospec=True,
+            side_effect=UserDatabaseError(),
+        )
+
+        response = await authed_client.delete(DELETE_ACCOUNT_URL)
+
+        assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+
+    async def test_cabinet_database_error_returns_503(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.users.router.users_facade.delete_account",
+            autospec=True,
+            side_effect=CabinetDatabaseError(),
+        )
+
+        response = await authed_client.delete(DELETE_ACCOUNT_URL)
+
+        assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+
+    async def test_account_deletion_error_returns_502(
+        self, authed_client: AsyncClient, mocker: MockerFixture
+    ):
+        mocker.patch(
+            "app.api.v1.users.router.users_facade.delete_account",
+            autospec=True,
+            side_effect=AccountDeletionError(),
+        )
+
+        response = await authed_client.delete(DELETE_ACCOUNT_URL)
+
+        assert response.status_code == status.HTTP_502_BAD_GATEWAY
