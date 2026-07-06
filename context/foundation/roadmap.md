@@ -3,7 +3,7 @@ project: "Home Medicine Cabinet"
 version: 1
 status: draft
 created: 2026-06-03
-updated: 2026-07-04
+updated: 2026-07-06
 prd_version: 1
 main_goal: low-complexity
 top_blocker: skills
@@ -42,7 +42,7 @@ A single adult can't reliably track their home medication inventory — what the
 | F-01b | auth-polish                 | (foundation) confirm-password field on the registration form so users cannot submit a typo in their password | F-01 | FR-001 | done    |
 | F-05 | backend-logging              | (foundation) structured logging across the FastAPI backend — central config, request/response middleware, consistent levels, meaningful logs at service/crud boundaries, no secrets/PII logged | F-01, F-02 | NFR (observability — baseline gap) | done |
 | F-06 | spa-refresh-fallback        | (foundation) refreshing or deep-linking any client-side route on the deployed Render static site serves the app instead of a 404 | F-04 | NFR (data persists across sessions and devices — stable deployed environment) | done |
-| S-09 | delete-user-account          | delete their own account and all associated data (cabinet entries, preferences) permanently, after explicit confirmation | F-01, F-02 | Access Control, NFR data-isolation | proposed |
+| S-09 | delete-user-account          | delete their own account and all associated data (cabinet entries, preferences) permanently, after explicit confirmation | F-01, F-02 | Access Control, NFR data-isolation | done |
 
 ## Streams
 
@@ -267,7 +267,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Whether deletion cascades via DB foreign keys or requires explicit per-table cleanup before removing the Supabase Auth user. Block: no — resolve during `/10x-plan`.
 - **Risk:** Irreversible operation — confirmation UX must make the consequence unambiguous. Cascade deletion must be verified against every table keyed by user id to avoid orphaned rows.
-- **Status:** proposed
+- **Status:** done
 
 ## Backlog Handoff
 
@@ -323,3 +323,4 @@ _(none — all questions resolved before roadmap finalisation)_
 - **S-03: user can increment or decrement package count, update the partial tablet count of an opened package, and delete an entry with explicit confirmation; decrementing to zero deletes non-categorised entries (with confirmation pop-up) and keeps important/used entries at zero so the user can restock.** — Archived 2026-07-04 → `context/archive/2026-07-02-manage-cabinet-entry/`. Lesson: —.
 - **F-01b: (foundation) confirm-password field on the registration form so users cannot submit a typo in their password** — Archived 2026-07-04 → `context/archive/2026-07-04-auth-polish/`. Lesson: —.
 - **F-06: (foundation) refreshing or deep-linking any client-side route on the deployed Render static site serves the app instead of a 404** — Archived 2026-07-04 → `context/archive/2026-07-04-spa-refresh-fallback/`. Lesson: —.
+- **S-09: user can delete their own account from a settings/account screen, behind an explicit confirmation step (e.g. type-to-confirm or a confirmation dialog); on confirmation, the Supabase Auth user and all associated data (cabinet entries, user preferences, dismissed notifications) are permanently deleted; the user is logged out and returned to the entry screen.** — Archived 2026-07-06 → `context/archive/2026-07-04-delete-user-account/`. Lesson: —.
