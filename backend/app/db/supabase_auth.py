@@ -75,18 +75,18 @@ def delete_user(user_id: str) -> None:
     """
     try:
         get_supabase_admin().auth.admin.delete_user(user_id)
-    except AuthApiError as e:
-        if e.status == 404:
+    except AuthApiError as exc:
+        if exc.status == 404:
             logger.warning(
                 "Supabase delete_user: user %s already absent (treated as deleted)",
                 user_id,
             )
             return
-        logger.error("Supabase delete_user failed (code=%s): %s", e.code, e)
-        raise AccountDeletionError() from e
-    except Exception as e:
-        logger.error("Unexpected error during delete_user: %s", e, exc_info=True)
-        raise AccountDeletionError() from e
+        logger.error("Supabase delete_user failed (code=%s): %s", exc.code, exc)
+        raise AccountDeletionError() from exc
+    except Exception as exc:
+        logger.error("Unexpected error during delete_user: %s", exc, exc_info=True)
+        raise AccountDeletionError() from exc
 
 
 def sign_up(email: str, password: str) -> "AuthResponse":

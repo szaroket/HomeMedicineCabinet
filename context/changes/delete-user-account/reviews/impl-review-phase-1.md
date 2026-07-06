@@ -35,7 +35,7 @@
 - **Location**: backend/app/db/supabase_auth.py:78, 88
 - **Detail**: New `delete_user` uses `except AuthApiError as e:` and `except Exception as e:`. Lesson L-005 says never use single-letter names; `e` → `exc`. The pre-existing functions in the same file (sign_up, sign_in_with_password, refresh_session) already use `e`, so the new code matches local file convention while deviating from the project lesson; fixing only the new code leaves the file mixed.
 - **Fix**: Rename `e` → `exc` in delete_user's two except blocks (new code only; leave pre-existing handlers for a separate cleanup).
-- **Decision**: PENDING
+- **Decision**: FIXED (renamed `e` → `exc` in delete_user's two except blocks; 6 unit tests pass, ruff clean)
 
 ### F2 — Test mocks omit `spec=` / autospec
 
@@ -45,7 +45,7 @@
 - **Location**: backend/tests/db/test_supabase_auth.py:41, 52, 63, 75
 - **Detail**: `mock_admin_client = MagicMock()` and the `mocker.patch(...)` calls are created without `spec=` / `autospec=True`, against the project mock-spec convention. Blind spot: the tests exercise a deep chain (`.auth.admin.delete_user`) which `spec=Client` does not validate beyond the top level, so the practical safety gain is small — hence warning, not blocker.
 - **Fix**: Add `spec=Client` to the admin-client MagicMock (import Client for runtime; currently TYPE_CHECKING-only).
-- **Decision**: PENDING
+- **Decision**: SKIPPED (fix not viable — attempted `MagicMock(spec=Client)`; `Client.auth` is an instance attribute set in `__init__`, not visible on the class spec, so all 4 delete_user tests fail with `AttributeError: Mock object has no attribute 'auth'`. This confirms and exceeds the finding's stated blind spot: a full class spec cannot validate this deep chain and actively breaks it. Reverted; mocks stay bare `MagicMock()`.)
 
 ### F3 — Lazy imports moved to top-level (unplanned but lesson-aligned)
 
@@ -54,4 +54,4 @@
 - **Dimension**: Scope Discipline
 - **Location**: backend/app/db/supabase_auth.py:8-10
 - **Detail**: The commit hoisted function-local `from supabase import ...` statements to module top-level. Not in the phase's "Changes Required" but documented in the commit message and directly satisfies L-006 (no function-body imports). supabase is a hard dependency already, so top-level import is benign. Noted as beneficial scope, not drift. The 404-idempotency branch (`e.status == 404`) is a reasonable guess pending the real-Supabase check in Phase 2 manual verification.
-- **Decision**: PENDING (observation — no fix required)
+- **Decision**: ACKNOWLEDGED (observation — no fix required; beneficial scope, L-006-aligned)
