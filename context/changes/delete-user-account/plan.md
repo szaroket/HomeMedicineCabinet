@@ -475,15 +475,15 @@ not a test failure.
 
 #### Automated
 
-- [ ] 1.1 Linting passes (ruff check + format)
-- [ ] 1.2 Unit tests pass for `delete_user` (success, `AuthApiError → AccountDeletionError`, admin client uses service-role key)
-- [ ] 1.3 Config loads with the new `supabase_service_role_key` field
-- [ ] 1.6 `SUPABASE_SERVICE_ROLE_KEY` wired into ci-cd.yml unit + integration `env:` blocks and e2e job env + secrets loop (no import-time crash)
+- [x] 1.1 Linting passes (ruff check + format)
+- [x] 1.2 Unit tests pass for `delete_user` (success, `AuthApiError → AccountDeletionError`, admin client uses service-role key)
+- [x] 1.3 Config loads with the new `supabase_service_role_key` field
+- [x] 1.6 `SUPABASE_SERVICE_ROLE_KEY` wired into ci-cd.yml unit + integration `env:` blocks and e2e job env + secrets loop (no import-time crash)
 
 #### Manual
 
-- [ ] 1.4 Service-role key set in local `.env` and Render backend env; not committed, not exposed to frontend
-- [ ] 1.5 Logs during a delete do not contain the service-role key
+- [x] 1.4 Service-role key set in local `.env` and Render backend env; not committed, not exposed to frontend
+- [x] 1.5 Logs during a delete do not contain the service-role key
 
 ### Phase 2: Backend — cascade deletion, facade, and endpoint
 

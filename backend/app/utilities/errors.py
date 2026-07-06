@@ -163,6 +163,22 @@ class UserDatabaseError(UserError):
         super().__init__(message)
 
 
+class AccountDeletionError(UserError):
+    """Raised when the Supabase Auth admin user deletion fails.
+
+    Signals an upstream failure distinct from `UserDatabaseError`, so the
+    router can map it to 502 rather than 503.
+    """
+
+    def __init__(self, message: str = "Failed to delete account.") -> None:
+        """Initialise with a default message.
+
+        Args:
+            message (str): Description of what went wrong.
+        """
+        super().__init__(message)
+
+
 class MedicinesError(Exception):
     """Base class for medicines domain errors.
 
