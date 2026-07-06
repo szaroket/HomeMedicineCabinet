@@ -510,13 +510,13 @@ not a test failure.
 
 #### Automated
 
-- [x] 3.1 Build passes (`npm run build`)
-- [x] 3.2 Lint passes (`npm run lint`)
-- [x] 3.3 Format check passes (prettier)
-- [x] 3.4 Unit test passes for the email-type-to-confirm gate
+- [x] 3.1 Build passes (`npm run build`) — a4c9124
+- [x] 3.2 Lint passes (`npm run lint`) — a4c9124
+- [x] 3.3 Format check passes (prettier) — a4c9124
+- [x] 3.4 Unit test passes for the email-type-to-confirm gate — a4c9124
 
 #### Manual
 
-- [ ] 3.5 Delete button disabled until exact email typed
-- [ ] 3.6 Confirm deletes account, redirects to `/login`, shows Polish notice, subsequent login fails
-- [ ] 3.7 Cancelling the dialog leaves the account intact
+- [x] 3.5 Delete button disabled until exact email typed — a4c9124
+- [x] 3.6 Confirm deletes account, redirects to `/login`, shows Polish notice, subsequent login fails — a4c9124
+- [x] 3.7 Cancelling the dialog leaves the account intact — a4c9124
