@@ -1,12 +1,18 @@
 ---
 change_id: notifications-and-badges
 title: Notifications and badges
-status: new
+status: plan_reviewed
 created: 2026-07-06
-updated: 2026-07-06
+updated: 2026-07-07
 archived_at: null
 ---
 
 ## Notes
 
 <!-- Free-form notes for this change: links, ad-hoc context, decisions that don't belong in research/frame/plan. -->
+
+### Resolved planning flags (2026-07-07)
+
+- **Phase 5 kept as explicit `delete_by_user`.** The `cabinet_entry_id` FK `ON DELETE CASCADE` already removes dismissals transitively on account delete (S-09 deletes all the user's entries first), so Phase 5 is technically redundant — but kept as belt-and-suspenders: documents intent, survives any future reorder of the S-09 entry-delete, and gives a dedicated no-orphans integration test for test-plan Risk #7.
+- **Login-refresh bug left parked.** The roadmap-parked "login requires a manual page refresh" bug is out of scope for S-06; it needs its own `/10x-frame` root-cause pass. S-06 is built/tested against an already-logged-in user, so the bug does not block it. Manual end-to-end testing may hit the login friction until it's fixed separately.
+- **Scope reconsidered and confirmed full.** Weighed dropping S-06 to v2 (dashboard-only) or shipping simplified read-only alerts on the dashboard. Decided to keep the full notification center + dismiss/GC as planned: in-app alerting is a PRD *primary* success criterion (#2) and multiple must-have FRs (007/008/019/020), and it's the product's core "proactive" value — a passive inventory list without it. Note: the dashboard (S-07) does **not** actually depend on S-06 — its five counts are computable from fields already shipped in S-02/S-04/S-05.
