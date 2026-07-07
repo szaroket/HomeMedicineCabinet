@@ -37,7 +37,16 @@ def upgrade() -> None:
             name="uq_dismissed_user_entry_trigger",
         ),
     )
+    op.create_index(
+        "ix_dismissed_notifications_cabinet_entry_id",
+        "dismissed_notifications",
+        ["cabinet_entry_id"],
+    )
 
 
 def downgrade() -> None:
+    op.drop_index(
+        "ix_dismissed_notifications_cabinet_entry_id",
+        table_name="dismissed_notifications",
+    )
     op.drop_table("dismissed_notifications")

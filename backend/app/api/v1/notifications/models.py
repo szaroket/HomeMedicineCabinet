@@ -23,6 +23,7 @@ class DismissedNotification(SQLModel, table=True):
             sa.Uuid(),
             sa.ForeignKey("cabinet_entries.id", ondelete="CASCADE"),
             nullable=False,
+            index=True,
         )
     )
     trigger_type: str = Field(sa_type=sa.Text)
