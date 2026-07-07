@@ -428,13 +428,13 @@ One additive migration (`dismissed_notifications`). No backfill — the table st
 
 #### Automated
 
-- [x] 2.1 Unit tests for the three predicates + order_notifications pass
-- [x] 2.2 Integration test: seeded triggers appear; healthy entry produces none
-- [x] 2.3 Lint/format + typecheck pass
+- [x] 2.1 Unit tests for the three predicates + order_notifications pass — e29ae20
+- [x] 2.2 Integration test: seeded triggers appear; healthy entry produces none — e29ae20
+- [x] 2.3 Lint/format + typecheck pass — e29ae20
 
 #### Manual
 
-- [ ] 2.4 GET /notifications returns expected alerts in urgency order
+- [x] 2.4 GET /notifications returns expected alerts in urgency order — e29ae20
 
 ### Phase 3: Dismiss endpoint + load-time garbage collection
 

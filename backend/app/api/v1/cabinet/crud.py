@@ -2,7 +2,7 @@
 
 import logging
 import uuid
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import Float, Integer, case, cast, delete, func, literal, select, text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -451,7 +451,7 @@ async def list_all_for_user(
     """
     stmt = _build_base_query(
         user_id=user_id,
-        today=date.today(),
+        today=datetime.now(timezone.utc).date(),
         threshold=0,
         status=None,
         tsquery=None,
