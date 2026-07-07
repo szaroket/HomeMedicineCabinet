@@ -416,13 +416,13 @@ One additive migration (`dismissed_notifications`). No backfill — the table st
 
 #### Automated
 
-- [x] 1.1 Model imports without error
-- [x] 1.2 Lint/format pass
-- [x] 1.3 Migration applies and rolls back cleanly
+- [x] 1.1 Model imports without error — f8d2cda
+- [x] 1.2 Lint/format pass — f8d2cda
+- [x] 1.3 Migration applies and rolls back cleanly — f8d2cda
 
 #### Manual
 
-- [x] 1.4 Table exists in Supabase with FK cascade and unique constraint
+- [x] 1.4 Table exists in Supabase with FK cascade and unique constraint — f8d2cda
 
 ### Phase 2: Notifications domain — trigger evaluation + GET /notifications
 
