@@ -27,3 +27,10 @@ class NotificationListOut(BaseModel):
     """Response envelope for GET /notifications."""
 
     items: list[NotificationOut]
+
+
+class DismissRequest(BaseModel):
+    """Request body for POST /notifications/dismiss."""
+
+    cabinet_entry_id: uuid.UUID
+    trigger_type: TriggerType

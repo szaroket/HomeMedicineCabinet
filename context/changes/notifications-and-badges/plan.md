@@ -440,13 +440,13 @@ One additive migration (`dismissed_notifications`). No backfill — the table st
 
 #### Automated
 
-- [ ] 3.1 Integration test: full fire → dismiss → clear (GC) → re-fire lifecycle
-- [ ] 3.2 Idempotent dismiss: twice → 204 each, one row
-- [ ] 3.3 Lint/format + typecheck pass
+- [x] 3.1 Integration test: full fire → dismiss → clear (GC) → re-fire lifecycle
+- [x] 3.2 Idempotent dismiss: twice → 204 each, one row
+- [x] 3.3 Lint/format + typecheck pass
 
 #### Manual
 
-- [ ] 3.4 Dismiss persists across reload; re-fires after condition flips off then on
+- [x] 3.4 Dismiss persists across reload; re-fires after condition flips off then on
 
 ### Phase 4: Backend — editable thresholds
 

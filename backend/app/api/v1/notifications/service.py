@@ -16,6 +16,7 @@ from app.api.v1.cabinet.service import Status
 from app.api.v1.notifications import crud
 from app.api.v1.notifications.models import DismissedNotification
 from app.api.v1.notifications.schemas import (
+    DismissRequest,
     NotificationListOut,
     NotificationOut,
     TriggerType,
@@ -142,6 +143,77 @@ def order_notifications(items: list[NotificationOut]) -> list[NotificationOut]:
     return sorted(items, key=_sort_key)
 
 
+def compute_active_notifications(
+    entries: list[CabinetEntryOut],
+    close_to_finish_threshold_days: int,
+    today: date,
+) -> list[NotificationOut]:
+    """Apply the trigger predicates to every entry, unfiltered by dismissal.
+
+    Args:
+        entries (list[CabinetEntryOut]): The user's computed cabinet entries.
+        close_to_finish_threshold_days (int): Threshold for the run-out trigger.
+        today (date): Reference date for computing days-to-expiry.
+
+    Returns:
+        list[NotificationOut]: Every currently-active alert, unordered and
+            regardless of dismissal state.
+    """
+    items: list[NotificationOut] = []
+    for entry in entries:
+        if is_expiry_active(entry):
+            items.append(
+                NotificationOut(
+                    trigger_type=TriggerType.EXPIRY,
+                    cabinet_entry_id=entry.id,
+                    medication_name=entry.name,
+                    days_remaining=(entry.expiry_date - today).days,
+                )
+            )
+        if is_below_minimum_active(entry):
+            items.append(
+                NotificationOut(
+                    trigger_type=TriggerType.BELOW_MINIMUM,
+                    cabinet_entry_id=entry.id,
+                    medication_name=entry.name,
+                    days_remaining=None,
+                )
+            )
+        if is_run_out_active(
+            entry, close_to_finish_threshold_days=close_to_finish_threshold_days
+        ):
+            items.append(
+                NotificationOut(
+                    trigger_type=TriggerType.RUN_OUT,
+                    cabinet_entry_id=entry.id,
+                    medication_name=entry.name,
+                    days_remaining=entry.days_of_supply,
+                )
+            )
+    return items
+
+
+def compute_stale_dismissal_keys(
+    dismissals: list[DismissedNotification],
+    active_keys: set[tuple[uuid.UUID, TriggerType]],
+) -> set[tuple[uuid.UUID, str]]:
+    """Return the (entry, trigger) keys of dismissals whose condition has cleared.
+
+    Args:
+        dismissals (list[DismissedNotification]): The user's dismissal rows.
+        active_keys (set[tuple[uuid.UUID, TriggerType]]): Keys of currently-active alerts.
+
+    Returns:
+        set[tuple[uuid.UUID, str]]: Dismissal keys with no matching active alert.
+    """
+    return {
+        (dismissal.cabinet_entry_id, dismissal.trigger_type)
+        for dismissal in dismissals
+        if (dismissal.cabinet_entry_id, TriggerType(dismissal.trigger_type))
+        not in active_keys
+    }
+
+
 def build_active_notifications(
     entries: list[CabinetEntryOut],
     dismissals: list[DismissedNotification],
@@ -164,54 +236,58 @@ def build_active_notifications(
         NotificationListOut: The active, non-dismissed notifications, ordered.
     """
     dismissed_keys = {(d.cabinet_entry_id, d.trigger_type) for d in dismissals}
+    active_items = compute_active_notifications(
+        entries=entries,
+        close_to_finish_threshold_days=close_to_finish_threshold_days,
+        today=today,
+    )
+    filtered = [
+        item
+        for item in active_items
+        if (item.cabinet_entry_id, item.trigger_type) not in dismissed_keys
+    ]
+    return NotificationListOut(items=order_notifications(filtered))
 
-    items: list[NotificationOut] = []
-    for entry in entries:
-        if (
-            is_expiry_active(entry)
-            and (
-                entry.id,
-                TriggerType.EXPIRY,
-            )
-            not in dismissed_keys
-        ):
-            items.append(
-                NotificationOut(
-                    trigger_type=TriggerType.EXPIRY,
-                    cabinet_entry_id=entry.id,
-                    medication_name=entry.name,
-                    days_remaining=(entry.expiry_date - today).days,
-                )
-            )
-        if (
-            is_below_minimum_active(entry)
-            and (
-                entry.id,
-                TriggerType.BELOW_MINIMUM,
-            )
-            not in dismissed_keys
-        ):
-            items.append(
-                NotificationOut(
-                    trigger_type=TriggerType.BELOW_MINIMUM,
-                    cabinet_entry_id=entry.id,
-                    medication_name=entry.name,
-                    days_remaining=None,
-                )
-            )
-        if (
-            is_run_out_active(
-                entry, close_to_finish_threshold_days=close_to_finish_threshold_days
-            )
-            and (entry.id, TriggerType.RUN_OUT) not in dismissed_keys
-        ):
-            items.append(
-                NotificationOut(
-                    trigger_type=TriggerType.RUN_OUT,
-                    cabinet_entry_id=entry.id,
-                    medication_name=entry.name,
-                    days_remaining=entry.days_of_supply,
-                )
-            )
 
-    return NotificationListOut(items=order_notifications(items))
+async def insert_dismissal(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    request: DismissRequest,
+) -> None:
+    """Record a dismissal for the given entry/trigger, idempotently.
+
+    Args:
+        session (AsyncSession): Active async database session.
+        user_id (uuid.UUID): Authenticated user's UUID.
+        request (DismissRequest): The entry and trigger type being dismissed.
+
+    Raises:
+        NotificationsDatabaseError: If the insert fails.
+    """
+    await crud.insert_dismissal(
+        session=session,
+        user_id=user_id,
+        cabinet_entry_id=request.cabinet_entry_id,
+        trigger_type=request.trigger_type.value,
+    )
+
+
+async def delete_stale_dismissals(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    stale_keys: set[tuple[uuid.UUID, str]],
+) -> None:
+    """Garbage-collect dismissals whose condition has cleared.
+
+    Args:
+        session (AsyncSession): Active async database session.
+        user_id (uuid.UUID): Authenticated user's UUID.
+        stale_keys (set[tuple[uuid.UUID, str]]): Non-empty set of stale
+            (cabinet_entry_id, trigger_type) keys to delete.
+
+    Raises:
+        NotificationsDatabaseError: If the delete fails.
+    """
+    await crud.delete_stale_dismissals(
+        session=session, user_id=user_id, stale_keys=stale_keys
+    )

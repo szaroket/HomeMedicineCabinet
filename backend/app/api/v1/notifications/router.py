@@ -7,7 +7,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.v1.auth.types import CurrentUser
 from app.api.v1.notifications import facade as notifications_facade
-from app.api.v1.notifications.schemas import NotificationListOut
+from app.api.v1.notifications.schemas import DismissRequest, NotificationListOut
 from app.core.jwt_security import get_current_user
 from app.db.connector import get_session
 from app.utilities.errors import (
@@ -49,6 +49,34 @@ async def list_notifications(
         ) from exc
     except Exception as exc:
         logger.exception("Unexpected error when listing notifications: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred.",
+        ) from exc
+
+
+@router.post(
+    "/dismiss",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def dismiss_notification(
+    request: DismissRequest,
+    current_user: CurrentUser = Security(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> None:
+    """Dismiss a notification so it no longer appears until its condition re-triggers."""
+    try:
+        await notifications_facade.dismiss(
+            session=session,
+            user_id=current_user.id,
+            request=request,
+        )
+    except NotificationsDatabaseError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=exc.message
+        ) from exc
+    except Exception as exc:
+        logger.exception("Unexpected error when dismissing notification: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred.",
