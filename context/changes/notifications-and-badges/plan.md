@@ -428,9 +428,9 @@ One additive migration (`dismissed_notifications`). No backfill — the table st
 
 #### Automated
 
-- [ ] 2.1 Unit tests for the three predicates + order_notifications pass
-- [ ] 2.2 Integration test: seeded triggers appear; healthy entry produces none
-- [ ] 2.3 Lint/format + typecheck pass
+- [x] 2.1 Unit tests for the three predicates + order_notifications pass
+- [x] 2.2 Integration test: seeded triggers appear; healthy entry produces none
+- [x] 2.3 Lint/format + typecheck pass
 
 #### Manual
 

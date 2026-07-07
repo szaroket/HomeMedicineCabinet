@@ -343,3 +343,42 @@ class CabinetDatabaseError(CabinetError):
             message (str): Description of what went wrong.
         """
         super().__init__(message)
+
+
+class NotificationsError(Exception):
+    """Base class for notifications domain errors.
+
+    Kept separate from the other domain taxonomies so notifications errors
+    do not bleed into cabinet/users error handling.
+
+    Attributes:
+        message (str): Human-readable description of the error (English).
+    """
+
+    def __init__(self, message: str) -> None:
+        """Initialise the error with a message.
+
+        Args:
+            message (str): Description of what went wrong.
+        """
+        super().__init__(message)
+        self.message = message
+
+
+class NotificationsDatabaseError(NotificationsError):
+    """Raised when a notifications database query fails (e.g. connection unavailable).
+
+    Wraps a SQLAlchemy error so the router can map it to 503 rather than leaking
+    a raw 500.
+    """
+
+    def __init__(
+        self,
+        message: str = "A database error occurred in the notifications domain.",
+    ) -> None:
+        """Initialise with a default message.
+
+        Args:
+            message (str): Description of what went wrong.
+        """
+        super().__init__(message)
