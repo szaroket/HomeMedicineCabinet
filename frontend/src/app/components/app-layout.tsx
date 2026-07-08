@@ -4,6 +4,7 @@ import { AppSidebar } from "@/app/components/app-sidebar";
 import { AppHeader } from "@/app/components/app-header";
 import { AppFooter } from "@/app/components/app-footer";
 import { LogoutButton } from "@/features/auth/components/logout-button";
+import { NotificationBell } from "@/features/notifications/components/notification-bell";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -40,7 +41,10 @@ export function AppLayout({ children }: AppLayoutProps) {
           </button>
           <AppHeader />
         </div>
-        <LogoutButton />
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          <LogoutButton />
+        </div>
       </header>
 
       {/* Body: sidebar + content */}

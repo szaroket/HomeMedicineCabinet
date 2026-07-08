@@ -366,6 +366,37 @@ Surface the two new thresholds in the settings form so the user can tune what fi
 
 ---
 
+## Phase 8: Frontend — click notification to filter cabinet
+
+### Overview
+
+Clicking a notification row closes the panel and navigates to the cabinet list, pre-filtered to that medication's name via the cabinet page's existing URL-driven search param. No backend change — `GET /cabinet/entries?search=` is already a free-text name/ingredient match consumed by `cabinet-page.tsx`'s `useSearchParams`-backed filter state.
+
+### Changes Required:
+
+#### 1. Row click navigates + closes panel
+
+**File**: `frontend/src/features/notifications/components/notification-panel.tsx`
+
+**Intent**: Make each notification row clickable (outside the existing dismiss button) so clicking it takes the user straight to their cabinet, filtered to that medication.
+
+**Contract**: Import `useNavigate` from `react-router-dom`. Wrap each row's medication-name/copy block in a `<button type="button">` (or make the `<li>` clickable via a wrapping button) with `onClick` that calls `onClose()` then `navigate(\`/cabinet?search=${encodeURIComponent(item.medication_name)}\`)`. The existing per-row dismiss button must call `event.stopPropagation()` in its `onClick` so dismissing a row never triggers navigation. Reuses the cabinet page's existing `search` param (`cabinet-page.tsx:52-141`, `CabinetListParams.search` in `cabinet-api.ts:125`) — no new query param, no backend change. Give the clickable row an accessible name distinct from the dismiss button, e.g. `aria-label={\`Pokaż w apteczce: ${item.medication_name}\`}`.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Component test: clicking a notification row navigates to `/cabinet?search=<medication_name>` and closes the panel; clicking the dismiss button on the same row does not navigate: `npm run test`
+- Build + lint + format pass.
+
+#### Manual Verification:
+
+- Click a notification in the panel; land on the cabinet page filtered to that medicine's name; the panel is closed.
+
+**Implementation Note**: Pause for manual confirmation after automated verification passes.
+
+---
+
 ## Testing Strategy
 
 ### Unit Tests:
@@ -475,8 +506,8 @@ One additive migration (`dismissed_notifications`). No backfill — the table st
 
 #### Automated
 
-- [ ] 6.1 Component tests: badge edges, panel copy per type, dismiss invokes mutation
-- [ ] 6.2 Build + lint + format pass
+- [x] 6.1 Component tests: badge edges, panel copy per type, dismiss invokes mutation
+- [x] 6.2 Build + lint + format pass
 
 #### Manual
 
@@ -492,3 +523,14 @@ One additive migration (`dismissed_notifications`). No backfill — the table st
 #### Manual
 
 - [ ] 7.3 Thresholds persist across reload and change which alerts appear
+
+### Phase 8: Frontend — click notification to filter cabinet
+
+#### Automated
+
+- [ ] 8.1 Row click navigates to /cabinet?search=<name> and closes panel; dismiss button does not navigate
+- [ ] 8.2 Build + lint + format pass
+
+#### Manual
+
+- [ ] 8.3 Clicking a notification lands on the cabinet page filtered to that medicine; panel closes
