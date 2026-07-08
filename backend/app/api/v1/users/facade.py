@@ -34,6 +34,7 @@ async def delete_account(session: AsyncSession, user_id: uuid.UUID) -> None:
         user_id (uuid.UUID): UUID of the authenticated user to delete.
 
     Raises:
+        NotificationsDatabaseError: If deleting the user's dismissals fails.
         CabinetDatabaseError: If deleting the user's cabinet entries fails.
         UserDatabaseError: If deleting the user's local rows fails.
         AccountDeletionError: If the Supabase Auth admin delete fails.

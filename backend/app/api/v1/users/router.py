@@ -14,6 +14,7 @@ from app.db.connector import get_session
 from app.utilities.errors import (
     AccountDeletionError,
     CabinetDatabaseError,
+    NotificationsDatabaseError,
     UserDatabaseError,
 )
 
@@ -61,7 +62,11 @@ async def delete_account(
     """Permanently delete the authenticated user's account and all associated data."""
     try:
         await users_facade.delete_account(session=session, user_id=current_user.id)
-    except (UserDatabaseError, CabinetDatabaseError) as exc:
+    except (
+        UserDatabaseError,
+        CabinetDatabaseError,
+        NotificationsDatabaseError,
+    ) as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=exc.message
         ) from exc
