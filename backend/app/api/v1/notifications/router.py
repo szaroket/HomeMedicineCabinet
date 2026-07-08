@@ -12,6 +12,7 @@ from app.core.jwt_security import get_current_user
 from app.db.connector import get_session
 from app.utilities.errors import (
     CabinetDatabaseError,
+    DismissalEntryNotFoundError,
     NotificationsDatabaseError,
     UserDatabaseError,
 )
@@ -71,6 +72,10 @@ async def dismiss_notification(
             user_id=current_user.id,
             request=request,
         )
+    except DismissalEntryNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=exc.message
+        ) from exc
     except NotificationsDatabaseError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=exc.message

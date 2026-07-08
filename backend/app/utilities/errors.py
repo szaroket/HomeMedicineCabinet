@@ -382,3 +382,20 @@ class NotificationsDatabaseError(NotificationsError):
             message (str): Description of what went wrong.
         """
         super().__init__(message)
+
+
+class DismissalEntryNotFoundError(NotificationsError):
+    """Raised when a dismissal references a cabinet entry that does not exist.
+
+    Distinguishes a genuine foreign-key violation (unknown ``cabinet_entry_id``)
+    from the unique-constraint race — a duplicate dismissal, which is treated as
+    success — so the router can map it to 404 rather than silently returning 204.
+    """
+
+    def __init__(self, message: str = "Cabinet entry not found.") -> None:
+        """Initialise with a default message.
+
+        Args:
+            message (str): Description of what went wrong.
+        """
+        super().__init__(message)

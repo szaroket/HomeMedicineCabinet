@@ -10,7 +10,10 @@ from sqlmodel import col
 
 from app.api.v1.notifications.models import DismissedNotification
 from app.db.connector import persist
-from app.utilities.errors import NotificationsDatabaseError
+from app.utilities.errors import (
+    DismissalEntryNotFoundError,
+    NotificationsDatabaseError,
+)
 
 logger = logging.getLogger("app.notifications.crud")
 
@@ -60,8 +63,9 @@ async def insert_dismissal(
         trigger_type (str): The trigger type being dismissed.
 
     Raises:
-        NotificationsDatabaseError: If the insert fails for a reason other than
-            the unique-constraint race.
+        DismissalEntryNotFoundError: If the integrity violation was a foreign-key
+            failure — the referenced ``cabinet_entry_id`` does not exist.
+        NotificationsDatabaseError: If the insert fails for any other database reason.
     """
     row = DismissedNotification(
         user_id=user_id,
@@ -71,10 +75,21 @@ async def insert_dismissal(
     try:
         async with persist(session, row):
             session.add(row)
-    except IntegrityError:
-        # persist() already rolled back; a concurrent duplicate dismissal means
-        # the row already exists, so the caller's intent is already satisfied.
-        pass
+    except IntegrityError as exc:
+        # persist() already rolled back. The only IntegrityError we treat as
+        # success is the unique-constraint race: a concurrent request already
+        # inserted this exact dismissal. Re-read to confirm the row is present;
+        # if it is not, the violation was a foreign-key failure (unknown
+        # cabinet_entry_id) and must surface as a 404 rather than a false 204.
+        existing = await session.execute(
+            select(DismissedNotification).where(
+                col(DismissedNotification.user_id) == user_id,
+                col(DismissedNotification.cabinet_entry_id) == cabinet_entry_id,
+                col(DismissedNotification.trigger_type) == trigger_type,
+            )
+        )
+        if existing.scalar_one_or_none() is None:
+            raise DismissalEntryNotFoundError() from exc
     except SQLAlchemyError as exc:
         logger.error(
             "Failed to insert dismissal for user %s, entry %s, trigger %s: %s",

@@ -88,6 +88,7 @@ async def dismiss(
         request (DismissRequest): The entry and trigger type being dismissed.
 
     Raises:
+        DismissalEntryNotFoundError: If the referenced cabinet entry does not exist.
         NotificationsDatabaseError: If the insert fails.
     """
     await notifications_service.insert_dismissal(

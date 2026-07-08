@@ -1,5 +1,6 @@
 """POST /api/v1/notifications/dismiss — dismiss lifecycle, GC, and idempotency."""
 
+import uuid
 from collections.abc import Awaitable, Callable
 from datetime import date
 
@@ -121,3 +122,35 @@ async def test_dismiss_is_idempotent(
         )
     )
     assert len(rows.scalars().all()) == 1
+
+
+@pytest.mark.asyncio
+async def test_dismiss_unknown_entry_returns_404_and_inserts_nothing(
+    authed_db_client: tuple[AsyncClient, Callable[[CurrentUser], None]],
+    db_session: AsyncSession,
+    seed_user: Callable[..., Awaitable[tuple[User, CurrentUser]]],
+) -> None:
+    """Dismissing a non-existent cabinet entry is a foreign-key violation -> 404, no row."""
+    client, act_as = authed_db_client
+
+    _, current_user = await seed_user()
+    act_as(current_user)
+
+    missing_entry_id = uuid.uuid4()
+    response = await client.post(
+        "/api/v1/notifications/dismiss",
+        json={
+            "cabinet_entry_id": str(missing_entry_id),
+            "trigger_type": "below_minimum",
+        },
+    )
+    assert response.status_code == 404
+
+    # The failed insert must leave no dismissal behind.
+    await db_session.rollback()
+    rows = await db_session.execute(
+        select(DismissedNotification).where(
+            col(DismissedNotification.cabinet_entry_id) == missing_entry_id
+        )
+    )
+    assert rows.scalars().all() == []

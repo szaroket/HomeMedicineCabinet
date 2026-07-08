@@ -17,7 +17,6 @@ from app.api.v1.notifications import crud
 from app.api.v1.notifications.models import DismissedNotification
 from app.api.v1.notifications.schemas import (
     DismissRequest,
-    NotificationListOut,
     NotificationOut,
     TriggerType,
 )
@@ -214,41 +213,6 @@ def compute_stale_dismissal_keys(
     }
 
 
-def build_active_notifications(
-    entries: list[CabinetEntryOut],
-    dismissals: list[DismissedNotification],
-    close_to_finish_threshold_days: int,
-    today: date,
-) -> NotificationListOut:
-    """Apply the trigger predicates to every entry and assemble the ordered, filtered list.
-
-    Business logic for the notification center: for each entry, evaluates the
-    three triggers, skips any that are already dismissed, and returns the
-    survivors ordered most-urgent-first.
-
-    Args:
-        entries (list[CabinetEntryOut]): The user's computed cabinet entries.
-        dismissals (list[DismissedNotification]): The user's dismissal rows.
-        close_to_finish_threshold_days (int): Threshold for the run-out trigger.
-        today (date): Reference date for computing days-to-expiry.
-
-    Returns:
-        NotificationListOut: The active, non-dismissed notifications, ordered.
-    """
-    dismissed_keys = {(d.cabinet_entry_id, d.trigger_type) for d in dismissals}
-    active_items = compute_active_notifications(
-        entries=entries,
-        close_to_finish_threshold_days=close_to_finish_threshold_days,
-        today=today,
-    )
-    filtered = [
-        item
-        for item in active_items
-        if (item.cabinet_entry_id, item.trigger_type) not in dismissed_keys
-    ]
-    return NotificationListOut(items=order_notifications(filtered))
-
-
 async def insert_dismissal(
     session: AsyncSession,
     user_id: uuid.UUID,
@@ -262,6 +226,7 @@ async def insert_dismissal(
         request (DismissRequest): The entry and trigger type being dismissed.
 
     Raises:
+        DismissalEntryNotFoundError: If the referenced cabinet entry does not exist.
         NotificationsDatabaseError: If the insert fails.
     """
     await crud.insert_dismissal(
