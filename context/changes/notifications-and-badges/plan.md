@@ -452,9 +452,9 @@ One additive migration (`dismissed_notifications`). No backfill — the table st
 
 #### Automated
 
-- [ ] 4.1 PATCH persists all three fields; GET reflects them
-- [ ] 4.2 Out-of-range threshold values return 422
-- [ ] 4.3 Lint/format + typecheck pass
+- [x] 4.1 PATCH persists all three fields; GET reflects them
+- [x] 4.2 Out-of-range threshold values return 422
+- [x] 4.3 Lint/format + typecheck pass
 
 #### Manual
 

@@ -91,6 +91,8 @@ async def patch_preferences(
         return await users_service.update_preferences(
             session=session,
             user_id=current_user.id,
+            expiry_threshold_days=data.expiry_threshold_days,
+            close_to_finish_threshold_days=data.close_to_finish_threshold_days,
             min_package_count=data.min_package_count,
         )
     except UserDatabaseError as exc:
