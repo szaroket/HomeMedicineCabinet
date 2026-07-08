@@ -110,6 +110,27 @@ describe("NotificationBell", () => {
     });
   });
 
+  it("caps the list height and lets it scroll when there are many notifications", async () => {
+    const items = Array.from({ length: 15 }, (_, index) =>
+      makeItem({
+        cabinet_entry_id: `entry-${index}`,
+        medication_name: `Lek ${index}`,
+      }),
+    );
+    vi.mocked(fetch).mockResolvedValue(jsonResponse({ items }));
+
+    const user = userEvent.setup();
+    renderBell();
+
+    await user.click(
+      await screen.findByRole("button", { name: "Powiadomienia" }),
+    );
+
+    const list = await screen.findByRole("list");
+    expect(list).toHaveClass("max-h-[70vh]");
+    expect(list).toHaveClass("overflow-y-auto");
+  });
+
   it("dismiss all invokes the mutation once per active notification", async () => {
     const items = [
       makeItem({ cabinet_entry_id: "entry-1", medication_name: "Apap" }),

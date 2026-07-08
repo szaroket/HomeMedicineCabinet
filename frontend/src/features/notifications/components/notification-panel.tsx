@@ -106,7 +106,7 @@ export function NotificationPanel({
               Odrzuć wszystkie
             </button>
           </div>
-          <ul className="flex flex-col gap-2">
+          <ul className="flex max-h-[70vh] flex-col gap-2 overflow-y-auto">
             {items.map((item) => (
               <li
                 key={`${item.cabinet_entry_id}-${item.trigger_type}`}
