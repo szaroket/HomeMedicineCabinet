@@ -139,3 +139,32 @@ async def delete_stale_dismissals(
             exc_info=True,
         )
         raise NotificationsDatabaseError() from exc
+
+
+async def delete_by_user(session: AsyncSession, user_id: uuid.UUID) -> None:
+    """Delete all dismissal rows owned by a user, on the shared session.
+
+    Executes the delete statement only — no commit, no persist. Callers own
+    the transaction (see the users-domain facade's account-deletion flow).
+
+    Args:
+        session (AsyncSession): Active async database session.
+        user_id (uuid.UUID): UUID of the user whose dismissals are being removed.
+
+    Raises:
+        NotificationsDatabaseError: If the delete statement fails.
+    """
+    try:
+        await session.execute(
+            delete(DismissedNotification).where(
+                col(DismissedNotification.user_id) == user_id
+            )
+        )
+    except SQLAlchemyError as exc:
+        logger.error(
+            "Failed to delete dismissals for user %s: %s",
+            user_id,
+            exc,
+            exc_info=True,
+        )
+        raise NotificationsDatabaseError() from exc

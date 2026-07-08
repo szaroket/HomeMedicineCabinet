@@ -464,12 +464,12 @@ One additive migration (`dismissed_notifications`). No backfill — the table st
 
 #### Automated
 
-- [ ] 5.1 Account delete leaves zero dismissal rows for the user
-- [ ] 5.2 Lint/format + typecheck pass
+- [x] 5.1 Account delete leaves zero dismissal rows for the user
+- [x] 5.2 Lint/format + typecheck pass
 
 #### Manual
 
-- [ ] 5.3 Deleting a test account with dismissals leaves no rows
+- [x] 5.3 Deleting a test account with dismissals leaves no rows
 
 ### Phase 6: Frontend — notification bell & center panel
 

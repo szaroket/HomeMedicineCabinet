@@ -11,6 +11,7 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.cabinet import service as cabinet_service
+from app.api.v1.notifications import service as notifications_service
 from app.api.v1.users import service as users_service
 from app.db import supabase_auth
 from app.db.connector import persist
@@ -40,6 +41,7 @@ async def delete_account(session: AsyncSession, user_id: uuid.UUID) -> None:
     logger.info("Starting account deletion for user %s", user_id)
 
     async with persist(session):
+        await notifications_service.delete_by_user(session=session, user_id=user_id)
         await cabinet_service.delete_by_user(session=session, user_id=user_id)
         await users_service.delete_user_rows(session=session, user_id=user_id)
 

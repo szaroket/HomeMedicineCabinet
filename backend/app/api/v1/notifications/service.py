@@ -256,3 +256,16 @@ async def delete_stale_dismissals(
     await crud.delete_stale_dismissals(
         session=session, user_id=user_id, stale_keys=stale_keys
     )
+
+
+async def delete_by_user(session: AsyncSession, user_id: uuid.UUID) -> None:
+    """Delete all dismissal rows owned by a user, on the shared session.
+
+    Args:
+        session (AsyncSession): Active async database session.
+        user_id (uuid.UUID): UUID of the user whose dismissals are being removed.
+
+    Raises:
+        NotificationsDatabaseError: If the delete statement fails.
+    """
+    await crud.delete_by_user(session=session, user_id=user_id)
