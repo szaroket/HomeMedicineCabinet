@@ -52,6 +52,12 @@ export function AppLayout({ children }: AppLayoutProps) {
         <AppSidebar isOpen={sidebarOpen} onClose={closeSidebar} />
 
         <main className="flex flex-1 flex-col overflow-hidden">
+          {/* NOTE: the `px-6 py-8` content padding here is depended on by the
+              full-bleed mobile-scroll containers in settings-page.tsx and
+              cabinet/add-medication-page.tsx (they use `-mx-6 -my-8 ...
+              px-6 py-8` + `h-[calc(100%+4rem)]` to cancel and re-apply it). If
+              you change this padding, update those two call sites in lockstep or
+              they will silently misalign/clip. */}
           <div className="flex flex-1 flex-col min-h-0 px-6 py-8">
             {children}
           </div>

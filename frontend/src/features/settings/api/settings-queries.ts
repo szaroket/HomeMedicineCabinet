@@ -6,6 +6,7 @@ import {
   type UpdatePreferencesPayload,
 } from "@/features/settings/api/settings-api";
 import { clearStoredToken } from "@/features/auth/store";
+import { notificationKeys } from "@/features/notifications/api/notifications-queries";
 import { AuthError } from "@/lib/errors";
 
 export const settingsKeys = {
@@ -26,6 +27,10 @@ export function useUpdatePreferences() {
       updatePreferences(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: settingsKeys.preferences() });
+      // Thresholds govern which alerts fire, so a save can change the active
+      // notification set — mirror the cabinet mutation cross-feature
+      // invalidation (Phase 6 §2) to keep the bell fresh.
+      queryClient.invalidateQueries({ queryKey: notificationKeys.all() });
     },
   });
 }

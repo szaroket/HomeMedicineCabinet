@@ -368,6 +368,10 @@ Surface the two new thresholds in the settings form so the user can tune what fi
 
 **Implementation Note**: Pause for manual confirmation after automated verification passes.
 
+### Addendum (2026-07-08, from impl-review-phase-7 F2)
+
+- **Unplanned mobile-scroll fix shipped with this phase.** Beyond the settings threshold controls, commit `e207c49` also fixes mobile viewport scrolling: `h-screen`→`h-dvh` on the global `AppLayout` (`app-layout.tsx:18`), plus a full-bleed scroll container (`-mx-6 -my-8 h-[calc(100%+4rem)] px-6 py-8`) on both `settings/components/settings-page.tsx:67` **and** `cabinet/components/add-medication-page.tsx:8` (a cabinet-feature file touched outside this phase's stated scope). Kept as-is: it is a genuine UX fix. **Known coupling / follow-up:** the negative-margin trick hard-couples to `AppLayout`'s exact `px-6 py-8` content padding (`app-layout.tsx:55`, now carrying a guard comment pointing at both dependents) — changing that padding silently misaligns all call sites, and there is no viewport regression test (unlike the Phase-6 panel-scroll fix, which got jsdom coverage). Revisit by extracting a shared full-bleed scroll container (single source for the padding math) if a third page needs it or the padding changes.
+
 ---
 
 ## Phase 8: Frontend — click notification to filter cabinet
@@ -521,12 +525,12 @@ One additive migration (`dismissed_notifications`). No backfill — the table st
 
 #### Automated
 
-- [x] 7.1 Form seeds all three values, rejects out-of-range with Polish messages, submits full payload
-- [x] 7.2 Build + lint + format pass
+- [x] 7.1 Form seeds all three values, rejects out-of-range with Polish messages, submits full payload — e207c49
+- [x] 7.2 Build + lint + format pass — e207c49
 
 #### Manual
 
-- [ ] 7.3 Thresholds persist across reload and change which alerts appear
+- [x] 7.3 Thresholds persist across reload and change which alerts appear — e207c49
 
 ### Phase 8: Frontend — click notification to filter cabinet
 
