@@ -325,6 +325,10 @@ Add the `features/notifications/` feature: API layer, the header bell with an un
 
 **Implementation Note**: Pause for manual confirmation after automated verification passes.
 
+### Addendum (2026-07-08, from impl-review-phase-6 F1)
+
+- **"Odrzuć wszystkie" (dismiss-all) added beyond the original contract.** The panel gained a `useDismissAllNotifications` hook (`notifications-queries.ts:34-50`) plus an "Odrzuć wszystkie" header button (`notification-panel.tsx:99-108`). It fans out one `dismissNotification` POST per item via `Promise.all` — there is **no bulk endpoint**, so N active notifications = N requests, and because `Promise.all` rejects on the first error a partial failure can leave some rows dismissed and some not (the query is invalidated either way). Kept as-is: self-contained, test-covered (`notification-bell.test.tsx:113`), and benign at PRD scale (small cabinets → few requests). **Known limitation / follow-up:** if cabinets grow, revisit with an atomic bulk-dismiss endpoint to fix the O(N)-request cost and the partial-failure window.
+
 ---
 
 ## Phase 7: Frontend — settings threshold controls

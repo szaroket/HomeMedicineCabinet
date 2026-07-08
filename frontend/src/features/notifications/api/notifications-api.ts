@@ -14,7 +14,7 @@ export interface NotificationListOut {
 }
 
 export function getNotifications(): Promise<NotificationListOut> {
-  return apiJson<NotificationListOut>("/notifications");
+  return apiJson<NotificationListOut>("/notifications/");
 }
 
 export interface DismissNotificationPayload {

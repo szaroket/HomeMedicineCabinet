@@ -13,17 +13,21 @@ interface NotificationPanelProps {
   onClose: () => void;
 }
 
+function dayWord(days: number | null): string {
+  return days === 1 ? "dzień" : "dni";
+}
+
 function rowLabel(item: NotificationItem): string {
   switch (item.trigger_type) {
     case "expiry":
       if (item.days_remaining != null && item.days_remaining < 0) {
         return "Termin ważności minął";
       }
-      return `Termin ważności kończy się za ${item.days_remaining} dni`;
+      return `Termin ważności kończy się za ${item.days_remaining} ${dayWord(item.days_remaining)}`;
     case "below_minimum":
       return "Liczba opakowań poniżej minimalnej wartości";
     case "run_out":
-      return `Zabraknie za ${item.days_remaining} dni`;
+      return `Zabraknie za ${item.days_remaining} ${dayWord(item.days_remaining)}`;
   }
 }
 
