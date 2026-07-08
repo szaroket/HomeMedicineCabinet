@@ -33,7 +33,11 @@ describe("updatePreferences", () => {
       min_package_count: 2,
     };
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(preferences));
-    const payload = { min_package_count: 2 };
+    const payload = {
+      expiry_threshold_days: 30,
+      close_to_finish_threshold_days: 7,
+      min_package_count: 2,
+    };
 
     await expect(updatePreferences(payload)).resolves.toEqual(preferences);
 

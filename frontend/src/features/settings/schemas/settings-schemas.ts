@@ -1,6 +1,15 @@
 import { z } from "zod";
 
 export const updatePreferencesSchema = z.object({
+  expiry_threshold_days: z
+    .number()
+    .int("Próg ważności musi być liczbą całkowitą.")
+    .min(7, "Minimalny próg ważności wynosi 7 dni.")
+    .max(90, "Maksymalny próg ważności wynosi 90 dni."),
+  close_to_finish_threshold_days: z
+    .number()
+    .int("Próg kończącego się zapasu musi być liczbą całkowitą.")
+    .min(1, "Minimalny próg kończącego się zapasu wynosi 1 dzień."),
   min_package_count: z
     .number()
     .int("Minimalna liczba opakowań musi być liczbą całkowitą.")

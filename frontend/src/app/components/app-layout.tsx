@@ -15,7 +15,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
 
   return (
-    <div className="flex h-screen flex-col bg-slate-900">
+    <div className="flex h-dvh flex-col bg-slate-900">
       {/* Top header — full width */}
       <header className="flex flex-shrink-0 items-center justify-between border-b border-slate-700 bg-slate-800 px-4 py-3">
         <div className="flex items-center gap-3">

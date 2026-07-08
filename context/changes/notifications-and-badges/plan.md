@@ -521,8 +521,8 @@ One additive migration (`dismissed_notifications`). No backfill — the table st
 
 #### Automated
 
-- [ ] 7.1 Form seeds all three values, rejects out-of-range with Polish messages, submits full payload
-- [ ] 7.2 Build + lint + format pass
+- [x] 7.1 Form seeds all three values, rejects out-of-range with Polish messages, submits full payload
+- [x] 7.2 Build + lint + format pass
 
 #### Manual
 
