@@ -506,12 +506,12 @@ One additive migration (`dismissed_notifications`). No backfill — the table st
 
 #### Automated
 
-- [x] 6.1 Component tests: badge edges, panel copy per type, dismiss invokes mutation
-- [x] 6.2 Build + lint + format pass
+- [x] 6.1 Component tests: badge edges, panel copy per type, dismiss invokes mutation — b632f5e
+- [x] 6.2 Build + lint + format pass — b632f5e
 
 #### Manual
 
-- [ ] 6.3 Bell count, panel open, dismiss decrements, outside-click/Escape close, mobile layout holds
+- [x] 6.3 Bell count, panel open, dismiss decrements, outside-click/Escape close, mobile layout holds — b632f5e
 
 ### Phase 7: Frontend — settings threshold controls
 
