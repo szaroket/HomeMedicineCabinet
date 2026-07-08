@@ -452,13 +452,13 @@ One additive migration (`dismissed_notifications`). No backfill — the table st
 
 #### Automated
 
-- [x] 4.1 PATCH persists all three fields; GET reflects them
-- [x] 4.2 Out-of-range threshold values return 422
-- [x] 4.3 Lint/format + typecheck pass
+- [x] 4.1 PATCH persists all three fields; GET reflects them — 4fe5bf1
+- [x] 4.2 Out-of-range threshold values return 422 — 4fe5bf1
+- [x] 4.3 Lint/format + typecheck pass — 4fe5bf1
 
 #### Manual
 
-- [ ] 4.4 New thresholds change which borderline alerts fire
+- [x] 4.4 New thresholds change which borderline alerts fire — 4fe5bf1
 
 ### Phase 5: Backend — account-delete cascade extension
 
