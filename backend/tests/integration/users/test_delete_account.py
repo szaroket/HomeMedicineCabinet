@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.auth.types import CurrentUser
 from app.api.v1.cabinet.models import CabinetEntry
 from app.api.v1.medicines.models import MedicationRegistry
+from app.api.v1.notifications.models import DismissedNotification
 from app.api.v1.users.models import User, UserPreferences
 from app.utilities.errors import AccountDeletionError
 
@@ -93,6 +94,52 @@ async def test_delete_account_removes_user_data_and_preserves_registry(
 
     # The Supabase admin delete is called exactly once, only after the local commit.
     delete_auth_user.assert_called_once_with(str(user.id))
+
+
+@pytest.mark.asyncio
+async def test_delete_account_leaves_no_orphaned_dismissals(
+    authed_db_client: tuple[AsyncClient, Callable[[CurrentUser], None]],
+    db_session: AsyncSession,
+    seed_user: Callable[..., Awaitable[tuple[User, CurrentUser]]],
+    seed_user_preferences: Callable[..., Awaitable[UserPreferences]],
+    seed_registry: Callable[..., Awaitable[MedicationRegistry]],
+    seed_entry: Callable[..., Awaitable[CabinetEntry]],
+    mocker: MockerFixture,
+) -> None:
+    """Deleting an account with dismissal rows leaves zero rows for that user (Risk #7)."""
+    client, act_as = authed_db_client
+    mocker.patch("app.db.supabase_auth.delete_user", autospec=True)
+
+    user, current_user = await seed_user()
+    await seed_user_preferences(user)
+    registry = await seed_registry()
+    entry = await seed_entry(user=user, registry=registry)
+
+    dismissal = DismissedNotification(
+        user_id=user.id,
+        cabinet_entry_id=entry.id,
+        trigger_type="below_minimum",
+    )
+    db_session.add(dismissal)
+    await db_session.flush()
+
+    act_as(current_user)
+    response = await client.delete("/api/v1/users/me")
+
+    assert response.status_code == 204
+
+    remaining = (
+        (
+            await db_session.execute(
+                select(DismissedNotification).where(
+                    DismissedNotification.user_id == user.id
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert remaining == [], "dismissal rows must not survive account deletion"
 
 
 @pytest.mark.asyncio

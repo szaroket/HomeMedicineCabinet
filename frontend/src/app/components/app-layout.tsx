@@ -4,6 +4,7 @@ import { AppSidebar } from "@/app/components/app-sidebar";
 import { AppHeader } from "@/app/components/app-header";
 import { AppFooter } from "@/app/components/app-footer";
 import { LogoutButton } from "@/features/auth/components/logout-button";
+import { NotificationBell } from "@/features/notifications/components/notification-bell";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -14,7 +15,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
 
   return (
-    <div className="flex h-screen flex-col bg-slate-900">
+    <div className="flex h-dvh flex-col bg-slate-900">
       {/* Top header — full width */}
       <header className="flex flex-shrink-0 items-center justify-between border-b border-slate-700 bg-slate-800 px-4 py-3">
         <div className="flex items-center gap-3">
@@ -40,7 +41,10 @@ export function AppLayout({ children }: AppLayoutProps) {
           </button>
           <AppHeader />
         </div>
-        <LogoutButton />
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          <LogoutButton />
+        </div>
       </header>
 
       {/* Body: sidebar + content */}
@@ -48,6 +52,12 @@ export function AppLayout({ children }: AppLayoutProps) {
         <AppSidebar isOpen={sidebarOpen} onClose={closeSidebar} />
 
         <main className="flex flex-1 flex-col overflow-hidden">
+          {/* NOTE: the `px-6 py-8` content padding here is depended on by the
+              full-bleed mobile-scroll containers in settings-page.tsx and
+              cabinet/add-medication-page.tsx (they use `-mx-6 -my-8 ...
+              px-6 py-8` + `h-[calc(100%+4rem)]` to cancel and re-apply it). If
+              you change this padding, update those two call sites in lockstep or
+              they will silently misalign/clip. */}
           <div className="flex flex-1 flex-col min-h-0 px-6 py-8">
             {children}
           </div>

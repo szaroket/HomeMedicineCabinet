@@ -21,6 +21,7 @@ import type {
   UsageFieldsPayload,
   UpdateQuantityPayload,
 } from "@/features/cabinet/api/cabinet-api";
+import { notificationKeys } from "@/features/notifications/api/notifications-queries";
 
 export const cabinetKeys = {
   products: (search: string) => ["cabinet", "products", search] as const,
@@ -70,6 +71,7 @@ export function useAddEntry() {
     mutationFn: (payload: AddEntryPayload) => addEntry(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: cabinetKeys.entriesAll() });
+      queryClient.invalidateQueries({ queryKey: notificationKeys.all() });
     },
   });
 }
@@ -81,6 +83,7 @@ export function useToggleImportant() {
       toggleImportant(id, is_important),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: cabinetKeys.entriesAll() });
+      queryClient.invalidateQueries({ queryKey: notificationKeys.all() });
     },
   });
 }
@@ -97,6 +100,7 @@ export function useSetUsage() {
     }) => setUsage(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: cabinetKeys.entriesAll() });
+      queryClient.invalidateQueries({ queryKey: notificationKeys.all() });
     },
   });
 }
@@ -107,6 +111,7 @@ export function useDeleteEntry() {
     mutationFn: ({ id }: { id: string }) => deleteEntry(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: cabinetKeys.entriesAll() });
+      queryClient.invalidateQueries({ queryKey: notificationKeys.all() });
     },
   });
 }
@@ -123,6 +128,7 @@ export function useUpdateQuantity() {
     }) => updateQuantity(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: cabinetKeys.entriesAll() });
+      queryClient.invalidateQueries({ queryKey: notificationKeys.all() });
     },
   });
 }
