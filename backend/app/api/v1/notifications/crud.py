@@ -126,8 +126,8 @@ async def delete_stale_dismissals(
                 delete(DismissedNotification).where(
                     col(DismissedNotification.user_id) == user_id,
                     tuple_(
-                        DismissedNotification.cabinet_entry_id,
-                        DismissedNotification.trigger_type,
+                        col(DismissedNotification.cabinet_entry_id),
+                        col(DismissedNotification.trigger_type),
                     ).in_(stale_keys),
                 )
             )
