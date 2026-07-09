@@ -103,6 +103,18 @@ the frontend phases can be developed against the real endpoint from Phase 1.
   filter. This keeps the S-06 below-minimum rule (`is_important AND package_count
   < minimum`, duplicated between `service.is_below_minimum` and the crud clause)
   in exactly one query path.
+- **"Brak zapasu" is deliberately narrowed to below-minimum only — needs product
+  sign-off.** FR-020 fires the out-of-stock badge on an important entry when
+  EITHER (a) it is close-to-expiry/expired OR (b) its package count is below
+  minimum. This card's count uses `below_minimum=True`, which is condition (b)
+  ONLY — an important, well-stocked but expiring entry shows the badge yet is not
+  counted here. This is intentional: the cabinet exposes `status` and
+  `below_minimum` as separate filters with no single "(a) OR (b)" filter, so
+  matching the full badge would require either a new combined cabinet filter
+  (violating "No new cabinet filters" scope) or breaking the count↔list invariant
+  that the whole endpoint is built around. **Confirm with the product owner that
+  the "Brak zapasu" number is intended as below-minimum-only before shipping; if
+  the full badge is required, revisit the scope decision.**
 - **`NavLink to="/"` needs `end`.** Without it the dashboard link renders active
   on `/cabinet`, `/settings`, etc.
 
@@ -138,7 +150,9 @@ orchestration over this domain's crud — no cross-domain calls here.
 
 **Contract**: `async def summarize_cabinet(session, user_id, expiry_threshold_days, min_package_count) -> CabinetSummaryOut`.
 Returns counts for `total` (no filter), `valid`, `expiring`, `expired`
-(`status=` each), and `out_of_stock` (`below_minimum=True` + `min_package_count`).
+(`status=` each), and `out_of_stock` (`below_minimum=True` + `min_package_count`
+— deliberately below-minimum-only, not the full FR-020 badge; see the "Brak
+zapasu" narrowing note in Critical Implementation Details).
 Uses the same `today`/UTC convention as `list_entries`.
 
 #### 3. `CabinetSummaryOut` schema
@@ -234,10 +248,12 @@ changes.
 
 **Contract**: add `queryClient.invalidateQueries({ queryKey: ["cabinet", "summary"] })`
 alongside the existing entries invalidation in each mutation's `onSuccess`.
-(Import `dashboardKeys` from the dashboard feature, or invalidate the literal key
-— match whichever import direction the repo prefers; dashboard depending on
-cabinet is the natural direction, so prefer invalidating the literal key here to
-avoid cabinet→dashboard import.)
+Invalidate the **literal** key here (do not import `dashboardKeys` from the
+dashboard feature): dashboard depends on cabinet, so a cabinet→dashboard import
+would invert the dependency direction. Add a short comment at this invalidation
+noting that `["cabinet","summary"]` must stay in sync with
+`dashboardKeys.summary()` (dashboard-queries.ts), which is the source of truth
+for the key, so the two literal copies don't silently drift.
 
 ### Success Criteria:
 
