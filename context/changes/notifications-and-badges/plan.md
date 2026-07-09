@@ -403,6 +403,11 @@ Clicking a notification row closes the panel and navigates to the cabinet list, 
 
 **Implementation Note**: Pause for manual confirmation after automated verification passes.
 
+### Addendum (2026-07-09, from impl-review-phase-8 F1/F2)
+
+- **Row navigation narrows beyond a bare name match.** Instead of the planned `navigate(\`/cabinet?search=${medication_name}\`)`, the row click builds a trigger-specific filter via `triggerFilterParams()` (`notification-panel.tsx:26-46`): `status=expired/expiring` for `expiry` (split on `days_remaining < 0`, matching `classify_status`'s boundary), `below_minimum=true` for `below_minimum`, `sufficiency=insufficient` for `run_out`. This excludes same-name-but-healthy packages from the filtered view and reuses the cabinet page's existing params — no new query param, no backend change. Now covered: `notification-bell.test.tsx` renders a `CabinetEcho` route that echoes `useSearchParams` and asserts the exact destination for every trigger branch (`it.each` block).
+- **Unplanned cabinet-page.tsx race fix.** Beyond `notification-panel.tsx`, this phase also touched `cabinet/components/cabinet-page.tsx:88-99` (a file outside the stated scope) to add a `pendingSearch` guard. On an externally-set `search` param (a notification-row navigation into the mounted cabinet), `debouncedSearch` lags one render behind `searchInput`, so the sync effect would briefly delete the just-navigated `search` param and restore it ~400ms later. Kept as-is: the fix is necessary (without it the new navigation flickers). Now covered: `cabinet-page.test.tsx` navigates in with `?search=Apap` and asserts the param survives both the render flush and the debounce window; verified to fail if the guard is removed.
+
 ---
 
 ## Testing Strategy

@@ -2,10 +2,22 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useSearchParams } from "react-router-dom";
 import { NotificationBell } from "@/features/notifications/components/notification-bell";
 import { jsonResponse } from "@/test/api-test-utils";
 import type { NotificationItem } from "@/features/notifications/api/notifications-api";
+
+// Echoes the incoming query string so tests can assert exactly where a
+// notification row navigated to (name search + trigger-specific filter).
+function CabinetEcho() {
+  const [searchParams] = useSearchParams();
+  return (
+    <>
+      <div>Cabinet page</div>
+      <div>params: {searchParams.toString()}</div>
+    </>
+  );
+}
 
 function renderBell() {
   const queryClient = new QueryClient({
@@ -16,7 +28,7 @@ function renderBell() {
       <QueryClientProvider client={queryClient}>
         <Routes>
           <Route path="/" element={<NotificationBell />} />
-          <Route path="/cabinet" element={<div>Cabinet page</div>} />
+          <Route path="/cabinet" element={<CabinetEcho />} />
         </Routes>
       </QueryClientProvider>
     </MemoryRouter>,
@@ -156,9 +168,74 @@ describe("NotificationBell", () => {
 
     expect(await screen.findByText("Cabinet page")).toBeInTheDocument();
     expect(
+      screen.getByText("params: search=Apap&status=expiring"),
+    ).toBeInTheDocument();
+    expect(
       screen.queryByRole("dialog", { name: "Powiadomienia" }),
     ).not.toBeInTheDocument();
   });
+
+  it.each([
+    {
+      name: "expiry still ahead → expiring status",
+      item: {
+        trigger_type: "expiry" as const,
+        medication_name: "Apap",
+        days_remaining: 5,
+      },
+      expected: "search=Apap&status=expiring",
+    },
+    {
+      name: "expiry already past → expired status",
+      item: {
+        trigger_type: "expiry" as const,
+        medication_name: "Apap",
+        days_remaining: -3,
+      },
+      expected: "search=Apap&status=expired",
+    },
+    {
+      name: "below_minimum → below_minimum flag",
+      item: {
+        trigger_type: "below_minimum" as const,
+        medication_name: "Ibuprom",
+        days_remaining: null,
+      },
+      expected: "search=Ibuprom&below_minimum=true",
+    },
+    {
+      name: "run_out → insufficient sufficiency",
+      item: {
+        trigger_type: "run_out" as const,
+        medication_name: "Amoksiklav",
+        days_remaining: 2,
+      },
+      expected: "search=Amoksiklav&sufficiency=insufficient",
+    },
+  ])(
+    "navigates to the cabinet with a trigger-specific filter ($name)",
+    async ({ item, expected }) => {
+      vi.mocked(fetch).mockResolvedValue(
+        jsonResponse({ items: [makeItem(item)] }),
+      );
+
+      const user = userEvent.setup();
+      renderBell();
+
+      await user.click(
+        await screen.findByRole("button", { name: "Powiadomienia" }),
+      );
+      await user.click(
+        await screen.findByRole("button", {
+          name: `Pokaż w apteczce: ${item.medication_name}`,
+        }),
+      );
+
+      expect(
+        await screen.findByText(`params: ${expected}`),
+      ).toBeInTheDocument();
+    },
+  );
 
   it("does not navigate when the dismiss button on a row is clicked", async () => {
     const items = [

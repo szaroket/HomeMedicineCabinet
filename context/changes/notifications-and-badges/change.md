@@ -1,7 +1,7 @@
 ---
 change_id: notifications-and-badges
 title: Notifications and badges
-status: implemented
+status: impl_reviewed
 created: 2026-07-06
 updated: 2026-07-09
 archived_at: null
