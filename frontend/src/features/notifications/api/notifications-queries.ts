@@ -35,7 +35,7 @@ export function useDismissAllNotifications() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (items: NotificationItem[]) =>
-      Promise.all(
+      Promise.allSettled(
         items.map((item) =>
           dismissNotification({
             cabinet_entry_id: item.cabinet_entry_id,
@@ -43,7 +43,9 @@ export function useDismissAllNotifications() {
           }),
         ),
       ),
-    onSuccess: () => {
+    // Re-sync regardless of partial failure: any dismissals that failed simply
+    // reappear after invalidation, so the panel never shows a stale set.
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: notificationKeys.all() });
     },
   });
