@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { NotificationBell } from "@/features/notifications/components/notification-bell";
 import { jsonResponse } from "@/test/api-test-utils";
 import type { NotificationItem } from "@/features/notifications/api/notifications-api";
@@ -11,9 +12,14 @@ function renderBell() {
     defaultOptions: { queries: { retry: false } },
   });
   return render(
-    <QueryClientProvider client={queryClient}>
-      <NotificationBell />
-    </QueryClientProvider>,
+    <MemoryRouter initialEntries={["/"]}>
+      <QueryClientProvider client={queryClient}>
+        <Routes>
+          <Route path="/" element={<NotificationBell />} />
+          <Route path="/cabinet" element={<div>Cabinet page</div>} />
+        </Routes>
+      </QueryClientProvider>
+    </MemoryRouter>,
   );
 }
 
@@ -129,6 +135,63 @@ describe("NotificationBell", () => {
     const list = await screen.findByRole("list");
     expect(list).toHaveClass("max-h-[70vh]");
     expect(list).toHaveClass("overflow-y-auto");
+  });
+
+  it("navigates to the cabinet filtered by medication name when a row is clicked, and closes the panel", async () => {
+    const items = [
+      makeItem({ cabinet_entry_id: "entry-1", medication_name: "Apap" }),
+    ];
+    vi.mocked(fetch).mockResolvedValue(jsonResponse({ items }));
+
+    const user = userEvent.setup();
+    renderBell();
+
+    await user.click(
+      await screen.findByRole("button", { name: "Powiadomienia" }),
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "Pokaż w apteczce: Apap" }),
+    );
+
+    expect(await screen.findByText("Cabinet page")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("dialog", { name: "Powiadomienia" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not navigate when the dismiss button on a row is clicked", async () => {
+    const items = [
+      makeItem({ cabinet_entry_id: "entry-1", medication_name: "Apap" }),
+    ];
+    vi.mocked(fetch).mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes("/notifications/dismiss")) {
+        return Promise.resolve(new Response(null, { status: 204 }));
+      }
+      return Promise.resolve(jsonResponse({ items }));
+    });
+
+    const user = userEvent.setup();
+    renderBell();
+
+    await user.click(
+      await screen.findByRole("button", { name: "Powiadomienia" }),
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Odrzuć powiadomienie: Apap" }),
+    );
+
+    await waitFor(() => {
+      const dismissCall = vi
+        .mocked(fetch)
+        .mock.calls.find(([url]) =>
+          String(url).includes("/notifications/dismiss"),
+        );
+      expect(dismissCall).toBeDefined();
+    });
+    expect(screen.queryByText("Cabinet page")).not.toBeInTheDocument();
   });
 
   it("dismiss all invokes the mutation once per active notification", async () => {

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 import {
   useNotifications,
   useDismissNotification,
@@ -15,6 +16,33 @@ interface NotificationPanelProps {
 
 function dayWord(days: number | null): string {
   return days === 1 ? "dzień" : "dni";
+}
+
+// Narrows the cabinet-page navigation beyond a bare name match so entries
+// that share a name but didn't trigger this alert (e.g. a second, healthy
+// package of the same medication) are excluded from the filtered view.
+// Reuses the cabinet page's existing status/below_minimum/sufficiency
+// filters — no new query param, no backend change.
+function triggerFilterParams(item: NotificationItem): URLSearchParams {
+  const params = new URLSearchParams();
+  params.set("search", item.medication_name);
+  switch (item.trigger_type) {
+    case "expiry":
+      params.set(
+        "status",
+        item.days_remaining != null && item.days_remaining < 0
+          ? "expired"
+          : "expiring",
+      );
+      break;
+    case "below_minimum":
+      params.set("below_minimum", "true");
+      break;
+    case "run_out":
+      params.set("sufficiency", "insufficient");
+      break;
+  }
+  return params;
 }
 
 function rowLabel(item: NotificationItem): string {
@@ -38,6 +66,7 @@ export function NotificationPanel({
   const { data } = useNotifications();
   const dismissMutation = useDismissNotification();
   const dismissAllMutation = useDismissAllNotifications();
+  const navigate = useNavigate();
   const [position, setPosition] = useState<{
     top: number;
     right: number;
@@ -116,21 +145,30 @@ export function NotificationPanel({
                 key={`${item.cabinet_entry_id}-${item.trigger_type}`}
                 className="flex items-start justify-between gap-2 rounded border border-slate-700 bg-slate-900 p-2"
               >
-                <div className="min-w-0">
+                <button
+                  type="button"
+                  aria-label={`Pokaż w apteczce: ${item.medication_name}`}
+                  onClick={() => {
+                    navigate(`/cabinet?${triggerFilterParams(item)}`);
+                    onClose();
+                  }}
+                  className="min-w-0 flex-1 cursor-pointer text-left"
+                >
                   <p className="truncate text-sm font-medium text-white">
                     {item.medication_name}
                   </p>
                   <p className="text-xs text-slate-400">{rowLabel(item)}</p>
-                </div>
+                </button>
                 <button
                   type="button"
                   aria-label={`Odrzuć powiadomienie: ${item.medication_name}`}
-                  onClick={() =>
+                  onClick={(event) => {
+                    event.stopPropagation();
                     dismissMutation.mutate({
                       cabinet_entry_id: item.cabinet_entry_id,
                       trigger_type: item.trigger_type,
-                    })
-                  }
+                    });
+                  }}
                   className="shrink-0 rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-white"
                 >
                   <svg
