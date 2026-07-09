@@ -536,9 +536,9 @@ One additive migration (`dismissed_notifications`). No backfill — the table st
 
 #### Automated
 
-- [x] 8.1 Row click navigates to /cabinet?search=<name> and closes panel; dismiss button does not navigate
-- [x] 8.2 Build + lint + format pass
+- [x] 8.1 Row click navigates to /cabinet?search=<name> and closes panel; dismiss button does not navigate — a018d2f
+- [x] 8.2 Build + lint + format pass — a018d2f
 
 #### Manual
 
-- [x] 8.3 Clicking a notification lands on the cabinet page filtered to that medicine; panel closes
+- [x] 8.3 Clicking a notification lands on the cabinet page filtered to that medicine; panel closes — a018d2f
