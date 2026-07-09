@@ -11,6 +11,8 @@ export function getPreferences(): Promise<UserPreferences> {
 }
 
 export interface UpdatePreferencesPayload {
+  expiry_threshold_days: number;
+  close_to_finish_threshold_days: number;
   min_package_count: number;
 }
 

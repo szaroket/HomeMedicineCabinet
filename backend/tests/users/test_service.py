@@ -77,13 +77,17 @@ class TestUpdatePreferences:
             return_value=existing,
         )
         mocker.patch(
-            "app.api.v1.users.service.crud.update_min_package_count",
+            "app.api.v1.users.service.crud.update_preferences",
             autospec=True,
             return_value=updated,
         )
 
         result = await update_preferences(
-            session=mock_session, user_id=_USER_ID, min_package_count=3
+            session=mock_session,
+            user_id=_USER_ID,
+            expiry_threshold_days=DEFAULT_EXPIRY_THRESHOLD_DAYS,
+            close_to_finish_threshold_days=DEFAULT_CLOSE_TO_FINISH_THRESHOLD_DAYS,
+            min_package_count=3,
         )
 
         assert isinstance(result, UserPreferencesOut)
@@ -93,8 +97,8 @@ class TestUpdatePreferences:
         self, mock_session: AsyncMock, mocker: MockerFixture
     ):
         inserted = MagicMock(spec=UserPreferences)
-        inserted.expiry_threshold_days = DEFAULT_EXPIRY_THRESHOLD_DAYS
-        inserted.close_to_finish_threshold_days = DEFAULT_CLOSE_TO_FINISH_THRESHOLD_DAYS
+        inserted.expiry_threshold_days = 45
+        inserted.close_to_finish_threshold_days = 10
         inserted.min_package_count = 5
         mocker.patch(
             "app.api.v1.users.service.crud.get_user_preferences",
@@ -108,12 +112,20 @@ class TestUpdatePreferences:
         )
 
         result = await update_preferences(
-            session=mock_session, user_id=_USER_ID, min_package_count=5
+            session=mock_session,
+            user_id=_USER_ID,
+            expiry_threshold_days=45,
+            close_to_finish_threshold_days=10,
+            min_package_count=5,
         )
 
         assert isinstance(result, UserPreferencesOut)
         assert result.min_package_count == 5
         insert_mock.assert_awaited_once()
+        new_prefs = insert_mock.call_args.kwargs["prefs"]
+        assert new_prefs.expiry_threshold_days == 45
+        assert new_prefs.close_to_finish_threshold_days == 10
+        assert new_prefs.min_package_count == 5
 
 
 class TestDeleteUserRows:

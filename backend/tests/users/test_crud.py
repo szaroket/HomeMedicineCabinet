@@ -11,7 +11,7 @@ from app.api.v1.users.crud import (
     delete_user_rows,
     get_user_preferences,
     insert_preferences,
-    update_min_package_count,
+    update_preferences,
 )
 from app.api.v1.users.models import UserPreferences
 from app.utilities.const import (
@@ -72,23 +72,29 @@ def _mock_persist(side_effect=None):
     return cm
 
 
-class TestUpdateMinPackageCount:
+class TestUpdatePreferences:
     def _make_prefs(self) -> MagicMock:
         prefs = MagicMock(spec=UserPreferences)
         prefs.user_id = _USER_ID
+        prefs.expiry_threshold_days = 30
+        prefs.close_to_finish_threshold_days = 7
         prefs.min_package_count = 1
         return prefs
 
-    async def test_sets_min_package_count_and_returns_prefs(
-        self, mock_session: AsyncMock
-    ):
+    async def test_sets_all_fields_and_returns_prefs(self, mock_session: AsyncMock):
         prefs = self._make_prefs()
         with patch("app.api.v1.users.crud.persist", return_value=_mock_persist()):
-            result = await update_min_package_count(
-                session=mock_session, prefs=prefs, min_package_count=4
+            result = await update_preferences(
+                session=mock_session,
+                prefs=prefs,
+                expiry_threshold_days=14,
+                close_to_finish_threshold_days=3,
+                min_package_count=4,
             )
 
         assert result is prefs
+        assert prefs.expiry_threshold_days == 14
+        assert prefs.close_to_finish_threshold_days == 3
         assert prefs.min_package_count == 4
 
     async def test_db_error_raises_user_database_error(self, mock_session: AsyncMock):
@@ -98,8 +104,12 @@ class TestUpdateMinPackageCount:
             return_value=_mock_persist(side_effect=SQLAlchemyError("disk full")),
         ):
             with pytest.raises(UserDatabaseError) as exc_info:
-                await update_min_package_count(
-                    session=mock_session, prefs=prefs, min_package_count=4
+                await update_preferences(
+                    session=mock_session,
+                    prefs=prefs,
+                    expiry_threshold_days=14,
+                    close_to_finish_threshold_days=3,
+                    min_package_count=4,
                 )
 
         assert (
@@ -114,8 +124,12 @@ class TestUpdateMinPackageCount:
             return_value=_mock_persist(side_effect=original),
         ):
             with pytest.raises(UserDatabaseError) as exc_info:
-                await update_min_package_count(
-                    session=mock_session, prefs=prefs, min_package_count=4
+                await update_preferences(
+                    session=mock_session,
+                    prefs=prefs,
+                    expiry_threshold_days=14,
+                    close_to_finish_threshold_days=3,
+                    min_package_count=4,
                 )
 
         assert exc_info.value.__cause__ is original

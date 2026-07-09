@@ -36,13 +36,17 @@ async def get_user_preferences(
 async def update_preferences(
     session: AsyncSession,
     user_id: uuid.UUID,
+    expiry_threshold_days: int,
+    close_to_finish_threshold_days: int,
     min_package_count: int,
 ) -> UserPreferencesOut:
-    """Upsert min_package_count and return the effective preferences.
+    """Upsert all preference fields and return the effective preferences.
 
     Args:
         session (AsyncSession): Active async database session.
         user_id (uuid.UUID): UUID of the user.
+        expiry_threshold_days (int): New expiry threshold in days (7-90).
+        close_to_finish_threshold_days (int): New close-to-finish threshold in days (>=1).
         min_package_count (int): New minimum package count (1-10).
 
     Returns:
@@ -53,22 +57,27 @@ async def update_preferences(
     """
     existing = await crud.get_user_preferences(session=session, user_id=user_id)
     if existing is not None:
-        prefs = await crud.update_min_package_count(
+        prefs = await crud.update_preferences(
             session=session,
             prefs=existing,
+            expiry_threshold_days=expiry_threshold_days,
+            close_to_finish_threshold_days=close_to_finish_threshold_days,
             min_package_count=min_package_count,
         )
     else:
         new_prefs = UserPreferences(
             user_id=user_id,
-            expiry_threshold_days=DEFAULT_EXPIRY_THRESHOLD_DAYS,
-            close_to_finish_threshold_days=DEFAULT_CLOSE_TO_FINISH_THRESHOLD_DAYS,
+            expiry_threshold_days=expiry_threshold_days,
+            close_to_finish_threshold_days=close_to_finish_threshold_days,
             min_package_count=min_package_count,
         )
         prefs = await crud.insert_preferences(session=session, prefs=new_prefs)
     logger.info(
-        "Updated preferences for user %s: min_package_count=%d",
+        "Updated preferences for user %s: expiry_threshold_days=%d, "
+        "close_to_finish_threshold_days=%d, min_package_count=%d",
         user_id,
+        prefs.expiry_threshold_days,
+        prefs.close_to_finish_threshold_days,
         prefs.min_package_count,
     )
     return UserPreferencesOut(
