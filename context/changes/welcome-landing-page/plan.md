@@ -262,10 +262,10 @@ The dashboard's URL changes from `/` to `/dashboard`. Any external bookmarks to 
 
 #### Automated
 
-- [ ] 1.1 Type check + build passes: `cd frontend && npm run build`
-- [ ] 1.2 Lint passes: `cd frontend && npm run lint`
-- [ ] 1.3 Format check passes: `cd frontend && npx prettier --check src/`
-- [ ] 1.4 Welcome page unit test passes: `cd frontend && npx vitest run src/features/landing`
+- [x] 1.1 Type check + build passes: `cd frontend && npm run build`
+- [x] 1.2 Lint passes: `cd frontend && npm run lint`
+- [x] 1.3 Format check passes: `cd frontend && npx prettier --check src/`
+- [x] 1.4 Welcome page unit test passes: `cd frontend && npx vitest run src/features/landing`
 
 #### Manual
 
