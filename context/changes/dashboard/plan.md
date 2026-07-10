@@ -521,13 +521,13 @@ No schema changes, no migrations. Purely additive endpoint + frontend feature.
 
 #### Automated
 
-- [x] 4.1 Lint passes
-- [x] 4.2 Typecheck passes
-- [x] 4.3 Sidebar test: renders "Panel główny" link to `/`, not active on another route
+- [x] 4.1 Lint passes — 7a5bfc6
+- [x] 4.2 Typecheck passes — 7a5bfc6
+- [x] 4.3 Sidebar test: renders "Panel główny" link to `/`, not active on another route — 7a5bfc6
 
 #### Manual
 
-- [x] 4.4 Login redirects to `/` showing dashboard cards
-- [x] 4.5 Register redirects to `/` showing dashboard cards
-- [x] 4.6 Sidebar "Panel główny" highlighted only on `/`
-- [x] 4.7 Clicking "Panel główny" from another page returns to the dashboard
+- [x] 4.4 Login redirects to `/` showing dashboard cards — 7a5bfc6
+- [x] 4.5 Register redirects to `/` showing dashboard cards — 7a5bfc6
+- [x] 4.6 Sidebar "Panel główny" highlighted only on `/` — 7a5bfc6
+- [x] 4.7 Clicking "Panel główny" from another page returns to the dashboard — 7a5bfc6
