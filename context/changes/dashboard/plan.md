@@ -95,14 +95,19 @@ the frontend phases can be developed against the real endpoint from Phase 1.
 
 ## Critical Implementation Details
 
-- **Count definitions must reuse `_build_base_query`, not re-implement filters.**
+- **Counts derive from one conditional-aggregation query over `_build_base_query`.**
   The whole point of the backend endpoint (vs client-side derivation) is that the
-  count and the list share one definition. `valid`/`expiring`/`expired` counts
-  pass the corresponding `status`; `below_minimum` count passes
-  `below_minimum=True` with the resolved `min_package_count`; `total` passes no
-  filter. This keeps the S-06 below-minimum rule (`is_important AND package_count
-  < minimum`, duplicated between `service.is_below_minimum` and the crud clause)
-  in exactly one query path.
+  counts and the list agree. `count_summary` builds the *unfiltered*
+  `_build_base_query` subquery (all of the user's joined entries — the same row
+  shape `list_entries` uses) and sums per-bucket `CASE` expressions in a single
+  query rather than issuing one filtered count per bucket. The expiry-status
+  boundaries mirror `_build_base_query`'s status branches and
+  `service.classify_status`; the below-minimum bucket mirrors
+  `service.is_below_minimum` and the crud `below_minimum` clause (`is_important
+  AND package_count < minimum`). This trades the single-shared-query guarantee for
+  a single round-trip: the status boundaries and below-minimum rule now live in
+  three copies kept in sync by hand, so a parity test (each `summary` status count
+  == `GET /cabinet/entries?status=…` total) guards the status seam against drift.
 - **"Brak zapasu" is deliberately narrowed to below-minimum only — needs product
   sign-off.** FR-020 fires the out-of-stock badge on an important entry when
   EITHER (a) it is close-to-expiry/expired OR (b) its package count is below
@@ -112,9 +117,9 @@ the frontend phases can be developed against the real endpoint from Phase 1.
   `below_minimum` as separate filters with no single "(a) OR (b)" filter, so
   matching the full badge would require either a new combined cabinet filter
   (violating "No new cabinet filters" scope) or breaking the count↔list invariant
-  that the whole endpoint is built around. **Confirm with the product owner that
-  the "Brak zapasu" number is intended as below-minimum-only before shipping; if
-  the full badge is required, revisit the scope decision.**
+  that the whole endpoint is built around. **Product sign-off obtained
+  (2026-07-10): "Brak zapasu" is confirmed as below-minimum-only. Gate closed —
+  Phase 3 may ship this count.**
 - **`NavLink to="/"` needs `end`.** Without it the dashboard link renders active
   on `/cabinet`, `/settings`, etc.
 
@@ -131,29 +136,31 @@ existing filtered query and preference resolution.
 
 **File**: `backend/app/api/v1/cabinet/crud.py`
 
-**Intent**: Add a function that returns the row count for a given filter set by
-reusing `_build_base_query`, so counts and the list share one definition. Follows
-L-004 (wrap `session.execute` in `try/except SQLAlchemyError` → `CabinetDatabaseError`).
+**Intent**: Add a single-query aggregation over `_build_base_query` that returns
+all five counts at once, so a dashboard load is one round-trip. Follows L-004
+(wrap `session.execute` in `try/except SQLAlchemyError` → `CabinetDatabaseError`).
 
-**Contract**: `async def count_entries(session, user_id, today, threshold, status=None, below_minimum=None, min_package_count=None) -> int`.
-Body builds `select(func.count()).select_from(_build_base_query(...).subquery())`
-and returns `scalar_one()`. Only the filters the summary needs (status,
-below_minimum) are wired; search/category/sufficiency are left at their defaults.
+**Contract**: `async def count_summary(session, user_id, today, threshold, min_package_count) -> SummaryCounts`
+(a `NamedTuple` of `total`, `valid`, `expiring`, `expired`, `out_of_stock`). Body
+builds the *unfiltered* `_build_base_query(...).subquery()` and selects
+`func.count()` plus per-bucket `sum(case(...))` expressions: valid/expiring/expired
+by the same expiry boundaries as `_build_base_query`'s status branches, and
+out_of_stock by `is_important AND package_count < min_package_count`. Search/
+category/sufficiency are not applied.
 
 #### 2. Summary computation in cabinet service
 
 **File**: `backend/app/api/v1/cabinet/service.py`
 
 **Intent**: Add a service function that computes today (UTC) and issues the five
-counts via `crud.count_entries`, returning a `CabinetSummaryOut`. Pure
+counts via `crud.count_summary`, returning a `CabinetSummaryOut`. Pure
 orchestration over this domain's crud — no cross-domain calls here.
 
 **Contract**: `async def summarize_cabinet(session, user_id, expiry_threshold_days, min_package_count) -> CabinetSummaryOut`.
-Returns counts for `total` (no filter), `valid`, `expiring`, `expired`
-(`status=` each), and `out_of_stock` (`below_minimum=True` + `min_package_count`
-— deliberately below-minimum-only, not the full FR-020 badge; see the "Brak
-zapasu" narrowing note in Critical Implementation Details).
-Uses the same `today`/UTC convention as `list_entries`.
+Calls `crud.count_summary` once and maps its `SummaryCounts` onto
+`CabinetSummaryOut`. `out_of_stock` is deliberately below-minimum-only, not the
+full FR-020 badge; see the "Brak zapasu" narrowing note in Critical
+Implementation Details. Uses the same `today`/UTC convention as `list_entries`.
 
 #### 3. `CabinetSummaryOut` schema
 
@@ -460,15 +467,15 @@ No schema changes, no migrations. Purely additive endpoint + frontend feature.
 
 #### Automated
 
-- [x] 1.1 Lint/format passes (ruff check + format)
-- [x] 1.2 Backend unit tests pass (tests/cabinet)
-- [x] 1.3 Backend typecheck passes
-- [x] 1.4 Integration test: GET /cabinet/summary returns five int fields; counts match seeded fixture across empty / threshold boundaries / below-minimum
-- [x] 1.5 Parity: total == valid+expiring+expired and each status count matches GET /cabinet/entries?status=<s> total
+- [x] 1.1 Lint/format passes (ruff check + format) — d8b08c0
+- [x] 1.2 Backend unit tests pass (tests/cabinet) — d8b08c0
+- [x] 1.3 Backend typecheck passes — d8b08c0
+- [x] 1.4 Integration test: GET /cabinet/summary returns five int fields; counts match seeded fixture across empty / threshold boundaries / below-minimum — d8b08c0
+- [x] 1.5 Parity: total == valid+expiring+expired and each status count matches GET /cabinet/entries?status=<s> total — d8b08c0
 
 #### Manual
 
-- [x] 1.6 GET /cabinet/summary returns sensible counts for a real account
+- [x] 1.6 GET /cabinet/summary returns sensible counts for a real account — d8b08c0
 
 ### Phase 2: Frontend dashboard data layer
 

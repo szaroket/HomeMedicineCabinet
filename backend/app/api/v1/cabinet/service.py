@@ -531,9 +531,12 @@ async def summarize_cabinet(
 ) -> CabinetSummaryOut:
     """Compute the five dashboard counts for a user's cabinet.
 
-    Each count reuses ``crud.count_entries``, which shares the same filtered
-    query as ``list_entries``, so the count and the corresponding filtered list
-    always agree. ``out_of_stock`` is deliberately narrowed to below-minimum
+    All five counts come from ``crud.count_summary``, a single
+    conditional-aggregation query over the user's cabinet. Its per-bucket status
+    boundaries mirror ``_build_base_query`` / ``classify_status`` and its
+    below-minimum bucket mirrors ``is_below_minimum``, so those rules are kept in
+    sync by hand rather than shared through one query path (a parity test guards
+    the status seam). ``out_of_stock`` is deliberately narrowed to below-minimum
     only (not the full FR-020 badge condition) — see the "Brak zapasu"
     narrowing note in the dashboard plan.
 

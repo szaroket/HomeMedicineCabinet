@@ -170,14 +170,21 @@ async def test_summary_parity_total_equals_status_sum(
 async def test_summary_status_counts_match_entries_list_totals(
     authed_db_client: tuple[AsyncClient, Callable[[CurrentUser], None]],
     seed_user: Callable[..., Awaitable[tuple[User, CurrentUser]]],
+    seed_user_preferences: Callable[..., Awaitable[UserPreferences]],
     seed_registry: Callable[..., Awaitable[MedicationRegistry]],
     seed_entry: Callable[..., Awaitable[CabinetEntry]],
     today: date,
 ) -> None:
-    """Each status count in the summary matches GET /cabinet/entries?status=<s>'s total."""
+    """Each summary count matches its GET /cabinet/entries filtered total.
+
+    Covers both seams whose rules are duplicated between count_summary and
+    _build_base_query: the status buckets (?status=<s>) and out_of_stock
+    (?below_minimum=true).
+    """
     client, act_as = authed_db_client
 
     user, current_user = await seed_user()
+    await seed_user_preferences(user=user, min_package_count=3)
     registry = await seed_registry()
 
     await seed_entry(
@@ -192,6 +199,14 @@ async def test_summary_status_counts_match_entries_list_totals(
     await seed_entry(
         user=user, registry=registry, expiry_date=today + timedelta(days=60)
     )
+    # Important, below-minimum entry: contributes to out_of_stock and its status bucket.
+    await seed_entry(
+        user=user,
+        registry=registry,
+        is_important=True,
+        package_count=1,
+        expiry_date=today + timedelta(days=90),
+    )
 
     act_as(current_user)
     summary_response = await client.get("/api/v1/cabinet/summary")
@@ -204,3 +219,9 @@ async def test_summary_status_counts_match_entries_list_totals(
         )
         assert list_response.status_code == 200
         assert summary[status_value] == list_response.json()["total"]
+
+    below_min_response = await client.get(
+        "/api/v1/cabinet/entries", params={"below_minimum": "true"}
+    )
+    assert below_min_response.status_code == 200
+    assert summary["out_of_stock"] == below_min_response.json()["total"]
