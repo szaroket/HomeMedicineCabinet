@@ -64,12 +64,17 @@ export function useCabinetEntries(params: CabinetListParams) {
   });
 }
 
+// Dashboard depends on cabinet, so this literal key must stay in sync by hand
+// with dashboardKeys.summary() (dashboard-queries.ts), the source of truth for it.
+const DASHBOARD_SUMMARY_KEY = ["cabinet", "summary"] as const;
+
 export function useAddEntry() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: AddEntryPayload) => addEntry(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: cabinetKeys.entriesAll() });
+      queryClient.invalidateQueries({ queryKey: DASHBOARD_SUMMARY_KEY });
     },
   });
 }
@@ -81,6 +86,7 @@ export function useToggleImportant() {
       toggleImportant(id, is_important),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: cabinetKeys.entriesAll() });
+      queryClient.invalidateQueries({ queryKey: DASHBOARD_SUMMARY_KEY });
     },
   });
 }
@@ -97,6 +103,7 @@ export function useSetUsage() {
     }) => setUsage(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: cabinetKeys.entriesAll() });
+      queryClient.invalidateQueries({ queryKey: DASHBOARD_SUMMARY_KEY });
     },
   });
 }
@@ -107,6 +114,7 @@ export function useDeleteEntry() {
     mutationFn: ({ id }: { id: string }) => deleteEntry(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: cabinetKeys.entriesAll() });
+      queryClient.invalidateQueries({ queryKey: DASHBOARD_SUMMARY_KEY });
     },
   });
 }
@@ -123,6 +131,7 @@ export function useUpdateQuantity() {
     }) => updateQuantity(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: cabinetKeys.entriesAll() });
+      queryClient.invalidateQueries({ queryKey: DASHBOARD_SUMMARY_KEY });
     },
   });
 }
