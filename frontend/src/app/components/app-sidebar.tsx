@@ -1,26 +1,52 @@
 import { useEffect } from "react";
+import type { ReactNode } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import capsule from "@/assets/capsule.png";
 import gear from "@/assets/gear.png";
 import { AppHeader } from "@/app/components/app-header";
 
-const TOP_NAV = [{ to: "/cabinet", label: "Apteczka", icon: capsule }];
+function HomeIcon() {
+  return (
+    <svg
+      className="h-4 w-4 flex-shrink-0 opacity-75"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3 9.75 12 3l9 6.75V21a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V9.75Z"
+      />
+    </svg>
+  );
+}
+
+const TOP_NAV = [
+  { to: "/dashboard", label: "Panel główny", icon: <HomeIcon />, end: true },
+  { to: "/cabinet", label: "Apteczka", icon: capsule },
+];
 const BOTTOM_NAV = [{ to: "/settings", label: "Ustawienia", icon: gear }];
 
 function SidebarLink({
   to,
   label,
   icon,
+  end,
   onClick,
 }: {
   to: string;
   label: string;
-  icon: string;
+  icon: string | ReactNode;
+  end?: boolean;
   onClick?: () => void;
 }) {
   return (
     <NavLink
       to={to}
+      end={end}
       onClick={onClick}
       className={({ isActive }) =>
         [
@@ -31,7 +57,11 @@ function SidebarLink({
         ].join(" ")
       }
     >
-      <img src={icon} alt="" className="h-4 w-4 flex-shrink-0 opacity-75" />
+      {typeof icon === "string" ? (
+        <img src={icon} alt="" className="h-4 w-4 flex-shrink-0 opacity-75" />
+      ) : (
+        icon
+      )}
       {label}
     </NavLink>
   );

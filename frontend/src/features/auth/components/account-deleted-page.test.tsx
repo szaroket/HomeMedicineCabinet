@@ -12,7 +12,7 @@ function renderPage(initialEntries: string[] = ["/account-deleted"]) {
       <MemoryRouter initialEntries={initialEntries}>
         <Routes>
           <Route path="/account-deleted" element={<AccountDeletedPage />} />
-          <Route path="/" element={<div>Dashboard</div>} />
+          <Route path="/dashboard" element={<div>Dashboard</div>} />
         </Routes>
       </MemoryRouter>
     </AuthProvider>,
@@ -24,7 +24,7 @@ describe("AccountDeletedPage", () => {
     localStorage.clear();
   });
 
-  it("renders the full-deletion message and a Powrót link to /login by default", () => {
+  it("renders the full-deletion message and a Powrót link to / by default", () => {
     renderPage();
 
     expect(
@@ -37,7 +37,7 @@ describe("AccountDeletedPage", () => {
     ).toBeVisible();
 
     const backLink = screen.getByRole("link", { name: "Powrót" });
-    expect(backLink).toHaveAttribute("href", "/login");
+    expect(backLink).toHaveAttribute("href", "/");
   });
 
   it("renders the partial-deletion message when the partial query param is set", () => {

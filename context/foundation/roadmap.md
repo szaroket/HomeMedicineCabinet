@@ -3,7 +3,7 @@ project: "Home Medicine Cabinet"
 version: 1
 status: draft
 created: 2026-06-03
-updated: 2026-07-06
+updated: 2026-07-10
 prd_version: 1
 main_goal: low-complexity
 top_blocker: skills
@@ -37,12 +37,13 @@ A single adult can't reliably track their home medication inventory — what the
 | S-04 | important-category           | mark a medication as "important", set the global minimum package count, and see an attention badge when stock falls below minimum or medication is expiring/expired | S-02 | FR-013, FR-014, FR-020 (partial) | done |
 | S-05 | dosage-tracking              | assign a tablet-based medication to the "used" category with a dosage schedule and optional end date; see the estimated finish date or sufficiency indicator; non-tablet medications marked used for date tracking only | S-02 | US-04, FR-015, FR-016, FR-017, FR-018 | done |
 | S-03 | manage-cabinet-entry         | increment or decrement package count, update partial tablet count, and delete an entry with confirmation; important/used entries stay at zero so the user can restock | S-02, S-04 | FR-005 | done |
-| S-06 | notifications-and-badges     | see a notification bell with unread count; notification center lists expiry alerts, below-minimum important stock, and used medications at risk of running out; configure expiry and close-to-finish thresholds in settings; dismiss individual notifications | S-03, S-05 | US-02, US-05, FR-007, FR-008, FR-019, FR-020 | proposed |
-| S-07 | dashboard                    | land on a dashboard showing summary counts (total / valid / expiring soon / expired / out-of-stock) with clickable links to the cabinet list pre-filtered to each status | S-06 | FR-009 | proposed |
+| S-06 | notifications-and-badges     | see a notification bell with unread count; notification center lists expiry alerts, below-minimum important stock, and used medications at risk of running out; configure expiry and close-to-finish thresholds in settings; dismiss individual notifications | S-03, S-05 | US-02, US-05, FR-007, FR-008, FR-019, FR-020 | done |
+| S-07 | dashboard                    | land on a dashboard showing summary counts (total / valid / expiring soon / expired / out-of-stock) with clickable links to the cabinet list pre-filtered to each status | S-06 | FR-009 | done |
 | F-01b | auth-polish                 | (foundation) confirm-password field on the registration form so users cannot submit a typo in their password | F-01 | FR-001 | done    |
 | F-05 | backend-logging              | (foundation) structured logging across the FastAPI backend — central config, request/response middleware, consistent levels, meaningful logs at service/crud boundaries, no secrets/PII logged | F-01, F-02 | NFR (observability — baseline gap) | done |
 | F-06 | spa-refresh-fallback        | (foundation) refreshing or deep-linking any client-side route on the deployed Render static site serves the app instead of a 404 | F-04 | NFR (data persists across sessions and devices — stable deployed environment) | done |
 | S-09 | delete-user-account          | delete their own account and all associated data (cabinet entries, preferences) permanently, after explicit confirmation | F-01, F-02 | Access Control, NFR data-isolation | done |
+| S-10 | welcome-landing-page         | (unauthenticated) land on a public welcome page describing the app and what they can do, with links to log in and to register | F-01 | FR-001, FR-002 | done |
 
 ## Streams
 
@@ -58,7 +59,7 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 | C      | Cabinet management   | `S-04` → `S-03`                                | Branches from S-02; S-03 needs category-aware zero behaviour from S-04        |
 | D      | Dosage tracking      | `S-05`                                         | Branches from S-02 in parallel with Stream C                                  |
 | E      | Alerts & dashboard   | `S-06` → `S-07`                                | Joins Streams C and D at S-06; completes the full notification loop           |
-| F′     | Account lifecycle    | `F-01` → `S-09`                                | Standalone account-management addition; depends only on auth + data layer, runnable any time after F-02 |
+| F′     | Auth entry & account lifecycle | `F-01` → `S-09` / `S-10`                   | Public entry surface (S-10) and account-management (S-09) both hang off auth; each depends only on F-01 (S-09 also F-02), runnable any time |
 
 ## Baseline
 
@@ -242,7 +243,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Notifications are computed on page load without a background queue (tech-stack.md constraint). The dismiss-and-don't-re-fire logic (FR-008) requires a `dismissed_notifications` record in the database — not client-side storage — to satisfy the per-account data isolation NFR and to persist correctly across devices.
-- **Status:** proposed
+- **Status:** done
 
 ### S-07: Dashboard
 
@@ -254,7 +255,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Dashboard depends on S-06 because the out-of-stock count (FR-009) requires the badge computation logic from S-06. Sequencing last keeps the dashboard query simple — all classification and badge logic is already in place and the counts are a straightforward aggregation.
-- **Status:** proposed
+- **Status:** done
 
 ### S-09: Delete user account
 
@@ -267,6 +268,19 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Whether deletion cascades via DB foreign keys or requires explicit per-table cleanup before removing the Supabase Auth user. Block: no — resolve during `/10x-plan`.
 - **Risk:** Irreversible operation — confirmation UX must make the consequence unambiguous. Cascade deletion must be verified against every table keyed by user id to avoid orphaned rows.
+- **Status:** done
+
+### S-10: Welcome landing page
+
+- **Outcome:** an unauthenticated visitor can land on a public welcome page that briefly describes the app (what it is and what they can do with it) and navigate from there to the login page or the registration page.
+- **Change ID:** welcome-landing-page
+- **PRD refs:** FR-001, FR-002 (the welcome page is the public entry surface that routes unauthenticated users into registration and login; no dedicated PRD FR exists for the landing page itself — it is the front door to the auth requirements)
+- **Prerequisites:** F-01 (the login and registration screens must exist as navigation targets)
+- **Parallel with:** any slice — standalone public-facing page with no schema impact
+- **Blockers:** —
+- **Unknowns:**
+  - Exact welcome copy and which capabilities to highlight — Owner: user. Block: no (content is a UI concern resolved during `/10x-plan`).
+- **Risk:** Low. The public route must be reachable without authentication and must not sit behind the auth guard; it replaces the current default unauthenticated landing (F-01 currently drops users straight onto the login/register forms), so routing must (a) show the welcome page to unauthenticated visitors and (b) send already-authenticated users past it to the dashboard. All UI text must be Polish (NFR).
 - **Status:** done
 
 ## Backlog Handoff
@@ -288,6 +302,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-06       | notifications-and-badges     | Feature: in-app notifications + threshold settings + out-of-stock badges      | no                    | Depends on S-03, S-05             |
 | S-07       | dashboard                    | Feature: dashboard with summary counts and filter links                       | no                    | Depends on S-06                   |
 | S-09       | delete-user-account          | Feature: delete user account with confirmation and cascading data cleanup     | yes                   | Depends on F-01, F-02; run `/10x-plan delete-user-account` |
+| S-10       | welcome-landing-page         | Feature: public welcome/landing page for unauthenticated users with login + register links | yes      | Depends on F-01 (done); run `/10x-plan welcome-landing-page` |
 
 ## Open Roadmap Questions
 
@@ -324,3 +339,6 @@ _(none — all questions resolved before roadmap finalisation)_
 - **F-01b: (foundation) confirm-password field on the registration form so users cannot submit a typo in their password** — Archived 2026-07-04 → `context/archive/2026-07-04-auth-polish/`. Lesson: —.
 - **F-06: (foundation) refreshing or deep-linking any client-side route on the deployed Render static site serves the app instead of a 404** — Archived 2026-07-04 → `context/archive/2026-07-04-spa-refresh-fallback/`. Lesson: —.
 - **S-09: user can delete their own account from a settings/account screen, behind an explicit confirmation step (e.g. type-to-confirm or a confirmation dialog); on confirmation, the Supabase Auth user and all associated data (cabinet entries, user preferences, dismissed notifications) are permanently deleted; the user is logged out and returned to the entry screen.** — Archived 2026-07-06 → `context/archive/2026-07-04-delete-user-account/`. Lesson: —.
+- **S-07: user lands on a dashboard showing summary counts (total medications / valid / expiring soon / expired / out-of-stock badges active); each count is a clickable link navigating to the cabinet list pre-filtered to that status.** — Archived 2026-07-10 → `context/archive/2026-07-09-dashboard/`. Lesson: —.
+- **S-10: an unauthenticated visitor can land on a public welcome page that briefly describes the app (what it is and what they can do with it) and navigate from there to the login page or the registration page.** — Archived 2026-07-10 → `context/archive/2026-07-10-welcome-landing-page/`. Lesson: —.
+- **S-06: user sees a notification bell with an unread count; the notification center lists alerts for expiring medications, important stock below minimum, and used medications at risk of running out before their end date; the user can dismiss individual notifications (dismissed notifications do not re-fire until the condition clears and re-triggers); expiry threshold and close-to-finish threshold are configurable in settings.** — Archived 2026-07-09 → `context/archive/2026-07-06-notifications-and-badges/`. Lesson: —.

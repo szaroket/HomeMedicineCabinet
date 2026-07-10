@@ -6,12 +6,18 @@
 >
 > Refresh: re-run `/10x-test-plan --refresh` when stale (see §8).
 >
-> Last updated: 2026-07-04 (refresh `test-plan-refresh-2026-07-04`: all four
-> rollout phases shipped + archived — §3 Phases 1–3 reconciled to `complete`
-> and folders repointed to archive; §4 frontend now `meaningful` (Vitest +
-> Playwright), backend 17→24 files; §2 added Risk #7 (S-09 account delete, top
-> new risk) + #8 (S-06 notifications); §3 added gated Phases 5–6; §8 dates
-> bumped)
+> Last updated: 2026-07-10 (refresh, docs-only: S-09 and S-06 **shipped with
+> their own slice tests**, so §3 Phases 5–6 reconciled `not started`→`complete`
+> and repointed to their slice archives; §4 stack recount backend 24→31,
+> frontend 5→19 unit + 3 e2e specs, added notifications/users/dashboard tiers;
+> new surfaces S-07 dashboard + S-10 welcome noted as covered/low-risk; login
+> stale-auth-state watch item confirmed still parked; §8 dates bumped)
+>
+> Prior: 2026-07-04 (refresh `test-plan-refresh-2026-07-04`: all four rollout
+> phases shipped + archived — §3 Phases 1–3 reconciled to `complete` and folders
+> repointed to archive; §4 frontend now `meaningful` (Vitest + Playwright),
+> backend 17→24 files; §2 added Risk #7 (S-09 account delete) + #8 (S-06
+> notifications); §3 added gated Phases 5–6; §8 dates bumped)
 
 ## 1. Strategy
 
@@ -61,12 +67,15 @@ first (#1, #2). #5 is High-impact × Low-likelihood (no incident yet, auth
 currently works) but is retained because it never surfaces from happy-path
 tests. #6 (S-05 dosage) **shipped** on 2026-06-25 and its pure calc functions
 already carry unit coverage; the residual risk is now the integration/usage
-path, not the arithmetic — see §3 note. **#7 and #8 target unshipped slices**
-(S-09, S-06 are roadmap `proposed`): the risk rows are documented now as
-evidence-based forward risks, but their rollout phases are **gated on the
-feature shipping** — no test code can be written until the code exists (§3
-Phases 5–6). #7 is the top new risk (irreversible data loss + ownership); it
-never surfaces from a happy-path self-delete test, exactly like #5.
+path, not the arithmetic — see §3 note. **#7 and #8 have since shipped**
+(S-09 delete-user-account, archived `2026-07-04-delete-user-account`; S-06
+notifications, archived `2026-07-06-notifications-and-badges`) — each landed
+**with its own slice tests**, so their §3 rollout phases are now `complete` via
+that slice coverage (§3 note), not gated. #7 (irreversible data loss +
+ownership) is directly covered by `tests/integration/users/test_delete_account.py`,
+which asserts row-absence across every user-keyed table (cabinet, preferences,
+user, dismissed notifications), registry preservation, and cross-user isolation
+— the exact "prove protection" bar for this risk (see Risk Response Guidance).
 
 ### Risk Response Guidance
 
@@ -93,8 +102,8 @@ orchestrator updates Status as artifacts appear on disk.
 | 2 | Frontend critical-path E2E | Lock the crucial user journeys (login → add → see; display/filter cabinet) so they can't break unnoticed. Bootstraps Playwright. | #2, #1 | e2e | complete | context/archive/2026-07-01-critical-path-e2e/ |
 | 3 | Frontend data-seam unit tests | Verify the API-calling layer (typed fetchers, request/response shape, error handling) cheaply. Bootstraps Vitest. Narrow by design. | #2, #1 | unit | complete | context/archive/2026-07-03-frontend-data-seam-tests/ |
 | 4 | Quality-gates wiring | Close the remaining CI gaps: wire the **frontend-unit** and **e2e** jobs into `ci-cd.yml` (the e2e job was previously disabled). Lint/typecheck/backend-test/build gates already ship via F-04. | #1–#6 | gates | complete | context/archive/2026-07-04-quality-gates-wiring/ |
-| 5 | Account-deletion safety net (S-09) | When S-09 ships: prove account deletion is complete (no orphaned rows in any user-keyed table) and strictly self-only. | #7 | integration | not started | — (gated on S-09 — see note) |
-| 6 | Notification idempotency (S-06) | When S-06 ships: prove dismissed alerts don't re-fire until re-triggered and that thresholds gate the alert set. | #8 | integration + unit | not started | — (gated on S-06 — see note) |
+| 5 | Account-deletion safety net (S-09) | Prove account deletion is complete (no orphaned rows in any user-keyed table) and strictly self-only. | #7 | integration | complete | covered by slice — context/archive/2026-07-04-delete-user-account/ |
+| 6 | Notification idempotency (S-06) | Prove dismissed alerts don't re-fire until re-triggered and that thresholds gate the alert set. | #8 | integration + unit | complete | covered by slice — context/archive/2026-07-06-notifications-and-badges/ |
 
 **Status vocabulary** (fixed — parser literals): `not started` → `change opened`
 → `researched` → `planned` → `implementing` → `complete`.
@@ -106,18 +115,46 @@ suite grew to 24 files including a DB-backed `tests/integration/cabinet/` tier.
 §3 status labels and change-folder pointers were reconciled from disk during
 refresh `test-plan-refresh-2026-07-04`.
 
-**Phases 5–6 are gated on unshipped slices.** S-09 (delete-user-account) and
-S-06 (notifications-and-badges) are roadmap `proposed` — no test code can be
-written until the features exist. When either slice lands, open its rollout
-phase via `/10x-new` and let `/10x-research` ground the real deletion / dismissal
-path. Until then these phases stay `not started`; `/10x-research` on Phase 5/6
-before the slice ships will correctly report "feature not yet implemented."
+**Phases 5–6 shipped with their slices (reconciled 2026-07-10, docs-only).**
+S-09 (delete-user-account, archived `2026-07-04-delete-user-account`) and S-06
+(notifications-and-badges, archived `2026-07-06-notifications-and-badges`) both
+landed **carrying their own tests**, so neither needed a separate test-rollout
+change — the coverage arrived with the feature:
+
+- **Phase 5 / Risk #7** — `backend/tests/integration/users/test_delete_account.py`
+  asserts row-absence across every user-keyed table (`CabinetEntry`,
+  `UserPreferences`, `User`, `DismissedNotification`), preserves the shared
+  `medication_registry` catalog, and verifies another user's data is never
+  collateral (cross-user isolation). This meets the risk's "prove protection"
+  bar directly; frontend adds `delete-account-section.test.tsx` +
+  `account-deleted-page.test.tsx`.
+- **Phase 6 / Risk #8** — `tests/integration/notifications/test_dismiss_notification.py`,
+  `test_list_notifications.py`, `tests/notifications/test_service.py` (threshold
+  classification) + frontend `notification-bell.test.tsx`. Marked complete via
+  slice coverage. **Not research-verified** (this was a docs-only refresh): if
+  the precise "a dismissed alert must not re-fire until its condition clears and
+  re-triggers" suppression semantics warrant a dedicated regression test, open a
+  thin follow-up via `/10x-new` and let `/10x-research` confirm the match-key path.
+
+**New surfaces since 2026-07-04 (S-07, S-10) — assessed, no new top risk.**
+S-07 dashboard (archived `2026-07-09-dashboard`) is a read-only aggregation of
+already-classified cabinet data (FR-009 summary counts) — it reuses the
+S-04/S-06 classification and ships with `tests/integration/cabinet/test_summary.py`
+plus frontend `dashboard-api` / `dashboard-queries` / `dashboard-page` tests;
+low incremental risk, no new risk row. S-10 welcome-landing-page (archived
+`2026-07-10-welcome-landing-page`) is an unauthenticated static page covered by
+`e2e/welcome-landing.spec.ts` + `welcome-page.test.tsx`; low risk, no new risk
+row. Revisit either only if it grows real business logic.
 
 **Watch item (not a rollout phase).** A parked bug — "login requires a manual
 page refresh to reach the user page" (stale auth-state race, roadmap Parked
-section, reported 2026-07-03) — is a known defect with no regression test. It
-was deliberately left out of the §2 risk map during refresh (not selected as a
-top risk); revisit as its own change if it recurs after the S-06/S-07 work.
+section, reported 2026-07-03) — is a known defect with no regression test.
+**Still parked as of 2026-07-10** (confirmed against the roadmap Parked
+section). It is *distinct* from F-06 `spa-refresh-fallback` (archived
+`2026-07-04-spa-refresh-fallback`), which fixed the deployed-host deep-link 404,
+not the client-side post-login auth-state race. It was deliberately left out of
+the §2 risk map (not selected as a top risk); revisit as its own change (bug
+triage via `/10x-frame`) if it recurs.
 
 **Risk #6 status (was deferred, now shipped).** Roadmap slice S-05 (dosage
 finish-date / sufficiency) **shipped** on 2026-06-25 (archived
@@ -140,11 +177,11 @@ AI-native tooling is deliberately omitted (see §7).
 
 | Layer | Tool | Version | Notes |
 |-------|------|---------|-------|
-| backend unit + integration | pytest + pytest-asyncio | pytest ≥8.0, asyncio ≥0.24 | **24 test files** across domains (`auth`, `cabinet`, `medicines`, `users`, `registry`, `core`, `db`) plus a DB-backed `tests/integration/cabinet/` tier (`test_add_entry`, `test_filters`, `test_list_entries`, `test_ownership`, `test_quantity`, `test_usage`); `httpx.AsyncClient` as the FastAPI test client; shared fixtures in `backend/tests/conftest.py` |
+| backend unit + integration | pytest + pytest-asyncio | pytest ≥8.0, asyncio ≥0.24 | **31 test files** across domains (`auth`, `cabinet`, `medicines`, `users`, `notifications`, `registry`, `core`, `db`) plus DB-backed `tests/integration/` tiers — `cabinet/` (`test_add_entry`, `test_filters`, `test_list_entries`, `test_ownership`, `test_quantity`, `test_usage`, `test_summary`), `notifications/` (`test_dismiss_notification`, `test_list_notifications`), `users/` (`test_delete_account`); `httpx.AsyncClient` as the FastAPI test client; shared fixtures in `backend/tests/conftest.py` |
 | backend mocking | pytest-mock + `unittest.mock` | pytest-mock ≥3.15 | always pass `spec=`; `autospec=True` for patched functions (AGENTS.md) |
 | backend coverage | coverage | ≥7.14 | run via `uv run pytest`; CI-gated, not local-gated |
-| frontend unit | Vitest + React Testing Library | Vitest 4.1.9 | **shipped** (§3 Phase 3): `test` block in `frontend/vite.config.ts`, `environment: "jsdom"`; suite covers the API/seam layer — `src/lib/api-client.test.ts`, `features/cabinet/api/cabinet-api.test.ts`, `features/auth/api/auth-api.test.ts`, `features/settings/api/settings-api.test.ts`, `features/auth/schemas/auth-schemas.test.ts`; helpers in `src/test/` |
-| e2e | Playwright | **shipped** (§3 Phase 2) | `frontend/playwright.config.ts` + `frontend/e2e/` with `auth.setup.ts`, `manage-cabinet-entry.spec.ts`, `seed.spec.ts`, `helpers.ts`, `test-account.ts`, and a `teardown` |
+| frontend unit | Vitest + React Testing Library | Vitest 4.1.9 | **shipped** (§3 Phase 3): `test` block in `frontend/vite.config.ts`, `environment: "jsdom"`; **19 test files** — the API/seam layer (`src/lib/api-client.test.ts`, `features/*/api/*-api.test.ts` for cabinet/auth/settings/dashboard, `features/auth/schemas/auth-schemas.test.ts`) plus query-hook and component tests (`cabinet-queries`, `dashboard-queries`, `settings-queries`; `cabinet-page`, `dashboard-page`, `settings-page`, `notification-bell`, `delete-account-section`, `account-deleted-page`, `welcome-page`, `app-sidebar`, `not-found-page`); helpers in `src/test/` |
+| e2e | Playwright | **shipped** (§3 Phase 2) | `frontend/playwright.config.ts` + `frontend/e2e/` with `auth.setup.ts`, `manage-cabinet-entry.spec.ts`, `seed.spec.ts`, `welcome-landing.spec.ts`, `helpers.ts`, `test-account.ts`, and a `teardown` |
 | CI gates | GitHub Actions | shipped (F-04 + §3 Phase 4) | `.github/workflows/ci-cd.yml` exists (F-04 `ci-cd-wiring`, archived `2026-06-29-ci-cd-wiring`; gaps closed by `quality-gates-wiring`): jobs for pip-audit, npm audit, pre-commit (ruff/eslint/tsc), backend pytest+coverage (`--ignore=tests/db --ignore=tests/integration`), frontend build, pyright, frontend-unit (Vitest), frontend-typecheck (`tsc -b`), backend-integration (testcontainers), frontend-e2e (Playwright, secrets-gated) |
 
 **Stack grounding tools (current session):**
@@ -294,8 +331,8 @@ contributors should respect these unless the underlying assumption changes.
 
 ## 8. Freshness Ledger
 
-- Strategy (§1–§5) last reviewed: 2026-07-04 (refresh — rollout reconciled complete; Risks #7/#8 added)
-- Stack versions last verified: 2026-07-04
+- Strategy (§1–§5) last reviewed: 2026-07-10 (docs-only refresh — Phases 5/6 reconciled `complete` via slice tests; S-07/S-10 assessed as low-risk; stack recount)
+- Stack versions last verified: 2026-07-10
 - AI-native tool references last verified: 2026-06-16
 
 Refresh (`/10x-test-plan --refresh`) when:
