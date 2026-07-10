@@ -3,7 +3,7 @@ project: "Home Medicine Cabinet"
 version: 1
 status: draft
 created: 2026-06-03
-updated: 2026-07-09
+updated: 2026-07-10
 prd_version: 1
 main_goal: low-complexity
 top_blocker: skills
@@ -43,6 +43,7 @@ A single adult can't reliably track their home medication inventory — what the
 | F-05 | backend-logging              | (foundation) structured logging across the FastAPI backend — central config, request/response middleware, consistent levels, meaningful logs at service/crud boundaries, no secrets/PII logged | F-01, F-02 | NFR (observability — baseline gap) | done |
 | F-06 | spa-refresh-fallback        | (foundation) refreshing or deep-linking any client-side route on the deployed Render static site serves the app instead of a 404 | F-04 | NFR (data persists across sessions and devices — stable deployed environment) | done |
 | S-09 | delete-user-account          | delete their own account and all associated data (cabinet entries, preferences) permanently, after explicit confirmation | F-01, F-02 | Access Control, NFR data-isolation | done |
+| S-10 | welcome-landing-page         | (unauthenticated) land on a public welcome page describing the app and what they can do, with links to log in and to register | F-01 | FR-001, FR-002 | ready |
 
 ## Streams
 
@@ -58,7 +59,7 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 | C      | Cabinet management   | `S-04` → `S-03`                                | Branches from S-02; S-03 needs category-aware zero behaviour from S-04        |
 | D      | Dosage tracking      | `S-05`                                         | Branches from S-02 in parallel with Stream C                                  |
 | E      | Alerts & dashboard   | `S-06` → `S-07`                                | Joins Streams C and D at S-06; completes the full notification loop           |
-| F′     | Account lifecycle    | `F-01` → `S-09`                                | Standalone account-management addition; depends only on auth + data layer, runnable any time after F-02 |
+| F′     | Auth entry & account lifecycle | `F-01` → `S-09` / `S-10`                   | Public entry surface (S-10) and account-management (S-09) both hang off auth; each depends only on F-01 (S-09 also F-02), runnable any time |
 
 ## Baseline
 
@@ -269,6 +270,19 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Risk:** Irreversible operation — confirmation UX must make the consequence unambiguous. Cascade deletion must be verified against every table keyed by user id to avoid orphaned rows.
 - **Status:** done
 
+### S-10: Welcome landing page
+
+- **Outcome:** an unauthenticated visitor can land on a public welcome page that briefly describes the app (what it is and what they can do with it) and navigate from there to the login page or the registration page.
+- **Change ID:** welcome-landing-page
+- **PRD refs:** FR-001, FR-002 (the welcome page is the public entry surface that routes unauthenticated users into registration and login; no dedicated PRD FR exists for the landing page itself — it is the front door to the auth requirements)
+- **Prerequisites:** F-01 (the login and registration screens must exist as navigation targets)
+- **Parallel with:** any slice — standalone public-facing page with no schema impact
+- **Blockers:** —
+- **Unknowns:**
+  - Exact welcome copy and which capabilities to highlight — Owner: user. Block: no (content is a UI concern resolved during `/10x-plan`).
+- **Risk:** Low. The public route must be reachable without authentication and must not sit behind the auth guard; it replaces the current default unauthenticated landing (F-01 currently drops users straight onto the login/register forms), so routing must (a) show the welcome page to unauthenticated visitors and (b) send already-authenticated users past it to the dashboard. All UI text must be Polish (NFR).
+- **Status:** ready
+
 ## Backlog Handoff
 
 | Roadmap ID | Change ID                    | Suggested issue title                                                         | Ready for `/10x-plan` | Notes                             |
@@ -288,6 +302,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-06       | notifications-and-badges     | Feature: in-app notifications + threshold settings + out-of-stock badges      | no                    | Depends on S-03, S-05             |
 | S-07       | dashboard                    | Feature: dashboard with summary counts and filter links                       | no                    | Depends on S-06                   |
 | S-09       | delete-user-account          | Feature: delete user account with confirmation and cascading data cleanup     | yes                   | Depends on F-01, F-02; run `/10x-plan delete-user-account` |
+| S-10       | welcome-landing-page         | Feature: public welcome/landing page for unauthenticated users with login + register links | yes      | Depends on F-01 (done); run `/10x-plan welcome-landing-page` |
 
 ## Open Roadmap Questions
 
