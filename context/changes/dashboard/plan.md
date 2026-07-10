@@ -487,24 +487,24 @@ No schema changes, no migrations. Purely additive endpoint + frontend feature.
 
 #### Manual
 
-- [ ] 2.4 Summary query fires on load and refetches after cabinet add/delete
+- [x] 2.4 Summary query fires on load and refetches after cabinet add/delete
 
 ### Phase 3: Frontend dashboard UI
 
 #### Automated
 
-- [ ] 3.1 Lint passes
-- [ ] 3.2 Typecheck passes
-- [ ] 3.3 Prettier passes (src/features/dashboard)
-- [ ] 3.4 Component tests: loading→skeleton, error→retry, total===0→add-CTA, populated→five cards with counts and correct pre-filtered hrefs
+- [x] 3.1 Lint passes
+- [x] 3.2 Typecheck passes
+- [x] 3.3 Prettier passes (src/features/dashboard)
+- [x] 3.4 Component tests: loading→skeleton, error→retry, total===0→add-CTA, populated→five cards with counts and correct pre-filtered hrefs
 
 #### Manual
 
-- [ ] 3.5 Five cards show correct numbers matching the cabinet list
-- [ ] 3.6 Clicking each card lands on correctly pre-filtered cabinet list with matching total
-- [ ] 3.7 Empty cabinet shows add-CTA, not five zeros
-- [ ] 3.8 Cards stack on mobile, row on desktop
-- [ ] 3.9 Slow/failed backend shows skeleton then error+retry
+- [x] 3.5 Five cards show correct numbers matching the cabinet list
+- [x] 3.6 Clicking each card lands on correctly pre-filtered cabinet list with matching total
+- [x] 3.7 Empty cabinet shows add-CTA, not five zeros
+- [x] 3.8 Cards stack on mobile, row on desktop
+- [x] 3.9 Slow/failed backend shows skeleton then error+retry
 
 ### Phase 4: Navigation & landing wiring
 
