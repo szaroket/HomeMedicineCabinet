@@ -24,7 +24,7 @@ export function RegisterForm() {
   function onSubmit(values: RegisterFormValues) {
     setServerError(null);
     mutate(registerSchema.parse(values), {
-      onSuccess: () => navigate("/"),
+      onSuccess: () => navigate("/dashboard"),
       onError: (err) => {
         const status = err instanceof Response ? err.status : null;
         setServerError(

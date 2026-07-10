@@ -4,6 +4,7 @@ import { ProtectedLayout } from "@/app/layouts/protected-layout";
 import { LoginPage } from "@/features/auth/components/login-page";
 import { RegisterPage } from "@/features/auth/components/register-page";
 import { AccountDeletedPage } from "@/features/auth/components/account-deleted-page";
+import { WelcomePage } from "@/features/landing/components/welcome-page";
 import { DashboardPage } from "@/features/dashboard/components/dashboard-page";
 import { CabinetPage } from "@/features/cabinet/components/cabinet-page";
 import { AddMedicationPage } from "@/features/cabinet/components/add-medication-page";
@@ -14,6 +15,7 @@ export const router = createBrowserRouter([
   {
     element: <PublicLayout />,
     children: [
+      { path: "/", element: <WelcomePage /> },
       { path: "/login", element: <LoginPage /> },
       { path: "/register", element: <RegisterPage /> },
       { path: "/account-deleted", element: <AccountDeletedPage /> },
@@ -22,7 +24,7 @@ export const router = createBrowserRouter([
   {
     element: <ProtectedLayout />,
     children: [
-      { path: "/", element: <DashboardPage /> },
+      { path: "/dashboard", element: <DashboardPage /> },
       { path: "/cabinet", element: <CabinetPage /> },
       { path: "/cabinet/add", element: <AddMedicationPage /> },
       { path: "/settings", element: <SettingsPage /> },

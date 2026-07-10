@@ -69,13 +69,11 @@ setup(
         "E2E_TEST_PASSWORD pair is wrong or the account is unconfirmed",
     ).toBe(200);
 
-    // Successful login redirects to the protected dashboard ("/"). Assert a
-    // protected-route element actually renders — proof the session took and we
-    // were not bounced back to /login by ProtectedLayout.
-    await page.waitForURL("/");
-    await expect(
-      page.getByRole("link", { name: "Apteczka" }),
-    ).toBeVisible();
+    // Successful login redirects to the protected dashboard ("/dashboard").
+    // Assert a protected-route element actually renders — proof the session
+    // took and we were not bounced back to /login by ProtectedLayout.
+    await page.waitForURL("/dashboard");
+    await expect(page.getByRole("link", { name: "Apteczka" })).toBeVisible();
 
     // Persist cookies + localStorage (incl. the `auth_token`) for the chromium
     // project to reuse via `storageState`.

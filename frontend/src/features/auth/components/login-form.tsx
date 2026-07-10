@@ -19,7 +19,7 @@ export function LoginForm() {
   function onSubmit(values: LoginValues) {
     setServerError(null);
     mutate(values, {
-      onSuccess: () => navigate("/"),
+      onSuccess: () => navigate("/dashboard"),
       onError: () =>
         setServerError("Nieprawidłowy e-mail lub hasło. Spróbuj ponownie."),
     });
