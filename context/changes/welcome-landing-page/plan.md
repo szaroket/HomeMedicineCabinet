@@ -33,7 +33,7 @@ This is roadmap slice **S-10** (`context/foundation/roadmap.md:273`). All user-f
 
 - Visiting `/` while unauthenticated renders the Polish welcome page: logo + headline + one-paragraph description, 4 short capability highlights, and two CTAs (Register primary, Login secondary) linking to `/register` and `/login`, with `AppFooter` at the bottom.
 - Visiting `/`, `/login`, or `/register` while authenticated redirects to `/dashboard`.
-- Visiting `/dashboard` (and other protected routes) while unauthenticated redirects to `/login` (unchanged `ProtectedLayout` behaviour).
+- Visiting `/dashboard` (and other protected routes) while unauthenticated redirects to `/` (the welcome page), a deliberate Phase 2 deviation from the original plan — see "Deviations from plan" below.
 - Successful login or registration lands the user on `/dashboard`.
 - The sidebar "Panel główny" link points to `/dashboard` and shows the active state there.
 - `npm run build`, `npm run lint`, unit tests, and E2E all pass.
@@ -49,7 +49,7 @@ This is roadmap slice **S-10** (`context/foundation/roadmap.md:273`). All user-f
 - No rich multi-section marketing site (no scrolling feature sections, no how-it-works steps, no illustrations beyond the existing logo).
 - No new backend endpoint, schema, or data fetching — the page is fully static.
 - No new shared UI primitives (button/input) — styling stays inline per current convention.
-- No change to `ProtectedLayout`'s unauthenticated redirect target (stays `/login`).
+- ~~No change to `ProtectedLayout`'s unauthenticated redirect target (stays `/login`).~~ Superseded during Phase 2 — see "Deviations from plan".
 - No i18n framework — Polish copy is written inline as everywhere else.
 - No changes to the login/register form internals beyond the post-submit navigation target.
 
@@ -262,29 +262,34 @@ The dashboard's URL changes from `/` to `/dashboard`. Any external bookmarks to 
 
 #### Automated
 
-- [x] 1.1 Type check + build passes: `cd frontend && npm run build`
-- [x] 1.2 Lint passes: `cd frontend && npm run lint`
-- [x] 1.3 Format check passes: `cd frontend && npx prettier --check src/`
-- [x] 1.4 Welcome page unit test passes: `cd frontend && npx vitest run src/features/landing`
+- [x] 1.1 Type check + build passes: `cd frontend && npm run build` — 1206092
+- [x] 1.2 Lint passes: `cd frontend && npm run lint` — 1206092
+- [x] 1.3 Format check passes: `cd frontend && npx prettier --check src/` — 1206092
+- [x] 1.4 Welcome page unit test passes: `cd frontend && npx vitest run src/features/landing` — 1206092
 
 #### Manual
 
-- [ ] 1.5 Component shows logo, headline, four highlights, and both CTAs in Polish; Register primary; no breakage at desktop/mobile
+- [x] 1.5 Component shows logo, headline, four highlights, and both CTAs in Polish; Register primary; no breakage at desktop/mobile
 
 ### Phase 2: Routing rewire & redirects
 
 #### Automated
 
-- [ ] 2.1 Type check + build passes: `cd frontend && npm run build`
-- [ ] 2.2 Lint passes: `cd frontend && npm run lint`
-- [ ] 2.3 Format check passes: `cd frontend && npx prettier --check src/`
-- [ ] 2.4 Unit tests pass (incl. updated sidebar test): `cd frontend && npx vitest run`
-- [ ] 2.5 E2E passes: `cd frontend && npx playwright test welcome-landing`
+- [x] 2.1 Type check + build passes: `cd frontend && npm run build`
+- [x] 2.2 Lint passes: `cd frontend && npm run lint`
+- [x] 2.3 Format check passes: `cd frontend && npx prettier --check src/`
+- [x] 2.4 Unit tests pass (incl. updated sidebar test): `cd frontend && npx vitest run`
+- [x] 2.5 E2E passes: `cd frontend && npx playwright test welcome-landing`
 
 #### Manual
 
-- [ ] 2.6 Logged out, `/` shows welcome; CTAs go to `/register` and `/login`
-- [ ] 2.7 Logged out, `/dashboard` redirects to `/login`
-- [ ] 2.8 Logged in, `/`, `/login`, `/register` all redirect to `/dashboard`
-- [ ] 2.9 Login and registration land on `/dashboard`; sidebar "Panel główny" active
-- [ ] 2.10 No console errors; responsive at mobile and desktop widths
+- [x] 2.6 Logged out, `/` shows welcome; CTAs go to `/register` and `/login`
+- [x] 2.7 Logged out, `/dashboard` redirects to `/` (changed from `/login` — see Deviations from plan)
+- [x] 2.8 Logged in, `/`, `/login`, `/register` all redirect to `/dashboard`
+- [x] 2.9 Login and registration land on `/dashboard`; sidebar "Panel główny" active
+- [x] 2.10 No console errors; responsive at mobile and desktop widths
+
+## Deviations from plan
+
+- **`ProtectedLayout`'s unauthenticated redirect target changed from `/login` to `/`.** During Phase 2 manual verification the user judged that a logged-out visitor hitting a protected URL should land on the public welcome page rather than jump straight to the login form. Changed `frontend/src/app/layouts/protected-layout.tsx:18` accordingly, and updated the corresponding `welcome-landing.spec.ts` E2E case. This reverses the "No change to `ProtectedLayout`'s unauthenticated redirect target" item in "What We're NOT Doing" and the matching line in "Desired End State".
+- **`AccountDeletedPage`'s "Powrót" link changed from `/login` to `/`.** For consistency with the redirect change above, the post-deletion "Powrót" link now sends the visitor to the public welcome page instead of straight to the login form. Changed `frontend/src/features/auth/components/account-deleted-page.tsx:26` and its unit test assertion in `account-deleted-page.test.tsx`.

@@ -4,15 +4,15 @@ import { MemoryRouter } from "react-router-dom";
 import { AppSidebar } from "@/app/components/app-sidebar";
 
 describe("AppSidebar", () => {
-  it("renders a Panel główny link to / and marks it active only on the exact route", () => {
+  it("renders a Panel główny link to /dashboard and marks it active only on the exact route", () => {
     render(
-      <MemoryRouter initialEntries={["/"]}>
+      <MemoryRouter initialEntries={["/dashboard"]}>
         <AppSidebar isOpen={false} onClose={() => {}} />
       </MemoryRouter>,
     );
 
     const dashboardLink = screen.getByRole("link", { name: "Panel główny" });
-    expect(dashboardLink).toHaveAttribute("href", "/");
+    expect(dashboardLink).toHaveAttribute("href", "/dashboard");
     expect(dashboardLink).toHaveAttribute("aria-current", "page");
   });
 

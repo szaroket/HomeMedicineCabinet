@@ -10,7 +10,7 @@ export function AccountDeletedPage() {
   // just-deleted user seeing their confirmation — send them to the dashboard.
   // Legitimately-deleted users have their session torn down first (see
   // useDeleteAccount), so they arrive here token-less and still see the page.
-  if (token) return <Navigate to="/" replace />;
+  if (token) return <Navigate to="/dashboard" replace />;
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-900 px-6 text-center">
@@ -23,7 +23,7 @@ export function AccountDeletedPage() {
           : "Twoje konto oraz wszystkie powiązane dane zostały trwale usunięte."}
       </p>
       <Link
-        to="/login"
+        to="/"
         className="rounded text-blue-500 hover:text-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         Powrót

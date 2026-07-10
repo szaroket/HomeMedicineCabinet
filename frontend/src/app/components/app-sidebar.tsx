@@ -25,7 +25,7 @@ function HomeIcon() {
 }
 
 const TOP_NAV = [
-  { to: "/", label: "Panel główny", icon: <HomeIcon />, end: true },
+  { to: "/dashboard", label: "Panel główny", icon: <HomeIcon />, end: true },
   { to: "/cabinet", label: "Apteczka", icon: capsule },
 ];
 const BOTTOM_NAV = [{ to: "/settings", label: "Ustawienia", icon: gear }];
