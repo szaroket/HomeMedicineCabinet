@@ -52,4 +52,11 @@ test.describe("authenticated visitor", () => {
     await page.waitForURL("/dashboard");
     await expect(page).toHaveURL("/dashboard");
   });
+
+  test("visiting /login redirects to /dashboard (S-10)", async ({ page }) => {
+    await page.goto("/login");
+
+    await page.waitForURL("/dashboard");
+    await expect(page).toHaveURL("/dashboard");
+  });
 });
