@@ -481,9 +481,9 @@ No schema changes, no migrations. Purely additive endpoint + frontend feature.
 
 #### Automated
 
-- [x] 2.1 Lint passes
-- [x] 2.2 Typecheck passes
-- [x] 2.3 Data-seam tests pass (dashboard/api: fetcher path/parse + hook success/error)
+- [x] 2.1 Lint passes — 54708f3
+- [x] 2.2 Typecheck passes — 54708f3
+- [x] 2.3 Data-seam tests pass (dashboard/api: fetcher path/parse + hook success/error) — 54708f3
 
 #### Manual
 
