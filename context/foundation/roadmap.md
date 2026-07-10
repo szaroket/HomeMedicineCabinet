@@ -43,7 +43,7 @@ A single adult can't reliably track their home medication inventory — what the
 | F-05 | backend-logging              | (foundation) structured logging across the FastAPI backend — central config, request/response middleware, consistent levels, meaningful logs at service/crud boundaries, no secrets/PII logged | F-01, F-02 | NFR (observability — baseline gap) | done |
 | F-06 | spa-refresh-fallback        | (foundation) refreshing or deep-linking any client-side route on the deployed Render static site serves the app instead of a 404 | F-04 | NFR (data persists across sessions and devices — stable deployed environment) | done |
 | S-09 | delete-user-account          | delete their own account and all associated data (cabinet entries, preferences) permanently, after explicit confirmation | F-01, F-02 | Access Control, NFR data-isolation | done |
-| S-10 | welcome-landing-page         | (unauthenticated) land on a public welcome page describing the app and what they can do, with links to log in and to register | F-01 | FR-001, FR-002 | ready |
+| S-10 | welcome-landing-page         | (unauthenticated) land on a public welcome page describing the app and what they can do, with links to log in and to register | F-01 | FR-001, FR-002 | done |
 
 ## Streams
 
@@ -281,7 +281,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Exact welcome copy and which capabilities to highlight — Owner: user. Block: no (content is a UI concern resolved during `/10x-plan`).
 - **Risk:** Low. The public route must be reachable without authentication and must not sit behind the auth guard; it replaces the current default unauthenticated landing (F-01 currently drops users straight onto the login/register forms), so routing must (a) show the welcome page to unauthenticated visitors and (b) send already-authenticated users past it to the dashboard. All UI text must be Polish (NFR).
-- **Status:** ready
+- **Status:** done
 
 ## Backlog Handoff
 
@@ -340,4 +340,5 @@ _(none — all questions resolved before roadmap finalisation)_
 - **F-06: (foundation) refreshing or deep-linking any client-side route on the deployed Render static site serves the app instead of a 404** — Archived 2026-07-04 → `context/archive/2026-07-04-spa-refresh-fallback/`. Lesson: —.
 - **S-09: user can delete their own account from a settings/account screen, behind an explicit confirmation step (e.g. type-to-confirm or a confirmation dialog); on confirmation, the Supabase Auth user and all associated data (cabinet entries, user preferences, dismissed notifications) are permanently deleted; the user is logged out and returned to the entry screen.** — Archived 2026-07-06 → `context/archive/2026-07-04-delete-user-account/`. Lesson: —.
 - **S-07: user lands on a dashboard showing summary counts (total medications / valid / expiring soon / expired / out-of-stock badges active); each count is a clickable link navigating to the cabinet list pre-filtered to that status.** — Archived 2026-07-10 → `context/archive/2026-07-09-dashboard/`. Lesson: —.
+- **S-10: an unauthenticated visitor can land on a public welcome page that briefly describes the app (what it is and what they can do with it) and navigate from there to the login page or the registration page.** — Archived 2026-07-10 → `context/archive/2026-07-10-welcome-landing-page/`. Lesson: —.
 - **S-06: user sees a notification bell with an unread count; the notification center lists alerts for expiring medications, important stock below minimum, and used medications at risk of running out before their end date; the user can dismiss individual notifications (dismissed notifications do not re-fire until the condition clears and re-triggers); expiry threshold and close-to-finish threshold are configurable in settings.** — Archived 2026-07-09 → `context/archive/2026-07-06-notifications-and-badges/`. Lesson: —.
