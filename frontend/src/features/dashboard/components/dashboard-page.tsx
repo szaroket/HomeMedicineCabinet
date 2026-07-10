@@ -10,7 +10,7 @@ export function DashboardPage() {
 
   return (
     <AppLayout>
-      <div className="h-full overflow-y-auto">
+      <div className="flex h-full flex-col overflow-y-auto">
         <div className="mb-6 text-center">
           <h2 className="text-xl font-semibold text-white">Panel główny</h2>
         </div>

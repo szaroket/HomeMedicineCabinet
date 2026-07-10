@@ -299,6 +299,10 @@ expired accents consistent with the cabinet status badges).
 **Contract**: props `{ label: string; count: number; to: string; accent: <status token> }`.
 The whole card is the link. Full-width when stacked.
 
+**Addendum (2026-07-10, impl review Phase 3):** each card also renders a decorative
+status icon (per-status PNG under the dashboard assets, one per card, `alt=""`),
+matching `dashboard-v1.jpg`. Accepted as in-scope styling.
+
 #### 2. Card configuration (count → label → link)
 
 **File**: `frontend/src/features/dashboard/components/summary-cards.config.ts`
@@ -313,6 +317,13 @@ directly testable.
 `{ key: "expiring", label: "Bliski termin", to: "/cabinet?status=expiring" }`,
 `{ key: "expired", label: "Przeterminowane", to: "/cabinet?status=expired" }`,
 `{ key: "out_of_stock", label: "Brak zapasu", to: "/cabinet?below_minimum=true" }`.
+
+**Addendum (2026-07-10, impl review Phase 3):** shipped labels expand the concise
+forms above for clarity — `"Aktualne leki"`, `"Leki bliskie terminu ważności"`,
+`"Leki przeterminowane"`, `"Leki bez zapasu"` (`"Łącznie leków"` unchanged). This
+richer copy is now the canonical card copy; the concise forms above are the
+original shorthand. Note: labels are config-driven and tests read from the config,
+so copy changes are invisible to CI — verify label copy by eye.
 
 #### 3. Loading skeleton + empty state
 
@@ -487,24 +498,24 @@ No schema changes, no migrations. Purely additive endpoint + frontend feature.
 
 #### Manual
 
-- [x] 2.4 Summary query fires on load and refetches after cabinet add/delete
+- [x] 2.4 Summary query fires on load and refetches after cabinet add/delete — 7088759
 
 ### Phase 3: Frontend dashboard UI
 
 #### Automated
 
-- [x] 3.1 Lint passes
-- [x] 3.2 Typecheck passes
-- [x] 3.3 Prettier passes (src/features/dashboard)
-- [x] 3.4 Component tests: loading→skeleton, error→retry, total===0→add-CTA, populated→five cards with counts and correct pre-filtered hrefs
+- [x] 3.1 Lint passes — 7088759
+- [x] 3.2 Typecheck passes — 7088759
+- [x] 3.3 Prettier passes (src/features/dashboard) — 7088759
+- [x] 3.4 Component tests: loading→skeleton, error→retry, total===0→add-CTA, populated→five cards with counts and correct pre-filtered hrefs — 7088759
 
 #### Manual
 
-- [x] 3.5 Five cards show correct numbers matching the cabinet list
-- [x] 3.6 Clicking each card lands on correctly pre-filtered cabinet list with matching total
-- [x] 3.7 Empty cabinet shows add-CTA, not five zeros
-- [x] 3.8 Cards stack on mobile, row on desktop
-- [x] 3.9 Slow/failed backend shows skeleton then error+retry
+- [x] 3.5 Five cards show correct numbers matching the cabinet list — 7088759
+- [x] 3.6 Clicking each card lands on correctly pre-filtered cabinet list with matching total — 7088759
+- [x] 3.7 Empty cabinet shows add-CTA, not five zeros — 7088759
+- [x] 3.8 Cards stack on mobile, row on desktop — 7088759
+- [x] 3.9 Slow/failed backend shows skeleton then error+retry — 7088759
 
 ### Phase 4: Navigation & landing wiring
 
