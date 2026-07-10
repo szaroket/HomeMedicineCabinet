@@ -1,7 +1,7 @@
 ---
 change_id: dashboard
 title: Dashboard
-status: implemented
+status: impl_reviewed
 created: 2026-07-09
 updated: 2026-07-10
 archived_at: null

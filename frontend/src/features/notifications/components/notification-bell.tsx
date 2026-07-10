@@ -5,7 +5,7 @@ import { NotificationPanel } from "@/features/notifications/components/notificat
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const { data } = useNotifications();
-  const count = data?.items.length ?? 0;
+  const count = data?.items?.length ?? 0;
   const anchorRef = useRef<HTMLDivElement>(null);
 
   return (

@@ -8,6 +8,10 @@ import { SUMMARY_CARDS } from "@/features/dashboard/components/summary-cards.con
 import type { CabinetSummaryOut } from "@/features/dashboard/api/dashboard-api";
 import { AuthProvider } from "@/features/auth/store";
 
+vi.mock("@/features/notifications/api/notifications-queries", () => ({
+  useNotifications: () => ({ data: { items: [] } }),
+}));
+
 function renderPage() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },

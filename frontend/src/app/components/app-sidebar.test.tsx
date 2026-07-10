@@ -13,7 +13,7 @@ describe("AppSidebar", () => {
 
     const dashboardLink = screen.getByRole("link", { name: "Panel główny" });
     expect(dashboardLink).toHaveAttribute("href", "/");
-    expect(dashboardLink).toHaveClass("bg-slate-700");
+    expect(dashboardLink).toHaveAttribute("aria-current", "page");
   });
 
   it("does not mark Panel główny active on another route", () => {
@@ -24,6 +24,6 @@ describe("AppSidebar", () => {
     );
 
     const dashboardLink = screen.getByRole("link", { name: "Panel główny" });
-    expect(dashboardLink).not.toHaveClass("bg-slate-700");
+    expect(dashboardLink).not.toHaveAttribute("aria-current", "page");
   });
 });

@@ -480,6 +480,9 @@ async def count_summary(
     def _sum_when(condition):
         return cast(func.coalesce(func.sum(case((condition, 1), else_=0)), 0), Integer)
 
+    # Parity invariant (total == valid + expiring + expired) relies on
+    # CabinetEntry.expiry_date being NOT NULL: a NULL-expiry row would be
+    # counted in total but fall into no status bucket.
     stmt = select(
         func.count().label("total"),
         _sum_when(expiry_col > today + timedelta(days=threshold)).label("valid"),
