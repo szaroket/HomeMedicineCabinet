@@ -5,7 +5,7 @@ import { AppLayout } from "@/app/components/app-layout";
 export function AddMedicationPage() {
   return (
     <AppLayout>
-      <div className="h-full overflow-y-auto">
+      <div className="-mx-6 -my-8 h-[calc(100%+4rem)] overflow-y-auto px-6 py-8">
         <div className="flex flex-col items-center">
           <div className="w-full max-w-md rounded-lg border border-slate-700 bg-slate-800 p-6 shadow-lg">
             <div className="mb-5 flex items-center justify-between">

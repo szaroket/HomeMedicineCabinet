@@ -25,12 +25,20 @@ export function SettingsPage() {
     formState: { errors },
   } = useForm<UpdatePreferencesFormValues>({
     resolver: zodResolver(updatePreferencesSchema),
-    defaultValues: { min_package_count: 1 },
+    defaultValues: {
+      expiry_threshold_days: 30,
+      close_to_finish_threshold_days: 7,
+      min_package_count: 1,
+    },
   });
 
   useEffect(() => {
     if (prefs) {
-      reset({ min_package_count: prefs.min_package_count });
+      reset({
+        expiry_threshold_days: prefs.expiry_threshold_days,
+        close_to_finish_threshold_days: prefs.close_to_finish_threshold_days,
+        min_package_count: prefs.min_package_count,
+      });
     }
   }, [prefs, reset]);
 
@@ -38,7 +46,11 @@ export function SettingsPage() {
     setSuccessMessage(null);
     setServerError(null);
     mutate(
-      { min_package_count: values.min_package_count },
+      {
+        expiry_threshold_days: values.expiry_threshold_days,
+        close_to_finish_threshold_days: values.close_to_finish_threshold_days,
+        min_package_count: values.min_package_count,
+      },
       {
         onSuccess: () => {
           setSuccessMessage("Ustawienia zostały zapisane.");
@@ -52,7 +64,7 @@ export function SettingsPage() {
 
   return (
     <AppLayout>
-      <div className="h-full overflow-y-auto">
+      <div className="-mx-6 -my-8 h-[calc(100%+4rem)] overflow-y-auto px-6 py-8">
         <div className="mb-6">
           <h2 className="text-xl font-semibold text-white">Ustawienia</h2>
         </div>
@@ -70,8 +82,65 @@ export function SettingsPage() {
         {!isLoading && !isError && (
           <form
             onSubmit={handleSubmit(onSubmit)}
+            noValidate
             className="w-full max-w-sm space-y-6"
           >
+            <div className="space-y-1">
+              <label
+                htmlFor="expiry_threshold_days"
+                className="block text-sm font-medium text-slate-300"
+              >
+                Próg ważności (dni)
+              </label>
+              <p className="text-xs text-slate-400">
+                Leki, którym kończy się ważność w ciągu tylu dni, zostaną
+                oznaczone jako wygasające (7–90).
+              </p>
+              <input
+                id="expiry_threshold_days"
+                type="number"
+                min={7}
+                max={90}
+                {...register("expiry_threshold_days", {
+                  valueAsNumber: true,
+                })}
+                className="mt-1 w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {errors.expiry_threshold_days && (
+                <p className="text-xs text-red-400">
+                  {errors.expiry_threshold_days.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <label
+                htmlFor="close_to_finish_threshold_days"
+                className="block text-sm font-medium text-slate-300"
+              >
+                Próg kończącego się zapasu (dni)
+              </label>
+              <p className="text-xs text-slate-400">
+                Leki, których zapas skończy się w ciągu tylu dni przed
+                zakończeniem kuracji, zostaną oznaczone jako zagrożone (minimum
+                1).
+              </p>
+              <input
+                id="close_to_finish_threshold_days"
+                type="number"
+                min={1}
+                {...register("close_to_finish_threshold_days", {
+                  valueAsNumber: true,
+                })}
+                className="mt-1 w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {errors.close_to_finish_threshold_days && (
+                <p className="text-xs text-red-400">
+                  {errors.close_to_finish_threshold_days.message}
+                </p>
+              )}
+            </div>
+
             <div className="space-y-1">
               <label
                 htmlFor="min_package_count"

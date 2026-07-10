@@ -2,7 +2,7 @@
 
 import logging
 import uuid
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import NamedTuple
 
 from sqlalchemy import Float, Integer, case, cast, delete, func, literal, select, text
@@ -510,6 +510,45 @@ async def count_summary(
         expired=row.expired,
         out_of_stock=row.out_of_stock,
     )
+
+
+async def list_all_for_user(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+) -> list[tuple[CabinetEntry, MedicationRegistry]]:
+    """Fetch all cabinet entries (with registry join) for a user, unpaginated.
+
+    Used by the notifications facade, which must evaluate every entry rather
+    than a paginated page.
+
+    Args:
+        session (AsyncSession): Active async database session.
+        user_id (uuid.UUID): UUID of the authenticated user.
+
+    Returns:
+        list[tuple[CabinetEntry, MedicationRegistry]]: All matching rows for the user.
+
+    Raises:
+        CabinetDatabaseError: If the database query fails.
+    """
+    stmt = _build_base_query(
+        user_id=user_id,
+        today=datetime.now(timezone.utc).date(),
+        threshold=0,
+        status=None,
+        tsquery=None,
+    )
+    try:
+        result = await session.execute(stmt)
+    except SQLAlchemyError as exc:
+        logger.error(
+            "Failed to list all cabinet entries for user %s: %s",
+            user_id,
+            exc,
+            exc_info=True,
+        )
+        raise CabinetDatabaseError() from exc
+    return list(result.tuples().all())
 
 
 async def find_entry_by_id(

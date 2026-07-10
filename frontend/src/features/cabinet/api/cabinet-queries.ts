@@ -21,6 +21,7 @@ import type {
   UsageFieldsPayload,
   UpdateQuantityPayload,
 } from "@/features/cabinet/api/cabinet-api";
+import { notificationKeys } from "@/features/notifications/api/notifications-queries";
 
 export const cabinetKeys = {
   products: (search: string) => ["cabinet", "products", search] as const,
@@ -75,6 +76,7 @@ export function useAddEntry() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: cabinetKeys.entriesAll() });
       queryClient.invalidateQueries({ queryKey: DASHBOARD_SUMMARY_KEY });
+      queryClient.invalidateQueries({ queryKey: notificationKeys.all() });
     },
   });
 }
@@ -87,6 +89,7 @@ export function useToggleImportant() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: cabinetKeys.entriesAll() });
       queryClient.invalidateQueries({ queryKey: DASHBOARD_SUMMARY_KEY });
+      queryClient.invalidateQueries({ queryKey: notificationKeys.all() });
     },
   });
 }
@@ -104,6 +107,7 @@ export function useSetUsage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: cabinetKeys.entriesAll() });
       queryClient.invalidateQueries({ queryKey: DASHBOARD_SUMMARY_KEY });
+      queryClient.invalidateQueries({ queryKey: notificationKeys.all() });
     },
   });
 }
@@ -115,6 +119,7 @@ export function useDeleteEntry() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: cabinetKeys.entriesAll() });
       queryClient.invalidateQueries({ queryKey: DASHBOARD_SUMMARY_KEY });
+      queryClient.invalidateQueries({ queryKey: notificationKeys.all() });
     },
   });
 }
@@ -132,6 +137,7 @@ export function useUpdateQuantity() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: cabinetKeys.entriesAll() });
       queryClient.invalidateQueries({ queryKey: DASHBOARD_SUMMARY_KEY });
+      queryClient.invalidateQueries({ queryKey: notificationKeys.all() });
     },
   });
 }

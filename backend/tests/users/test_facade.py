@@ -33,6 +33,15 @@ def mock_cabinet_service(mocker: MockerFixture):
 
 
 @pytest.fixture
+def mock_notifications_service(mocker: MockerFixture):
+    service = mocker.patch(
+        "app.api.v1.users.facade.notifications_service", autospec=True
+    )
+    service.delete_by_user = AsyncMock(return_value=None)
+    return service
+
+
+@pytest.fixture
 def mock_users_service(mocker: MockerFixture):
     service = mocker.patch("app.api.v1.users.facade.users_service", autospec=True)
     service.delete_user_rows = AsyncMock(return_value=None)
@@ -50,6 +59,7 @@ class TestDeleteAccount:
         mock_session: AsyncMock,
         mocker: MockerFixture,
         mock_cabinet_service,
+        mock_notifications_service,
         mock_users_service,
         mock_supabase_auth,
     ):
@@ -57,6 +67,9 @@ class TestDeleteAccount:
 
         await delete_account(session=mock_session, user_id=_USER_ID)
 
+        mock_notifications_service.delete_by_user.assert_awaited_once_with(
+            session=mock_session, user_id=_USER_ID
+        )
         mock_cabinet_service.delete_by_user.assert_awaited_once_with(
             session=mock_session, user_id=_USER_ID
         )
@@ -70,6 +83,7 @@ class TestDeleteAccount:
         mock_session: AsyncMock,
         mocker: MockerFixture,
         mock_cabinet_service,
+        mock_notifications_service,
         mock_users_service,
         mock_supabase_auth,
     ):
@@ -86,6 +100,7 @@ class TestDeleteAccount:
         mock_session: AsyncMock,
         mocker: MockerFixture,
         mock_cabinet_service,
+        mock_notifications_service,
         mock_users_service,
         mock_supabase_auth,
     ):
@@ -102,6 +117,7 @@ class TestDeleteAccount:
         mock_session: AsyncMock,
         mocker: MockerFixture,
         mock_cabinet_service,
+        mock_notifications_service,
         mock_users_service,
         mock_supabase_auth,
     ):

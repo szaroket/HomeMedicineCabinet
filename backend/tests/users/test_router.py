@@ -83,7 +83,12 @@ class TestPatchPreferencesEndpoint:
         )
 
         response = await authed_client.patch(
-            PREFERENCES_URL, json={"min_package_count": 3}
+            PREFERENCES_URL,
+            json={
+                "expiry_threshold_days": DEFAULT_EXPIRY_THRESHOLD_DAYS,
+                "close_to_finish_threshold_days": DEFAULT_CLOSE_TO_FINISH_THRESHOLD_DAYS,
+                "min_package_count": 3,
+            },
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -99,17 +104,56 @@ class TestPatchPreferencesEndpoint:
         )
 
         response = await authed_client.patch(
-            PREFERENCES_URL, json={"min_package_count": 3}
+            PREFERENCES_URL,
+            json={
+                "expiry_threshold_days": DEFAULT_EXPIRY_THRESHOLD_DAYS,
+                "close_to_finish_threshold_days": DEFAULT_CLOSE_TO_FINISH_THRESHOLD_DAYS,
+                "min_package_count": 3,
+            },
         )
 
         assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
 
     @pytest.mark.parametrize("invalid_value", [0, 11])
-    async def test_out_of_range_returns_422(
+    async def test_out_of_range_min_package_count_returns_422(
         self, authed_client: AsyncClient, invalid_value: int
     ):
         response = await authed_client.patch(
-            PREFERENCES_URL, json={"min_package_count": invalid_value}
+            PREFERENCES_URL,
+            json={
+                "expiry_threshold_days": DEFAULT_EXPIRY_THRESHOLD_DAYS,
+                "close_to_finish_threshold_days": DEFAULT_CLOSE_TO_FINISH_THRESHOLD_DAYS,
+                "min_package_count": invalid_value,
+            },
+        )
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+    @pytest.mark.parametrize("invalid_value", [6, 91])
+    async def test_out_of_range_expiry_threshold_returns_422(
+        self, authed_client: AsyncClient, invalid_value: int
+    ):
+        response = await authed_client.patch(
+            PREFERENCES_URL,
+            json={
+                "expiry_threshold_days": invalid_value,
+                "close_to_finish_threshold_days": DEFAULT_CLOSE_TO_FINISH_THRESHOLD_DAYS,
+                "min_package_count": 3,
+            },
+        )
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+    async def test_out_of_range_close_to_finish_threshold_returns_422(
+        self, authed_client: AsyncClient
+    ):
+        response = await authed_client.patch(
+            PREFERENCES_URL,
+            json={
+                "expiry_threshold_days": DEFAULT_EXPIRY_THRESHOLD_DAYS,
+                "close_to_finish_threshold_days": 0,
+                "min_package_count": 3,
+            },
         )
 
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT

@@ -44,16 +44,20 @@ async def get_user_preferences(
     return result.scalar_one_or_none()
 
 
-async def update_min_package_count(
+async def update_preferences(
     session: AsyncSession,
     prefs: UserPreferences,
+    expiry_threshold_days: int,
+    close_to_finish_threshold_days: int,
     min_package_count: int,
 ) -> UserPreferences:
-    """Update min_package_count on an existing preferences row.
+    """Update all preference fields on an existing preferences row.
 
     Args:
         session (AsyncSession): Active async database session.
         prefs (UserPreferences): Existing UserPreferences instance to update.
+        expiry_threshold_days (int): New expiry threshold in days to persist.
+        close_to_finish_threshold_days (int): New close-to-finish threshold in days to persist.
         min_package_count (int): New minimum package count to persist.
 
     Returns:
@@ -62,6 +66,8 @@ async def update_min_package_count(
     Raises:
         UserDatabaseError: If the flush or commit fails.
     """
+    prefs.expiry_threshold_days = expiry_threshold_days
+    prefs.close_to_finish_threshold_days = close_to_finish_threshold_days
     prefs.min_package_count = min_package_count
     prefs.updated_at = datetime.now(timezone.utc)
     try:

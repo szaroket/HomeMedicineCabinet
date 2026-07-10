@@ -72,9 +72,10 @@ export function CabinetPage() {
   const [searchInput, setSearchInput] = useState(rawSearch);
   const debouncedSearch = useDebounce(searchInput, 400);
 
-  // When the URL's search changes externally (Back/Forward, cleared filters),
-  // reflect it into the input. Adjusting state during render is React's
-  // recommended pattern over calling setState inside an effect.
+  // When the URL's search changes externally (Back/Forward, cleared filters,
+  // a notification-row navigation), reflect it into the input. Adjusting
+  // state during render is React's recommended pattern over calling setState
+  // inside an effect.
   const [prevRawSearch, setPrevRawSearch] = useState(rawSearch);
   if (rawSearch !== prevRawSearch) {
     setPrevRawSearch(rawSearch);
@@ -84,8 +85,18 @@ export function CabinetPage() {
   // Only searches of at least MIN_SEARCH_LEN characters are sent to the API, so
   // shorter input must not leak into the URL either — otherwise the URL would
   // advertise a search the query ignores.
+  //
+  // When searchInput already matches rawSearch (nothing pending — either the
+  // user hasn't typed since the last URL sync, or an external navigation just
+  // set both to the same value above), use rawSearch directly instead of
+  // debouncedSearch. debouncedSearch lags one render behind searchInput
+  // (useDebounce's internal state only catches up after its own effect
+  // runs), so falling back to it here would make the sync effect below see a
+  // stale value that mismatches the just-navigated rawSearch and briefly
+  // delete the "search" param it was never supposed to touch.
+  const pendingSearch = searchInput === rawSearch ? rawSearch : debouncedSearch;
   const effectiveSearch =
-    debouncedSearch.length >= MIN_SEARCH_LEN ? debouncedSearch : "";
+    pendingSearch.length >= MIN_SEARCH_LEN ? pendingSearch : "";
 
   // Reflect the effective search into the URL. Uses replace so a single typed
   // word doesn't push one history entry per keystroke, and resets pagination

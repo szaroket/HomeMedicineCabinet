@@ -566,6 +566,39 @@ async def summarize_cabinet(
     )
 
 
+async def list_all_for_user(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    expiry_threshold_days: int,
+    min_package_count: int = DEFAULT_MIN_PACKAGE_COUNT,
+) -> list[CabinetEntryOut]:
+    """Return all of a user's cabinet entries with computed status, unpaginated.
+
+    Used by the notifications facade to evaluate every entry for alert triggers.
+
+    Args:
+        session (AsyncSession): Active async database session.
+        user_id (uuid.UUID): Authenticated user's UUID.
+        expiry_threshold_days (int): Days ahead that triggers "expiring" status.
+        min_package_count (int): User's global minimum package count for below-minimum signal.
+
+    Returns:
+        list[CabinetEntryOut]: All of the user's cabinet entries with computed fields.
+    """
+    today = datetime.now(timezone.utc).date()
+    rows = await crud.list_all_for_user(session=session, user_id=user_id)
+    return [
+        _map_row_to_entry_out(
+            entry=entry,
+            variant=variant,
+            today=today,
+            expiry_threshold_days=expiry_threshold_days,
+            min_package_count=min_package_count,
+        )
+        for entry, variant in rows
+    ]
+
+
 async def _get_variant_or_raise(
     session: AsyncSession,
     medication_registry_id: uuid.UUID,
