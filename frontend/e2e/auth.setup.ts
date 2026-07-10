@@ -74,7 +74,7 @@ setup(
     // were not bounced back to /login by ProtectedLayout.
     await page.waitForURL("/");
     await expect(
-      page.getByRole("link", { name: "Moja apteczka" }),
+      page.getByRole("link", { name: "Apteczka" }),
     ).toBeVisible();
 
     // Persist cookies + localStorage (incl. the `auth_token`) for the chromium

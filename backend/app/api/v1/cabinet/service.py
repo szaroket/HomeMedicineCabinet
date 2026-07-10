@@ -18,6 +18,7 @@ from app.api.v1.cabinet.schemas import (
     AddEntryResult,
     CabinetEntryOut,
     CabinetPageOut,
+    CabinetSummaryOut,
     MergeSummary,
     UsageFields,
 )
@@ -520,6 +521,49 @@ async def list_entries(
         for entry, variant in rows
     ]
     return CabinetPageOut(items=items, total=total, page=page, page_size=page_size)
+
+
+async def summarize_cabinet(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    expiry_threshold_days: int,
+    min_package_count: int = DEFAULT_MIN_PACKAGE_COUNT,
+) -> CabinetSummaryOut:
+    """Compute the five dashboard counts for a user's cabinet.
+
+    All five counts come from ``crud.count_summary``, a single
+    conditional-aggregation query over the user's cabinet. Its per-bucket status
+    boundaries mirror ``_build_base_query`` / ``classify_status`` and its
+    below-minimum bucket mirrors ``is_below_minimum``, so those rules are kept in
+    sync by hand rather than shared through one query path (a parity test guards
+    the status seam). ``out_of_stock`` is deliberately narrowed to below-minimum
+    only (not the full FR-020 badge condition) — see the "Brak zapasu"
+    narrowing note in the dashboard plan.
+
+    Args:
+        session (AsyncSession): Active async database session.
+        user_id (uuid.UUID): Authenticated user's UUID.
+        expiry_threshold_days (int): Days ahead that triggers "expiring" status.
+        min_package_count (int): User's global minimum package count for below-minimum signal.
+
+    Returns:
+        CabinetSummaryOut: with total, valid, expiring, expired, and out_of_stock counts.
+    """
+    today = datetime.now(timezone.utc).date()
+    counts = await crud.count_summary(
+        session=session,
+        user_id=user_id,
+        today=today,
+        threshold=expiry_threshold_days,
+        min_package_count=min_package_count,
+    )
+    return CabinetSummaryOut(
+        total=counts.total,
+        valid=counts.valid,
+        expiring=counts.expiring,
+        expired=counts.expired,
+        out_of_stock=counts.out_of_stock,
+    )
 
 
 async def list_all_for_user(

@@ -267,3 +267,13 @@ class AddEntryResult(BaseModel):
     merged: bool
     entry: AddEntryOut
     merge_summary: MergeSummary | None
+
+
+class CabinetSummaryOut(BaseModel):
+    """Response schema for GET /cabinet/summary: five dashboard counts."""
+
+    total: int
+    valid: int
+    expiring: int
+    expired: int
+    out_of_stock: int
