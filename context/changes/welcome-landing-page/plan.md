@@ -269,25 +269,25 @@ The dashboard's URL changes from `/` to `/dashboard`. Any external bookmarks to 
 
 #### Manual
 
-- [x] 1.5 Component shows logo, headline, four highlights, and both CTAs in Polish; Register primary; no breakage at desktop/mobile
+- [x] 1.5 Component shows logo, headline, four highlights, and both CTAs in Polish; Register primary; no breakage at desktop/mobile — cd8c612
 
 ### Phase 2: Routing rewire & redirects
 
 #### Automated
 
-- [x] 2.1 Type check + build passes: `cd frontend && npm run build`
-- [x] 2.2 Lint passes: `cd frontend && npm run lint`
-- [x] 2.3 Format check passes: `cd frontend && npx prettier --check src/`
-- [x] 2.4 Unit tests pass (incl. updated sidebar test): `cd frontend && npx vitest run`
-- [x] 2.5 E2E passes: `cd frontend && npx playwright test welcome-landing`
+- [x] 2.1 Type check + build passes: `cd frontend && npm run build` — cd8c612
+- [x] 2.2 Lint passes: `cd frontend && npm run lint` — cd8c612
+- [x] 2.3 Format check passes: `cd frontend && npx prettier --check src/` — cd8c612
+- [x] 2.4 Unit tests pass (incl. updated sidebar test): `cd frontend && npx vitest run` — cd8c612
+- [x] 2.5 E2E passes: `cd frontend && npx playwright test welcome-landing` — cd8c612
 
 #### Manual
 
-- [x] 2.6 Logged out, `/` shows welcome; CTAs go to `/register` and `/login`
-- [x] 2.7 Logged out, `/dashboard` redirects to `/` (changed from `/login` — see Deviations from plan)
-- [x] 2.8 Logged in, `/`, `/login`, `/register` all redirect to `/dashboard`
-- [x] 2.9 Login and registration land on `/dashboard`; sidebar "Panel główny" active
-- [x] 2.10 No console errors; responsive at mobile and desktop widths
+- [x] 2.6 Logged out, `/` shows welcome; CTAs go to `/register` and `/login` — cd8c612
+- [x] 2.7 Logged out, `/dashboard` redirects to `/` (changed from `/login` — see Deviations from plan) — cd8c612
+- [x] 2.8 Logged in, `/`, `/login`, `/register` all redirect to `/dashboard` — cd8c612
+- [x] 2.9 Login and registration land on `/dashboard`; sidebar "Panel główny" active — cd8c612
+- [x] 2.10 No console errors; responsive at mobile and desktop widths — cd8c612
 
 ## Deviations from plan
 

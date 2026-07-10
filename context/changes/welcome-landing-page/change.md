@@ -1,7 +1,7 @@
 ---
 change_id: welcome-landing-page
 title: Welcome landing page
-status: implementing
+status: implemented
 created: 2026-07-10
 updated: 2026-07-10
 archived_at: null
