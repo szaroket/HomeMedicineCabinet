@@ -15,6 +15,7 @@ from app.api.v1.cabinet.schemas import (
     CabinetEntryOut,
     CabinetListParams,
     CabinetPageOut,
+    CabinetSummaryOut,
     SetImportantRequest,
     UpdateQuantityRequest,
     UsageFields,
@@ -78,6 +79,36 @@ async def list_entries(
             params.model_dump(exclude_none=True),
             exc,
         )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred.",
+        ) from exc
+
+
+@router.get(
+    "/summary",
+    response_model=CabinetSummaryOut,
+)
+async def get_summary(
+    current_user: CurrentUser = Security(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> CabinetSummaryOut:
+    """Return the authenticated user's five dashboard counts."""
+    try:
+        return await cabinet_facade.get_summary(
+            session=session,
+            user_id=current_user.id,
+        )
+    except (CabinetDatabaseError, UserDatabaseError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=exc.message
+        ) from exc
+    except CabinetError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
+        ) from exc
+    except Exception as exc:
+        logger.exception("Unexpected error when getting cabinet summary: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred.",

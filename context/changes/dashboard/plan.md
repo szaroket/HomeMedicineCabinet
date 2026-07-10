@@ -460,15 +460,15 @@ No schema changes, no migrations. Purely additive endpoint + frontend feature.
 
 #### Automated
 
-- [ ] 1.1 Lint/format passes (ruff check + format)
-- [ ] 1.2 Backend unit tests pass (tests/cabinet)
-- [ ] 1.3 Backend typecheck passes
-- [ ] 1.4 Integration test: GET /cabinet/summary returns five int fields; counts match seeded fixture across empty / threshold boundaries / below-minimum
-- [ ] 1.5 Parity: total == valid+expiring+expired and each status count matches GET /cabinet/entries?status=<s> total
+- [x] 1.1 Lint/format passes (ruff check + format)
+- [x] 1.2 Backend unit tests pass (tests/cabinet)
+- [x] 1.3 Backend typecheck passes
+- [x] 1.4 Integration test: GET /cabinet/summary returns five int fields; counts match seeded fixture across empty / threshold boundaries / below-minimum
+- [x] 1.5 Parity: total == valid+expiring+expired and each status count matches GET /cabinet/entries?status=<s> total
 
 #### Manual
 
-- [ ] 1.6 GET /cabinet/summary returns sensible counts for a real account
+- [x] 1.6 GET /cabinet/summary returns sensible counts for a real account
 
 ### Phase 2: Frontend dashboard data layer
 

@@ -11,7 +11,12 @@ from typing import NamedTuple
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.cabinet import service as cabinet_service
-from app.api.v1.cabinet.schemas import CabinetEntryOut, CabinetPageOut, UsageFields
+from app.api.v1.cabinet.schemas import (
+    CabinetEntryOut,
+    CabinetPageOut,
+    CabinetSummaryOut,
+    UsageFields,
+)
 from app.api.v1.users import service as users_service
 from app.utilities.const import DEFAULT_EXPIRY_THRESHOLD_DAYS, DEFAULT_MIN_PACKAGE_COUNT
 
@@ -89,6 +94,30 @@ async def list_entries(
         category=category,
         below_minimum=below_minimum,
         sufficiency=sufficiency,
+    )
+
+
+async def get_summary(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+) -> CabinetSummaryOut:
+    """Return the current user's five dashboard counts.
+
+    Fetches user preferences from the users domain, then delegates to the cabinet service.
+
+    Args:
+        session (AsyncSession): Active async database session.
+        user_id (uuid.UUID): Authenticated user's UUID.
+
+    Returns:
+        CabinetSummaryOut: with total, valid, expiring, expired, and out_of_stock counts.
+    """
+    resolved = await _resolve_prefs(session, user_id)
+    return await cabinet_service.summarize_cabinet(
+        session=session,
+        user_id=user_id,
+        expiry_threshold_days=resolved.expiry_threshold_days,
+        min_package_count=resolved.min_package_count,
     )
 
 

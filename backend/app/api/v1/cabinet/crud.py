@@ -3,6 +3,7 @@
 import logging
 import uuid
 from datetime import date, timedelta
+from typing import NamedTuple
 
 from sqlalchemy import Float, Integer, case, cast, delete, func, literal, select, text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -428,6 +429,87 @@ async def list_entries(
     rows = list(page_result.tuples().all())
     total = count_result.scalar_one()
     return rows, total
+
+
+class SummaryCounts(NamedTuple):
+    """Five dashboard counts computed in a single aggregate query."""
+
+    total: int
+    valid: int
+    expiring: int
+    expired: int
+    out_of_stock: int
+
+
+async def count_summary(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    today: date,
+    threshold: int,
+    min_package_count: int,
+) -> SummaryCounts:
+    """Compute all five dashboard counts in one query via conditional aggregation.
+
+    Builds on the unfiltered ``_build_base_query`` (all of the user's entries,
+    joined with the registry for parity with the row shape ``list_entries`` and
+    the per-filter counts use) and sums per-bucket CASE expressions instead of
+    issuing one query per filter. The expiry-status boundaries mirror
+    ``_build_base_query``'s status branches and ``service.classify_status``; the
+    below-minimum condition mirrors ``service.is_below_minimum`` and the
+    ``below_minimum`` clause in ``_build_base_query`` — keep all three in sync if
+    the rules ever change.
+
+    Args:
+        session (AsyncSession): Active async database session.
+        user_id (uuid.UUID): UUID of the authenticated user.
+        today (date): Reference date for status computation.
+        threshold (int): Expiry threshold in days.
+        min_package_count (int): User's minimum package count for the below-minimum bucket.
+
+    Returns:
+        SummaryCounts: total, valid, expiring, expired, and out_of_stock counts.
+
+    Raises:
+        CabinetDatabaseError: If the database query fails.
+    """
+    base = _build_base_query(user_id, today, threshold, None, None).subquery()
+    expiry_col = base.c.expiry_date
+    is_important_col = base.c.is_important
+    package_count_col = base.c.package_count
+
+    def _sum_when(condition):
+        return cast(func.coalesce(func.sum(case((condition, 1), else_=0)), 0), Integer)
+
+    stmt = select(
+        func.count().label("total"),
+        _sum_when(expiry_col > today + timedelta(days=threshold)).label("valid"),
+        _sum_when(
+            (expiry_col >= today) & (expiry_col <= today + timedelta(days=threshold))
+        ).label("expiring"),
+        _sum_when(expiry_col < today).label("expired"),
+        _sum_when(
+            is_important_col.is_(True) & (package_count_col < min_package_count)
+        ).label("out_of_stock"),
+    ).select_from(base)
+
+    try:
+        result = await session.execute(stmt)
+    except SQLAlchemyError as exc:
+        logger.error(
+            "Failed to compute cabinet summary for user %s: %s",
+            user_id,
+            exc,
+            exc_info=True,
+        )
+        raise CabinetDatabaseError() from exc
+    row = result.one()
+    return SummaryCounts(
+        total=row.total,
+        valid=row.valid,
+        expiring=row.expiring,
+        expired=row.expired,
+        out_of_stock=row.out_of_stock,
+    )
 
 
 async def find_entry_by_id(

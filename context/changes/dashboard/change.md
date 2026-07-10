@@ -1,9 +1,9 @@
 ---
 change_id: dashboard
 title: Dashboard
-status: plan_reviewed
+status: implementing
 created: 2026-07-09
-updated: 2026-07-09
+updated: 2026-07-10
 archived_at: null
 ---
 
