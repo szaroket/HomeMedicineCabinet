@@ -351,15 +351,15 @@ No data or schema changes. Rollback is deleting `.github/workflows/ai-review.yml
 
 #### Automated
 
-- [ ] 1.1 `.github/review-criteria.md` exists
-- [ ] 1.2 The file contains at least five `##` headings
-- [ ] 1.3 Pre-commit passes on the new file
+- [x] 1.1 `.github/review-criteria.md` exists
+- [x] 1.2 The file contains at least five `##` headings
+- [x] 1.3 Pre-commit passes on the new file
 
 #### Manual
 
-- [ ] 1.4 Each criterion is traceable to a concrete rule in `AGENTS.md` or `lessons.md`
-- [ ] 1.5 No criterion duplicates the injected rules-file verbatim
-- [ ] 1.6 The user has explicitly approved the final set of headings
+- [x] 1.4 Each criterion is traceable to a concrete rule in `AGENTS.md` or `lessons.md`
+- [x] 1.5 No criterion duplicates the injected rules-file verbatim
+- [x] 1.6 The user has explicitly approved the final set of headings
 
 ### Phase 2: Write the Review Workflow
 

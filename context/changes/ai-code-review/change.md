@@ -1,9 +1,9 @@
 ---
 change_id: ai-code-review
 title: AI code review
-status: planned
+status: implementing
 created: 2026-08-01
-updated: 2026-08-01
+updated: 2026-08-03
 archived_at: null
 ---
 
