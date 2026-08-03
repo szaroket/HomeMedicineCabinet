@@ -396,8 +396,8 @@ No data or schema changes. Rollback is deleting `.github/workflows/ai-review.yml
 #### Automated
 
 - [x] 4.1 Branch merged to `develop` — 6efba5f
-- [x] 4.2 `gh workflow list` includes `AI Code Review`
-- [x] 4.3 The bootstrap run shows a success conclusion
+- [x] 4.2 `gh workflow list` includes `AI Code Review` — 932c482
+- [x] 4.3 The bootstrap run shows a success conclusion — 932c482
 
 #### Manual
 
