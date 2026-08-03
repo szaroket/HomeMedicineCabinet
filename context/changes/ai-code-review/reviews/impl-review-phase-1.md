@@ -94,8 +94,8 @@ prose file in one commit, under the skill's ≤3-file budgeting threshold.
   landing commit — as written, they cannot.
 - **Fix**: Replace `40ffc62` with `5678f46` on lines 354-362 and commit the plan
   update.
-- **Decision**: FIXED — all six Phase 1 annotations now read `5678f46`. Still
-  needs to be committed alongside the other plan edits.
+- **Decision**: FIXED — all six Phase 1 annotations now read `5678f46`,
+  committed in `323dc00`.
 
 ### F3 — Nine criteria, each needing a score under default max-turns
 
