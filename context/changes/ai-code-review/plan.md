@@ -366,30 +366,30 @@ No data or schema changes. Rollback is deleting `.github/workflows/ai-review.yml
 
 #### Automated
 
-- [x] 2.1 Workflow file parses as valid YAML
-- [x] 2.2 The workflow does not reference an Anthropic API key
-- [x] 2.3 The action reference is SHA-pinned, not a branch
-- [x] 2.4 Pre-commit passes on the workflow and `AGENTS.md`
+- [x] 2.1 Workflow file parses as valid YAML — db60770
+- [x] 2.2 The workflow does not reference an Anthropic API key — db60770
+- [x] 2.3 The action reference is SHA-pinned, not a branch — db60770
+- [x] 2.4 Pre-commit passes on the workflow and `AGENTS.md` — db60770
 
 #### Manual
 
-- [x] 2.5 `ci-cd.yml` is untouched and the deploy gate is unchanged
-- [x] 2.6 `continue-on-error: true` sits on the action step, not the job
-- [x] 2.7 The `exclude` globs match real paths in this repo
-- [x] 2.8 The pin comment matches the convention at `ci-cd.yml:24`
+- [x] 2.5 `ci-cd.yml` is untouched and the deploy gate is unchanged — db60770
+- [x] 2.6 `continue-on-error: true` sits on the action step, not the job — db60770
+- [x] 2.7 The `exclude` globs match real paths in this repo — db60770
+- [x] 2.8 The pin comment matches the convention at `ci-cd.yml:24` — db60770
 
 ### Phase 3: Provision the Secret and Validate
 
 #### Automated
 
-- [ ] 3.1 `gh secret list` includes `OPENROUTER_API_KEY`
-- [ ] 3.2 `gh secret list` does not include `ANTHROPIC_API_KEY`
-- [ ] 3.3 `actionlint` passes on the workflow
+- [x] 3.1 `gh secret list` includes `OPENROUTER_API_KEY`
+- [x] 3.2 `gh secret list` does not include `ANTHROPIC_API_KEY`
+- [x] 3.3 `actionlint` passes on the workflow
 
 #### Manual
 
-- [ ] 3.4 The OpenRouter key has credit/quota available
-- [ ] 3.5 The secret value was never written to a file, command line, or conversation
+- [x] 3.4 The OpenRouter key has credit/quota available
+- [x] 3.5 The secret value was never written to a file, command line, or conversation
 
 ### Phase 4: Merge and Verify Live
 
