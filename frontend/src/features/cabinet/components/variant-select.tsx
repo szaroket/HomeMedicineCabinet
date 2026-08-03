@@ -38,8 +38,8 @@ export function VariantSelect({ product, selectedId, onChange }: Props) {
         {variants?.map((v) => (
           <option key={v.id} value={v.id}>
             {v.capacity != null
-              ? `${v.capacity} ${v.capacity_unit ?? "szt."}`
-              : (v.capacity_unit ?? "—")}
+              ? `${v.capacity} ${v.capacityUnit ?? "szt."}`
+              : (v.capacityUnit ?? "—")}
           </option>
         ))}
       </select>

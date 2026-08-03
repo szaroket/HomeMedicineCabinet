@@ -14,7 +14,7 @@ export function useLogin() {
   const { setSession } = useAuth();
   return useMutation({
     mutationFn: (data: LoginValues) => login(data),
-    onSuccess: (res) => setSession(res.access_token, res.user),
+    onSuccess: (res) => setSession(res.accessToken, res.user),
   });
 }
 
@@ -22,7 +22,7 @@ export function useRegister() {
   const { setSession } = useAuth();
   return useMutation({
     mutationFn: (data: RegisterValues) => register(data),
-    onSuccess: (res) => setSession(res.access_token, res.user),
+    onSuccess: (res) => setSession(res.accessToken, res.user),
   });
 }
 

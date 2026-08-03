@@ -128,10 +128,10 @@ export function CabinetPage() {
   const params: CabinetListParams = {
     order,
     page,
-    page_size: pageSize,
+    pageSize: pageSize,
     ...(status ? { status } : {}),
     ...(category ? { category } : {}),
-    ...(belowMinimum ? { below_minimum: true } : {}),
+    ...(belowMinimum ? { belowMinimum: true } : {}),
     ...(sufficiency ? { sufficiency } : {}),
     ...(effectiveSearch !== "" ? { search: effectiveSearch } : {}),
   };
@@ -184,7 +184,7 @@ export function CabinetPage() {
   }
 
   const totalPages = pageData
-    ? Math.max(1, Math.ceil(pageData.total / pageData.page_size))
+    ? Math.max(1, Math.ceil(pageData.total / pageData.pageSize))
     : 1;
 
   // Guard against an out-of-range page (e.g. ?page=999, or a page that no longer

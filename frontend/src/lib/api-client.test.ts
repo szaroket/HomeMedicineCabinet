@@ -40,7 +40,7 @@ describe("apiFetch", () => {
     setToken("old-token");
     vi.mocked(fetch)
       .mockResolvedValueOnce(jsonResponse({}, { status: 401 }))
-      .mockResolvedValueOnce(jsonResponse({ access_token: "new-token" }))
+      .mockResolvedValueOnce(jsonResponse({ accessToken: "new-token" }))
       .mockResolvedValueOnce(jsonResponse({ ok: true }));
 
     const res = await apiFetch("/cabinet/entries");
@@ -111,7 +111,7 @@ describe("refreshOnce", () => {
   });
 
   it("collapses concurrent calls onto one refresh, then issues a fresh fetch afterward", async () => {
-    vi.mocked(fetch).mockResolvedValue(jsonResponse({ access_token: "t1" }));
+    vi.mocked(fetch).mockResolvedValue(jsonResponse({ accessToken: "t1" }));
 
     const [first, second] = await Promise.all([refreshOnce(), refreshOnce()]);
 
@@ -119,7 +119,7 @@ describe("refreshOnce", () => {
     expect(second).toBe("t1");
     expect(fetch).toHaveBeenCalledTimes(1);
 
-    vi.mocked(fetch).mockResolvedValue(jsonResponse({ access_token: "t2" }));
+    vi.mocked(fetch).mockResolvedValue(jsonResponse({ accessToken: "t2" }));
     const third = await refreshOnce();
 
     expect(third).toBe("t2");

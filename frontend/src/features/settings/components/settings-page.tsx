@@ -26,18 +26,18 @@ export function SettingsPage() {
   } = useForm<UpdatePreferencesFormValues>({
     resolver: zodResolver(updatePreferencesSchema),
     defaultValues: {
-      expiry_threshold_days: 30,
-      close_to_finish_threshold_days: 7,
-      min_package_count: 1,
+      expiryThresholdDays: 30,
+      closeToFinishThresholdDays: 7,
+      minPackageCount: 1,
     },
   });
 
   useEffect(() => {
     if (prefs) {
       reset({
-        expiry_threshold_days: prefs.expiry_threshold_days,
-        close_to_finish_threshold_days: prefs.close_to_finish_threshold_days,
-        min_package_count: prefs.min_package_count,
+        expiryThresholdDays: prefs.expiryThresholdDays,
+        closeToFinishThresholdDays: prefs.closeToFinishThresholdDays,
+        minPackageCount: prefs.minPackageCount,
       });
     }
   }, [prefs, reset]);
@@ -47,9 +47,9 @@ export function SettingsPage() {
     setServerError(null);
     mutate(
       {
-        expiry_threshold_days: values.expiry_threshold_days,
-        close_to_finish_threshold_days: values.close_to_finish_threshold_days,
-        min_package_count: values.min_package_count,
+        expiryThresholdDays: values.expiryThresholdDays,
+        closeToFinishThresholdDays: values.closeToFinishThresholdDays,
+        minPackageCount: values.minPackageCount,
       },
       {
         onSuccess: () => {
@@ -87,7 +87,7 @@ export function SettingsPage() {
           >
             <div className="space-y-1">
               <label
-                htmlFor="expiry_threshold_days"
+                htmlFor="expiryThresholdDays"
                 className="block text-sm font-medium text-slate-300"
               >
                 Próg ważności (dni)
@@ -97,25 +97,25 @@ export function SettingsPage() {
                 oznaczone jako wygasające (7–90).
               </p>
               <input
-                id="expiry_threshold_days"
+                id="expiryThresholdDays"
                 type="number"
                 min={7}
                 max={90}
-                {...register("expiry_threshold_days", {
+                {...register("expiryThresholdDays", {
                   valueAsNumber: true,
                 })}
                 className="mt-1 w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              {errors.expiry_threshold_days && (
+              {errors.expiryThresholdDays && (
                 <p className="text-xs text-red-400">
-                  {errors.expiry_threshold_days.message}
+                  {errors.expiryThresholdDays.message}
                 </p>
               )}
             </div>
 
             <div className="space-y-1">
               <label
-                htmlFor="close_to_finish_threshold_days"
+                htmlFor="closeToFinishThresholdDays"
                 className="block text-sm font-medium text-slate-300"
               >
                 Próg kończącego się zapasu (dni)
@@ -126,24 +126,24 @@ export function SettingsPage() {
                 1).
               </p>
               <input
-                id="close_to_finish_threshold_days"
+                id="closeToFinishThresholdDays"
                 type="number"
                 min={1}
-                {...register("close_to_finish_threshold_days", {
+                {...register("closeToFinishThresholdDays", {
                   valueAsNumber: true,
                 })}
                 className="mt-1 w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              {errors.close_to_finish_threshold_days && (
+              {errors.closeToFinishThresholdDays && (
                 <p className="text-xs text-red-400">
-                  {errors.close_to_finish_threshold_days.message}
+                  {errors.closeToFinishThresholdDays.message}
                 </p>
               )}
             </div>
 
             <div className="space-y-1">
               <label
-                htmlFor="min_package_count"
+                htmlFor="minPackageCount"
                 className="block text-sm font-medium text-slate-300"
               >
                 Minimalna liczba opakowań
@@ -153,16 +153,16 @@ export function SettingsPage() {
                 apteczce (1–10).
               </p>
               <input
-                id="min_package_count"
+                id="minPackageCount"
                 type="number"
                 min={1}
                 max={10}
-                {...register("min_package_count", { valueAsNumber: true })}
+                {...register("minPackageCount", { valueAsNumber: true })}
                 className="mt-1 w-full rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              {errors.min_package_count && (
+              {errors.minPackageCount && (
                 <p className="text-xs text-red-400">
-                  {errors.min_package_count.message}
+                  {errors.minPackageCount.message}
                 </p>
               )}
             </div>

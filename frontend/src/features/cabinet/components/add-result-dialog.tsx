@@ -7,7 +7,7 @@ interface Props {
 }
 
 export function AddResultDialog({ result, onAddAnother, onNavigate }: Props) {
-  const { merged, merge_summary } = result;
+  const { merged, mergeSummary } = result;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
@@ -16,28 +16,28 @@ export function AddResultDialog({ result, onAddAnother, onNavigate }: Props) {
           {merged ? "Połączono z istniejącym wpisem" : "Dodano lek"}
         </h2>
 
-        {merged && merge_summary && (
+        {merged && mergeSummary && (
           <div className="mb-4 rounded bg-slate-700 p-3 text-sm text-slate-300">
-            {merge_summary.previous_total_tablets != null ? (
+            {mergeSummary.previousTotalTablets != null ? (
               <>
                 <p>
                   Przed:{" "}
                   <span className="text-white">
-                    {merge_summary.previous_package_count} opak.
-                    {merge_summary.previous_partial_tablet_count != null
-                      ? ` + ${merge_summary.previous_partial_tablet_count} szt.`
+                    {mergeSummary.previousPackageCount} opak.
+                    {mergeSummary.previousPartialTabletCount != null
+                      ? ` + ${mergeSummary.previousPartialTabletCount} szt.`
                       : ""}{" "}
-                    ({merge_summary.previous_total_tablets} szt. łącznie)
+                    ({mergeSummary.previousTotalTablets} szt. łącznie)
                   </span>
                 </p>
                 <p>
                   Po:{" "}
                   <span className="text-white">
-                    {result.entry.package_count} opak.
-                    {result.entry.partial_tablet_count != null
-                      ? ` + ${result.entry.partial_tablet_count} szt.`
+                    {result.entry.packageCount} opak.
+                    {result.entry.partialTabletCount != null
+                      ? ` + ${result.entry.partialTabletCount} szt.`
                       : ""}{" "}
-                    ({merge_summary.new_total_tablets} szt. łącznie)
+                    ({mergeSummary.newTotalTablets} szt. łącznie)
                   </span>
                 </p>
               </>
@@ -46,13 +46,13 @@ export function AddResultDialog({ result, onAddAnother, onNavigate }: Props) {
                 <p>
                   Przed:{" "}
                   <span className="text-white">
-                    {merge_summary.previous_package_count} opak.
+                    {mergeSummary.previousPackageCount} opak.
                   </span>
                 </p>
                 <p>
                   Po:{" "}
                   <span className="text-white">
-                    {result.entry.package_count} opak.
+                    {result.entry.packageCount} opak.
                   </span>
                 </p>
               </>

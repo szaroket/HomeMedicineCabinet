@@ -5,7 +5,7 @@ export interface CabinetSummaryOut {
   valid: number;
   expiring: number;
   expired: number;
-  out_of_stock: number;
+  outOfStock: number;
 }
 
 export function getCabinetSummary(): Promise<CabinetSummaryOut> {

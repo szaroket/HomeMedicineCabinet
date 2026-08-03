@@ -18,13 +18,13 @@ export function DosageFields({
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <input
-          id="is_used"
+          id="isUsed"
           type="checkbox"
           className="h-4 w-4 rounded border-slate-600 bg-slate-700 accent-blue-500"
-          {...register("is_used")}
+          {...register("isUsed")}
         />
         <label
-          htmlFor="is_used"
+          htmlFor="isUsed"
           className="cursor-pointer text-sm font-medium text-blue-400"
         >
           Oznacz jako przyjmowany
@@ -45,14 +45,14 @@ export function DosageFields({
                     min={1}
                     placeholder="np. 3"
                     className="rounded border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    {...register("dosage_times", {
+                    {...register("dosageTimes", {
                       setValueAs: (value: string) =>
                         value === "" || value == null ? null : Number(value),
                     })}
                   />
-                  {errors.dosage_times && (
+                  {errors.dosageTimes && (
                     <p className="text-xs text-red-400">
-                      {errors.dosage_times.message}
+                      {errors.dosageTimes.message}
                     </p>
                   )}
                 </div>
@@ -63,7 +63,7 @@ export function DosageFields({
                   </label>
                   <select
                     className="rounded border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    {...register("dosage_period", {
+                    {...register("dosagePeriod", {
                       setValueAs: (value: string) =>
                         value === "" ? null : value,
                     })}
@@ -72,9 +72,9 @@ export function DosageFields({
                     <option value="day">dzień</option>
                     <option value="week">tydzień</option>
                   </select>
-                  {errors.dosage_period && (
+                  {errors.dosagePeriod && (
                     <p className="text-xs text-red-400">
-                      {errors.dosage_period.message}
+                      {errors.dosagePeriod.message}
                     </p>
                   )}
                 </div>
@@ -89,14 +89,14 @@ export function DosageFields({
                   min={1}
                   placeholder="np. 2"
                   className="rounded border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  {...register("dosage_amount", {
+                  {...register("dosageAmount", {
                     setValueAs: (value: string) =>
                       value === "" || value == null ? null : Number(value),
                   })}
                 />
-                {errors.dosage_amount && (
+                {errors.dosageAmount && (
                   <p className="text-xs text-red-400">
-                    {errors.dosage_amount.message}
+                    {errors.dosageAmount.message}
                   </p>
                 )}
               </div>
@@ -111,11 +111,11 @@ export function DosageFields({
               <input
                 type="date"
                 className="rounded border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                {...register("dosage_start_date")}
+                {...register("dosageStartDate")}
               />
-              {errors.dosage_start_date && (
+              {errors.dosageStartDate && (
                 <p className="text-xs text-red-400">
-                  {errors.dosage_start_date.message}
+                  {errors.dosageStartDate.message}
                 </p>
               )}
             </div>
@@ -127,11 +127,11 @@ export function DosageFields({
               <input
                 type="date"
                 className="rounded border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                {...register("dosage_end_date")}
+                {...register("dosageEndDate")}
               />
-              {errors.dosage_end_date && (
+              {errors.dosageEndDate && (
                 <p className="text-xs text-red-400">
-                  {errors.dosage_end_date.message}
+                  {errors.dosageEndDate.message}
                 </p>
               )}
             </div>
