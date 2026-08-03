@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Run AI code review
-        uses: szaroket/AICodeReviewAction@92f71507193dc6a685dc3c6ed7646bc31a387963 # SHA-pinned: 3rd-party action (supply-chain); GitHub-owned actions use major tags; repo renamed from ai-code-review-action
+        uses: szaroket/AICodeReviewAction@9d571ca5fa96f26a4d3681cf4a8a3c7258d68f6d # SHA-pinned: 3rd-party action (supply-chain); GitHub-owned actions use major tags; repo renamed from ai-code-review-action
         with:
           pr-number: ${{ github.event.pull_request.number }}
           criteria-file: .github/review-criteria.md
@@ -29,7 +29,9 @@ jobs:
           github-token: ${{ github.token }}
           publish: "true"
           format: all
-          max-turns: "25"
+          # Diff-only review converges in 2-4 turns; the headroom is for
+          # submit_finding, which costs one turn per finding.
+          max-turns: "15"
 
       - name: Upload review output
         if: always()
