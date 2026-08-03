@@ -382,22 +382,22 @@ No data or schema changes. Rollback is deleting `.github/workflows/ai-review.yml
 
 #### Automated
 
-- [x] 3.1 `gh secret list` includes `OPENROUTER_API_KEY`
-- [x] 3.2 `gh secret list` does not include `ANTHROPIC_API_KEY`
-- [x] 3.3 `actionlint` passes on the workflow
+- [x] 3.1 `gh secret list` includes `OPENROUTER_API_KEY` — 892218e
+- [x] 3.2 `gh secret list` does not include `ANTHROPIC_API_KEY` — 892218e
+- [x] 3.3 `actionlint` passes on the workflow — 892218e
 
 #### Manual
 
-- [x] 3.4 The OpenRouter key has credit/quota available
-- [x] 3.5 The secret value was never written to a file, command line, or conversation
+- [x] 3.4 The OpenRouter key has credit/quota available — 892218e
+- [x] 3.5 The secret value was never written to a file, command line, or conversation — 892218e
 
 ### Phase 4: Merge and Verify Live
 
 #### Automated
 
-- [ ] 4.1 Branch merged to `develop`
-- [ ] 4.2 `gh workflow list` includes `AI Code Review`
-- [ ] 4.3 The bootstrap run shows a success conclusion
+- [x] 4.1 Branch merged to `develop` — 6efba5f
+- [x] 4.2 `gh workflow list` includes `AI Code Review`
+- [x] 4.3 The bootstrap run shows a success conclusion
 
 #### Manual
 
