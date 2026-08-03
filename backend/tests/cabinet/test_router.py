@@ -35,10 +35,10 @@ _ENTRY_ID = uuid4()
 _EXPIRY = "2027-06-01"
 
 _VALID_BODY = {
-    "medication_registry_id": str(_REGISTRY_ID),
-    "package_count": 2,
-    "expiry_date": _EXPIRY,
-    "partial_tablet_count": 5,
+    "medicationRegistryId": str(_REGISTRY_ID),
+    "packageCount": 2,
+    "expiryDate": _EXPIRY,
+    "partialTabletCount": 5,
 }
 
 
@@ -105,8 +105,8 @@ class TestAddEntrySuccess:
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
         assert data["merged"] is False
-        assert data["merge_summary"] is None
-        assert data["entry"]["total_tablets"] == 25
+        assert data["mergeSummary"] is None
+        assert data["entry"]["totalTablets"] == 25
 
     @pytest.mark.asyncio
     async def test_merge_returns_201_merged_true_with_summary(
@@ -123,8 +123,8 @@ class TestAddEntrySuccess:
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
         assert data["merged"] is True
-        assert data["merge_summary"]["previous_total_tablets"] == 20
-        assert data["merge_summary"]["new_total_tablets"] == 45
+        assert data["mergeSummary"]["previousTotalTablets"] == 20
+        assert data["mergeSummary"]["newTotalTablets"] == 45
 
     @pytest.mark.asyncio
     async def test_add_with_is_important_true_returns_important_entry(
@@ -142,11 +142,11 @@ class TestAddEntrySuccess:
 
         response = await authed_client.post(
             "/api/v1/cabinet/entries",
-            json={**_VALID_BODY, "is_important": True},
+            json={**_VALID_BODY, "isImportant": True},
         )
 
         assert response.status_code == status.HTTP_201_CREATED
-        assert response.json()["entry"]["is_important"] is True
+        assert response.json()["entry"]["isImportant"] is True
         call_kwargs = mock_add.call_args.kwargs
         assert call_kwargs["is_important"] is True
 
@@ -163,7 +163,7 @@ class TestAddEntrySuccess:
         response = await authed_client.post("/api/v1/cabinet/entries", json=_VALID_BODY)
 
         assert response.status_code == status.HTTP_201_CREATED
-        assert response.json()["entry"]["is_important"] is False
+        assert response.json()["entry"]["isImportant"] is False
         call_kwargs = mock_add.call_args.kwargs
         assert call_kwargs["is_important"] is False
 
@@ -245,7 +245,7 @@ class TestAddEntryRequestValidation:
     async def test_package_count_zero_returns_422(self, authed_client: AsyncClient):
         response = await authed_client.post(
             "/api/v1/cabinet/entries",
-            json={**_VALID_BODY, "package_count": 0},
+            json={**_VALID_BODY, "packageCount": 0},
         )
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
@@ -255,19 +255,19 @@ class TestAddEntryRequestValidation:
     ):
         response = await authed_client.post(
             "/api/v1/cabinet/entries",
-            json={**_VALID_BODY, "partial_tablet_count": 0},
+            json={**_VALID_BODY, "partialTabletCount": 0},
         )
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     @pytest.mark.asyncio
     async def test_missing_expiry_date_returns_422(self, authed_client: AsyncClient):
-        body = {k: v for k, v in _VALID_BODY.items() if k != "expiry_date"}
+        body = {k: v for k, v in _VALID_BODY.items() if k != "expiryDate"}
         response = await authed_client.post("/api/v1/cabinet/entries", json=body)
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     @pytest.mark.asyncio
     async def test_missing_registry_id_returns_422(self, authed_client: AsyncClient):
-        body = {k: v for k, v in _VALID_BODY.items() if k != "medication_registry_id"}
+        body = {k: v for k, v in _VALID_BODY.items() if k != "medicationRegistryId"}
         response = await authed_client.post("/api/v1/cabinet/entries", json=body)
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
@@ -325,11 +325,11 @@ class TestListEntriesSuccess:
         data = response.json()
         assert data["total"] == 1
         assert data["page"] == 1
-        assert data["page_size"] == 20
+        assert data["pageSize"] == 20
         assert len(data["items"]) == 1
         assert data["items"][0]["name"] == "Apap"
         assert data["items"][0]["status"] == "valid"
-        assert data["items"][0]["total_tablets"] == 25
+        assert data["items"][0]["totalTablets"] == 25
 
     @pytest.mark.asyncio
     async def test_returns_empty_page_when_no_entries(
@@ -365,7 +365,7 @@ class TestListEntriesSuccess:
                 "search": "apap",
                 "order": "desc",
                 "page": 2,
-                "page_size": 50,
+                "pageSize": 50,
             },
         )
 
@@ -383,7 +383,7 @@ class TestListEntriesParamValidation:
     @pytest.mark.asyncio
     async def test_invalid_page_size_returns_422(self, authed_client: AsyncClient):
         response = await authed_client.get(
-            "/api/v1/cabinet/entries", params={"page_size": 25}
+            "/api/v1/cabinet/entries", params={"pageSize": 25}
         )
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
@@ -419,7 +419,7 @@ class TestListEntriesParamValidation:
             return_value=_make_page_out([]),
         )
         response = await authed_client.get(
-            "/api/v1/cabinet/entries", params={"page_size": page_size}
+            "/api/v1/cabinet/entries", params={"pageSize": page_size}
         )
         assert response.status_code == status.HTTP_200_OK
 
@@ -486,8 +486,8 @@ class TestListEntriesImportanceFields:
 
         assert response.status_code == status.HTTP_200_OK
         item = response.json()["items"][0]
-        assert item["is_important"] is True
-        assert item["below_minimum"] is True
+        assert item["isImportant"] is True
+        assert item["belowMinimum"] is True
 
     @pytest.mark.asyncio
     async def test_category_important_forwarded_to_facade(
@@ -517,7 +517,7 @@ class TestListEntriesImportanceFields:
         )
 
         response = await authed_client.get(
-            "/api/v1/cabinet/entries", params={"below_minimum": "true"}
+            "/api/v1/cabinet/entries", params={"belowMinimum": "true"}
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -554,11 +554,11 @@ class TestSetEntryImportanceSuccess:
 
         response = await authed_client.patch(
             f"/api/v1/cabinet/entries/{_ENTRY_ID}",
-            json={"is_important": True},
+            json={"isImportant": True},
         )
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.json()["is_important"] is True
+        assert response.json()["isImportant"] is True
 
     @pytest.mark.asyncio
     async def test_toggle_off_returns_200_with_is_important_false(
@@ -574,11 +574,11 @@ class TestSetEntryImportanceSuccess:
 
         response = await authed_client.patch(
             f"/api/v1/cabinet/entries/{_ENTRY_ID}",
-            json={"is_important": False},
+            json={"isImportant": False},
         )
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.json()["is_important"] is False
+        assert response.json()["isImportant"] is False
 
 
 class TestSetEntryImportanceErrorMapping:
@@ -594,7 +594,7 @@ class TestSetEntryImportanceErrorMapping:
 
         response = await authed_client.patch(
             f"/api/v1/cabinet/entries/{_ENTRY_ID}",
-            json={"is_important": True},
+            json={"isImportant": True},
         )
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -611,7 +611,7 @@ class TestSetEntryImportanceErrorMapping:
 
         response = await authed_client.patch(
             f"/api/v1/cabinet/entries/{_ENTRY_ID}",
-            json={"is_important": True},
+            json={"isImportant": True},
         )
 
         assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
@@ -628,7 +628,7 @@ class TestSetEntryImportanceErrorMapping:
 
         response = await authed_client.patch(
             f"/api/v1/cabinet/entries/{_ENTRY_ID}",
-            json={"is_important": True},
+            json={"isImportant": True},
         )
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -638,7 +638,7 @@ class TestSetEntryImportanceErrorMapping:
     async def test_missing_token_returns_401(self, client: AsyncClient):
         response = await client.patch(
             f"/api/v1/cabinet/entries/{_ENTRY_ID}",
-            json={"is_important": True},
+            json={"isImportant": True},
         )
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
@@ -661,7 +661,7 @@ class TestListEntriesCategoryFilter:
         assert response.status_code == status.HTTP_200_OK
         call_kwargs = mock_facade.call_args.kwargs
         assert call_kwargs["category"] == "used"
-        assert response.json()["items"][0]["is_used"] is True
+        assert response.json()["items"][0]["isUsed"] is True
 
     @pytest.mark.asyncio
     async def test_invalid_category_returns_422(self, authed_client: AsyncClient):
@@ -672,15 +672,15 @@ class TestListEntriesCategoryFilter:
 
 
 _USAGE_BODY = {
-    "is_used": True,
-    "dosage_times": 3,
-    "dosage_period": "day",
-    "dosage_amount": 2,
-    "dosage_start_date": "2026-06-25",
-    "dosage_end_date": None,
+    "isUsed": True,
+    "dosageTimes": 3,
+    "dosagePeriod": "day",
+    "dosageAmount": 2,
+    "dosageStartDate": "2026-06-25",
+    "dosageEndDate": None,
 }
 
-_UNASSIGN_BODY = {"is_used": False}
+_UNASSIGN_BODY = {"isUsed": False}
 
 
 class TestSetEntryUsageSuccess:
@@ -700,7 +700,7 @@ class TestSetEntryUsageSuccess:
         )
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.json()["is_used"] is True
+        assert response.json()["isUsed"] is True
 
     @pytest.mark.asyncio
     async def test_unassign_returns_200_with_is_used_false(
@@ -718,7 +718,7 @@ class TestSetEntryUsageSuccess:
         )
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.json()["is_used"] is False
+        assert response.json()["isUsed"] is False
 
 
 class TestSetEntryUsageErrorMapping:
@@ -802,10 +802,10 @@ class TestSetEntryUsageErrorMapping:
     @pytest.mark.parametrize(
         ("field", "value"),
         [
-            ("dosage_times", 25),
-            ("dosage_times", 0),
-            ("dosage_amount", 101),
-            ("dosage_amount", 0),
+            ("dosageTimes", 25),
+            ("dosageTimes", 0),
+            ("dosageAmount", 101),
+            ("dosageAmount", 0),
         ],
         ids=["times_over_max", "times_zero", "amount_over_max", "amount_zero"],
     )
@@ -820,7 +820,7 @@ class TestSetEntryUsageErrorMapping:
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
-_QUANTITY_BODY = {"package_count": 3, "partial_tablet_count": 10}
+_QUANTITY_BODY = {"packageCount": 3, "partialTabletCount": 10}
 
 
 class TestSetEntryQuantitySuccess:
@@ -842,7 +842,7 @@ class TestSetEntryQuantitySuccess:
         )
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.json()["package_count"] == 3
+        assert response.json()["packageCount"] == 3
 
     @pytest.mark.asyncio
     async def test_zero_package_count_returns_200(
@@ -858,11 +858,11 @@ class TestSetEntryQuantitySuccess:
 
         response = await authed_client.patch(
             f"/api/v1/cabinet/entries/{_ENTRY_ID}/quantity",
-            json={"package_count": 0},
+            json={"packageCount": 0},
         )
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.json()["package_count"] == 0
+        assert response.json()["packageCount"] == 0
 
 
 class TestSetEntryQuantityErrorMapping:
@@ -870,7 +870,7 @@ class TestSetEntryQuantityErrorMapping:
     async def test_negative_package_count_returns_422(self, authed_client: AsyncClient):
         response = await authed_client.patch(
             f"/api/v1/cabinet/entries/{_ENTRY_ID}/quantity",
-            json={"package_count": -1},
+            json={"packageCount": -1},
         )
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 

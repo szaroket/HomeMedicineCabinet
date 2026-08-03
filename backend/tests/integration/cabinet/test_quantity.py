@@ -46,14 +46,14 @@ async def test_quantity_patch_persists_counts_and_recomputes_total(
     act_as(current_user)
     response = await client.patch(
         f"/api/v1/cabinet/entries/{entry.id}/quantity",
-        json={"package_count": 3, "partial_tablet_count": 10},
+        json={"packageCount": 3, "partialTabletCount": 10},
     )
 
     assert response.status_code == 200
     body = response.json()
-    assert body["package_count"] == 3
-    assert body["partial_tablet_count"] == 10
-    assert body["total_tablets"] == 50
+    assert body["packageCount"] == 3
+    assert body["partialTabletCount"] == 10
+    assert body["totalTablets"] == 50
 
 
 @pytest.mark.asyncio
@@ -80,14 +80,14 @@ async def test_quantity_patch_allows_zero_package_count(
     act_as(current_user)
     response = await client.patch(
         f"/api/v1/cabinet/entries/{entry.id}/quantity",
-        json={"package_count": 0},
+        json={"packageCount": 0},
     )
 
     assert response.status_code == 200
     body = response.json()
-    assert body["package_count"] == 0
-    assert body["partial_tablet_count"] is None
-    assert body["below_minimum"] is True
+    assert body["packageCount"] == 0
+    assert body["partialTabletCount"] is None
+    assert body["belowMinimum"] is True
 
 
 @pytest.mark.asyncio
@@ -107,7 +107,7 @@ async def test_quantity_patch_negative_count_returns_422(
     act_as(current_user)
     response = await client.patch(
         f"/api/v1/cabinet/entries/{entry.id}/quantity",
-        json={"package_count": -1},
+        json={"packageCount": -1},
     )
 
     assert response.status_code == 422
@@ -130,7 +130,7 @@ async def test_quantity_patch_partial_out_of_range_returns_422(
     act_as(current_user)
     response = await client.patch(
         f"/api/v1/cabinet/entries/{entry.id}/quantity",
-        json={"package_count": 2, "partial_tablet_count": 20},
+        json={"packageCount": 2, "partialTabletCount": 20},
     )
 
     assert response.status_code == 422
@@ -153,7 +153,7 @@ async def test_quantity_patch_partial_on_non_tablet_variant_returns_422(
     act_as(current_user)
     response = await client.patch(
         f"/api/v1/cabinet/entries/{entry.id}/quantity",
-        json={"package_count": 2, "partial_tablet_count": 5},
+        json={"packageCount": 2, "partialTabletCount": 5},
     )
 
     assert response.status_code == 422
@@ -171,7 +171,7 @@ async def test_quantity_patch_on_nonexistent_entry_returns_404(
     act_as(current_user)
     response = await client.patch(
         f"/api/v1/cabinet/entries/{uuid.uuid4()}/quantity",
-        json={"package_count": 1},
+        json={"packageCount": 1},
     )
 
     assert response.status_code == 404

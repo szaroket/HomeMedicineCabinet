@@ -37,7 +37,7 @@ async def test_summary_empty_cabinet_returns_all_zeros(
         "valid": 0,
         "expiring": 0,
         "expired": 0,
-        "out_of_stock": 0,
+        "outOfStock": 0,
     }
 
 
@@ -80,7 +80,7 @@ async def test_summary_counts_expiry_threshold_boundaries(
     assert body["expired"] == 1
     assert body["expiring"] == 2
     assert body["valid"] == 1
-    assert body["out_of_stock"] == 0
+    assert body["outOfStock"] == 0
 
 
 @pytest.mark.asyncio
@@ -128,7 +128,7 @@ async def test_summary_out_of_stock_counts_below_minimum_important_entries(
     assert response.status_code == 200
     body = response.json()
     assert body["total"] == 3
-    assert body["out_of_stock"] == 1
+    assert body["outOfStock"] == 1
 
 
 @pytest.mark.asyncio
@@ -221,7 +221,7 @@ async def test_summary_status_counts_match_entries_list_totals(
         assert summary[status_value] == list_response.json()["total"]
 
     below_min_response = await client.get(
-        "/api/v1/cabinet/entries", params={"below_minimum": "true"}
+        "/api/v1/cabinet/entries", params={"belowMinimum": "true"}
     )
     assert below_min_response.status_code == 200
-    assert summary["out_of_stock"] == below_min_response.json()["total"]
+    assert summary["outOfStock"] == below_min_response.json()["total"]

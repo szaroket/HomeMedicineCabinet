@@ -6,12 +6,13 @@ from decimal import Decimal
 from enum import StrEnum
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import ConfigDict, Field, field_validator
 
+from app.core.schema import CamelModel
 from app.utilities.types import DosagePeriod, NonEmptyStr
 
 
-class UsageFields(BaseModel):
+class UsageFields(CamelModel):
     """Usage/dosage fields shared by the POST and PATCH write paths."""
 
     is_used: bool = False
@@ -51,7 +52,7 @@ class SufficiencyFilter(StrEnum):
     sufficient = "sufficient"
 
 
-class CabinetListParams(BaseModel):
+class CabinetListParams(CamelModel):
     """Query parameters for GET /cabinet/entries."""
 
     model_config = ConfigDict(populate_by_name=True, extra="forbid")
@@ -84,7 +85,7 @@ class CabinetListParams(BaseModel):
         return v
 
 
-class AddEntryRequest(BaseModel):
+class AddEntryRequest(CamelModel):
     """Validated request body for POST /cabinet/entries."""
 
     medication_registry_id: uuid.UUID
@@ -131,7 +132,7 @@ class AddEntryRequest(BaseModel):
         return v
 
 
-class AddEntryOut(BaseModel):
+class AddEntryOut(CamelModel):
     """Response schema for a single entry as returned by POST /cabinet/entries.
 
     Status is omitted — callers should fetch GET /cabinet/entries for up-to-date
@@ -158,7 +159,7 @@ class AddEntryOut(BaseModel):
     dosage_end_date: date | None = None
 
 
-class CabinetEntryOut(BaseModel):
+class CabinetEntryOut(CamelModel):
     """Response schema for a single cabinet entry, including computed status."""
 
     id: uuid.UUID
@@ -190,13 +191,13 @@ class CabinetEntryOut(BaseModel):
     is_sufficient: bool | None = None
 
 
-class SetImportantRequest(BaseModel):
+class SetImportantRequest(CamelModel):
     """Request body for PATCH /cabinet/entries/{entry_id}."""
 
     is_important: bool
 
 
-class UpdateQuantityRequest(BaseModel):
+class UpdateQuantityRequest(CamelModel):
     """Request body for PATCH /cabinet/entries/{entry_id}/quantity.
 
     Unlike AddEntryRequest, package_count may be 0 here (decrement to zero is valid).
@@ -242,7 +243,7 @@ class UpdateQuantityRequest(BaseModel):
         return v
 
 
-class CabinetPageOut(BaseModel):
+class CabinetPageOut(CamelModel):
     """Paginated response envelope for GET /cabinet/entries."""
 
     items: list[CabinetEntryOut]
@@ -251,7 +252,7 @@ class CabinetPageOut(BaseModel):
     page_size: int
 
 
-class MergeSummary(BaseModel):
+class MergeSummary(CamelModel):
     """Before/after totals returned when an add operation merges with an existing entry."""
 
     previous_package_count: int
@@ -261,7 +262,7 @@ class MergeSummary(BaseModel):
     new_total_tablets: int | None
 
 
-class AddEntryResult(BaseModel):
+class AddEntryResult(CamelModel):
     """Envelope returned by POST /cabinet/entries."""
 
     merged: bool
@@ -269,7 +270,7 @@ class AddEntryResult(BaseModel):
     merge_summary: MergeSummary | None
 
 
-class CabinetSummaryOut(BaseModel):
+class CabinetSummaryOut(CamelModel):
     """Response schema for GET /cabinet/summary: five dashboard counts."""
 
     total: int

@@ -58,26 +58,26 @@ async def test_usage_patch_persists_and_returns_correct_supply_view(
     response = await client.patch(
         f"/api/v1/cabinet/entries/{entry.id}/usage",
         json={
-            "is_used": True,
-            "dosage_times": 1,
-            "dosage_period": "day",
-            "dosage_amount": 1,
-            "dosage_start_date": today.isoformat(),
-            "dosage_end_date": dosage_end.isoformat(),
+            "isUsed": True,
+            "dosageTimes": 1,
+            "dosagePeriod": "day",
+            "dosageAmount": 1,
+            "dosageStartDate": today.isoformat(),
+            "dosageEndDate": dosage_end.isoformat(),
         },
     )
 
     assert response.status_code == 200
     body = response.json()
-    assert body["is_used"] is True
-    assert body["dosage_times"] == 1
-    assert body["dosage_period"] == "day"
-    assert body["dosage_amount"] == 1
-    assert body["dosage_end_date"] == dosage_end.isoformat()
+    assert body["isUsed"] is True
+    assert body["dosageTimes"] == 1
+    assert body["dosagePeriod"] == "day"
+    assert body["dosageAmount"] == 1
+    assert body["dosageEndDate"] == dosage_end.isoformat()
     # Independent oracle values
-    assert body["days_of_supply"] == 80
-    assert body["days_until_end"] == 60
-    assert body["is_sufficient"] is True
+    assert body["daysOfSupply"] == 80
+    assert body["daysUntilEnd"] == 60
+    assert body["isSufficient"] is True
 
 
 @pytest.mark.asyncio
@@ -109,20 +109,20 @@ async def test_clearing_usage_nulls_dosage_fields(
     act_as(current_user)
     response = await client.patch(
         f"/api/v1/cabinet/entries/{entry.id}/usage",
-        json={"is_used": False},
+        json={"isUsed": False},
     )
 
     assert response.status_code == 200
     body = response.json()
-    assert body["is_used"] is False
-    assert body["dosage_times"] is None
-    assert body["dosage_period"] is None
-    assert body["dosage_amount"] is None
-    assert body["dosage_start_date"] is None
-    assert body["dosage_end_date"] is None
-    assert body["days_of_supply"] is None
-    assert body["days_until_end"] is None
-    assert body["is_sufficient"] is None
+    assert body["isUsed"] is False
+    assert body["dosageTimes"] is None
+    assert body["dosagePeriod"] is None
+    assert body["dosageAmount"] is None
+    assert body["dosageStartDate"] is None
+    assert body["dosageEndDate"] is None
+    assert body["daysOfSupply"] is None
+    assert body["daysUntilEnd"] is None
+    assert body["isSufficient"] is None
 
 
 # ---------------------------------------------------------------------------
@@ -273,7 +273,7 @@ async def test_sufficiency_filter_parity_with_compute_usage_view(
     # SQL filter: sufficiency=sufficient
     resp_sufficient = await client.get(
         "/api/v1/cabinet/entries",
-        params={"sufficiency": "sufficient", "page_size": 100},
+        params={"sufficiency": "sufficient", "pageSize": 100},
     )
     assert resp_sufficient.status_code == 200
     returned_sufficient_ids = {item["id"] for item in resp_sufficient.json()["items"]}
@@ -284,7 +284,7 @@ async def test_sufficiency_filter_parity_with_compute_usage_view(
     # SQL filter: sufficiency=insufficient
     resp_insufficient = await client.get(
         "/api/v1/cabinet/entries",
-        params={"sufficiency": "insufficient", "page_size": 100},
+        params={"sufficiency": "insufficient", "pageSize": 100},
     )
     assert resp_insufficient.status_code == 200
     returned_insufficient_ids = {

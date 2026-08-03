@@ -3,10 +3,12 @@
 import uuid
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import ConfigDict
+
+from app.core.schema import CamelModel
 
 
-class ProductOut(BaseModel):
+class ProductOut(CamelModel):
     """A distinct product result from the registry search.
 
     A product groups all pack-size variants that share the same name,
@@ -28,7 +30,7 @@ class ProductOut(BaseModel):
     active_ingredient: str | None
 
 
-class VariantOut(BaseModel):
+class VariantOut(CamelModel):
     """A concrete pack-size variant from the registry.
 
     Returned by the variants endpoint so the add flow can reference a specific
