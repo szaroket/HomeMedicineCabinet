@@ -123,3 +123,5 @@ Frontend: Vitest + React Testing Library (not yet configured — add `vitest.con
 ## Commit & Pull Request Guidelines
 
 Use Conventional Commits prefixes: `feat:` new features, `fix:` bug fixes, `docs:` documentation, `refactor:` code changes without behaviour change, `test:` adding/updating tests, `chore:` tooling and config. CI runs on every PR and push to `main`/`develop` via `.github/workflows/ci-cd.yml`: vulnerability scan, pre-commit (lint/typecheck), backend unit tests, backend integration tests, frontend build, backend typecheck, frontend unit tests, frontend typecheck, and frontend e2e — all gate the release deploy. Still run `pre-commit run --all-files` and `npm run build` manually before opening a PR to catch issues before CI does.
+
+A separate `AI Code Review` workflow (`.github/workflows/ai-review.yml`) also runs on every PR against `main`/`develop`, posting advisory inline comments against `.github/review-criteria.md`; it never gates the deploy and is not a required check.

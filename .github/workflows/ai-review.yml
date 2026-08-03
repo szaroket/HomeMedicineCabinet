@@ -1,0 +1,40 @@
+name: AI Code Review
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    name: AI Code Review
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Run AI code review
+        continue-on-error: true
+        uses: szaroket/ai-code-review-action@6e89cd450e9921fed50e5e0c62083c46e6e96084 # SHA-pinned: 3rd-party action (supply-chain); GitHub-owned actions use major tags
+        with:
+          pr-number: ${{ github.event.pull_request.number }}
+          criteria-file: .github/review-criteria.md
+          rules-file: AGENTS.md
+          lessons-file: context/foundation/lessons.md
+          scope-dirs: backend,frontend
+          exclude: "**/uv.lock,**/package-lock.json,backend/migrations/**"
+          anthropic-base-url: https://openrouter.ai/api
+          anthropic-auth-token: ${{ secrets.OPENROUTER_API_KEY }}
+          github-token: ${{ github.token }}
+          publish: "true"
+          format: all
+
+      - name: Upload review output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: review-output
+          path: review-output/
+          retention-days: 7

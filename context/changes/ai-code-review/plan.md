@@ -366,17 +366,17 @@ No data or schema changes. Rollback is deleting `.github/workflows/ai-review.yml
 
 #### Automated
 
-- [ ] 2.1 Workflow file parses as valid YAML
-- [ ] 2.2 The workflow does not reference an Anthropic API key
-- [ ] 2.3 The action reference is SHA-pinned, not a branch
-- [ ] 2.4 Pre-commit passes on the workflow and `AGENTS.md`
+- [x] 2.1 Workflow file parses as valid YAML
+- [x] 2.2 The workflow does not reference an Anthropic API key
+- [x] 2.3 The action reference is SHA-pinned, not a branch
+- [x] 2.4 Pre-commit passes on the workflow and `AGENTS.md`
 
 #### Manual
 
-- [ ] 2.5 `ci-cd.yml` is untouched and the deploy gate is unchanged
-- [ ] 2.6 `continue-on-error: true` sits on the action step, not the job
-- [ ] 2.7 The `exclude` globs match real paths in this repo
-- [ ] 2.8 The pin comment matches the convention at `ci-cd.yml:24`
+- [x] 2.5 `ci-cd.yml` is untouched and the deploy gate is unchanged
+- [x] 2.6 `continue-on-error: true` sits on the action step, not the job
+- [x] 2.7 The `exclude` globs match real paths in this repo
+- [x] 2.8 The pin comment matches the convention at `ci-cd.yml:24`
 
 ### Phase 3: Provision the Secret and Validate
 
