@@ -109,7 +109,7 @@ Produce `.github/review-criteria.md` with at least five criteria tailored to thi
 
 **Intent**: Write the agreed criteria to disk in the format the action parses.
 
-**Contract**: A markdown file whose top-level structure is a single `#` title followed by at least five `##` headings, each with a short prose body. Heading text is the criterion name; the body is model guidance. A file with zero `##` headings causes exit `3`. Keep each body to two or three sentences — it is prompt input, not documentation.
+**Contract**: A markdown file whose top-level structure is a single `#` title followed by at least five `##` headings, each with a short prose body. Heading text is the criterion name; the body is model guidance. A file with zero `##` headings causes exit `3`. Keep each body to a short paragraph — principle first, repo specifics only as illustration. Bodies run longer than a bare one-liner on purpose: the rationale is what makes a criterion yield a specific finding instead of generic advice, and per-run prompt cost is accepted as the trade (see Performance Considerations).
 
 ### Success Criteria:
 
@@ -294,6 +294,7 @@ Land the change on `develop`, then confirm end-to-end behavior on the next real 
 - On the first post-merge PR, inline comments are published on the diff
 - The `review-output` artifact downloads and contains both JSON and markdown
 - Findings are scoped to `backend/`/`frontend/` and are substantive rather than generic
+- The verdict carries one score per criterion — all nine, by exact heading name. Nine axes against a default `max-turns` of `5` is the pressure point: a verdict missing scores, or visibly thin scores on the later criteria, means the budget is too tight and `max-turns` needs revisiting
 - The review quality justifies keeping `publish: "true"` on a public repo — if it does not, opening a follow-up change to revert to artifacts-only is the correct response
 
 ---
@@ -351,15 +352,15 @@ No data or schema changes. Rollback is deleting `.github/workflows/ai-review.yml
 
 #### Automated
 
-- [x] 1.1 `.github/review-criteria.md` exists
-- [x] 1.2 The file contains at least five `##` headings
-- [x] 1.3 Pre-commit passes on the new file
+- [x] 1.1 `.github/review-criteria.md` exists — 5678f46
+- [x] 1.2 The file contains at least five `##` headings — 5678f46
+- [x] 1.3 Pre-commit passes on the new file — 5678f46
 
 #### Manual
 
-- [x] 1.4 Each criterion is traceable to a concrete rule in `AGENTS.md` or `lessons.md`
-- [x] 1.5 No criterion duplicates the injected rules-file verbatim
-- [x] 1.6 The user has explicitly approved the final set of headings
+- [x] 1.4 Each criterion is traceable to a concrete rule in `AGENTS.md` or `lessons.md` — 5678f46
+- [x] 1.5 No criterion duplicates the injected rules-file verbatim — 5678f46
+- [x] 1.6 The user has explicitly approved the final set of headings — 5678f46
 
 ### Phase 2: Write the Review Workflow
 
@@ -403,4 +404,5 @@ No data or schema changes. Rollback is deleting `.github/workflows/ai-review.yml
 - [ ] 4.4 Inline comments are published on the first post-merge PR
 - [ ] 4.5 The `review-output` artifact contains both JSON and markdown
 - [ ] 4.6 Findings are scoped to `backend/`/`frontend/` and are substantive
-- [ ] 4.7 Review quality justifies keeping `publish: "true"` on a public repo
+- [ ] 4.7 The verdict carries all nine criterion scores, none visibly thin
+- [ ] 4.8 Review quality justifies keeping `publish: "true"` on a public repo
