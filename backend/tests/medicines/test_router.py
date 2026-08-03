@@ -51,8 +51,8 @@ class TestSearchProductsEndpoint:
             {
                 "name": "Apap",
                 "strength": "500 mg",
-                "pharmaceutical_form": "tablet",
-                "active_ingredient": "paracetamol",
+                "pharmaceuticalForm": "tablet",
+                "activeIngredient": "paracetamol",
             }
         ]
         mock_search.assert_awaited_once()
@@ -180,7 +180,7 @@ class TestListVariantsEndpoint:
         data = response.json()
         assert len(data) == 1
         assert data[0]["name"] == "Apap"
-        assert data[0]["is_tablet_based"] is True
+        assert data[0]["isTabletBased"] is True
 
     async def test_empty_result_returns_200_with_empty_list(
         self, authed_client: AsyncClient, mocker: MockerFixture

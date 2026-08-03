@@ -1,9 +1,11 @@
 """Users API schemas."""
 
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from app.core.schema import CamelModel
 
 
-class UserPreferencesOut(BaseModel):
+class UserPreferencesOut(CamelModel):
     """Response schema for user preferences."""
 
     expiry_threshold_days: int
@@ -11,7 +13,7 @@ class UserPreferencesOut(BaseModel):
     min_package_count: int
 
 
-class UpdatePreferencesRequest(BaseModel):
+class UpdatePreferencesRequest(CamelModel):
     """Request schema for updating user preferences."""
 
     expiry_threshold_days: int = Field(ge=7, le=90)

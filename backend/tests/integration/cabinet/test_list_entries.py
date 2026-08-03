@@ -50,11 +50,11 @@ async def test_populated_cabinet_returns_all_seeded_entries(
 
     for item in items:
         entry = seeded[item["id"]]
-        assert item["package_count"] == entry.package_count
-        assert item["expiry_date"] == entry.expiry_date.isoformat()
+        assert item["packageCount"] == entry.package_count
+        assert item["expiryDate"] == entry.expiry_date.isoformat()
         assert item["status"] == "valid"
-        assert item["is_tablet_based"] is True
-        assert item["is_important"] is False
+        assert item["isTabletBased"] is True
+        assert item["isImportant"] is False
 
 
 @pytest.mark.asyncio
@@ -90,10 +90,10 @@ async def test_each_entry_carries_expected_field_values(
     item = items[0]
     assert item["id"] == str(entry.id)
     assert item["name"] == "Ibuprofen 400mg tabl."
-    assert item["package_count"] == 5
-    assert item["expiry_date"] == expiry.isoformat()
-    assert item["is_important"] is True
-    assert item["is_tablet_based"] is True
+    assert item["packageCount"] == 5
+    assert item["expiryDate"] == expiry.isoformat()
+    assert item["isImportant"] is True
+    assert item["isTabletBased"] is True
     assert item["status"] == "valid"
 
 

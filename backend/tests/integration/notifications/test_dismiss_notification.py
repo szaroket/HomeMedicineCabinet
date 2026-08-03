@@ -45,7 +45,7 @@ async def test_dismiss_suppresses_then_gc_then_refires_on_condition_toggle(
 
     dismiss_response = await client.post(
         "/api/v1/notifications/dismiss",
-        json={"cabinet_entry_id": str(entry.id), "trigger_type": "below_minimum"},
+        json={"cabinetEntryId": str(entry.id), "triggerType": "below_minimum"},
     )
     assert dismiss_response.status_code == 204
 
@@ -76,8 +76,8 @@ async def test_dismiss_suppresses_then_gc_then_refires_on_condition_toggle(
     assert response.status_code == 200
     items = response.json()["items"]
     assert len(items) == 1
-    assert items[0]["trigger_type"] == "below_minimum"
-    assert items[0]["cabinet_entry_id"] == str(entry.id)
+    assert items[0]["triggerType"] == "below_minimum"
+    assert items[0]["cabinetEntryId"] == str(entry.id)
 
 
 @pytest.mark.asyncio
@@ -102,7 +102,7 @@ async def test_dismiss_is_idempotent(
 
     act_as(current_user)
 
-    payload = {"cabinet_entry_id": str(entry_id), "trigger_type": "below_minimum"}
+    payload = {"cabinetEntryId": str(entry_id), "triggerType": "below_minimum"}
 
     first = await client.post("/api/v1/notifications/dismiss", json=payload)
     assert first.status_code == 204
@@ -140,8 +140,8 @@ async def test_dismiss_unknown_entry_returns_404_and_inserts_nothing(
     response = await client.post(
         "/api/v1/notifications/dismiss",
         json={
-            "cabinet_entry_id": str(missing_entry_id),
-            "trigger_type": "below_minimum",
+            "cabinetEntryId": str(missing_entry_id),
+            "triggerType": "below_minimum",
         },
     )
     assert response.status_code == 404
