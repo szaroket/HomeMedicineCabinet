@@ -16,7 +16,6 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Run AI code review
-        continue-on-error: true
         uses: szaroket/ai-code-review-action@6e89cd450e9921fed50e5e0c62083c46e6e96084 # SHA-pinned: 3rd-party action (supply-chain); GitHub-owned actions use major tags
         with:
           pr-number: ${{ github.event.pull_request.number }}
@@ -30,6 +29,7 @@ jobs:
           github-token: ${{ github.token }}
           publish: "true"
           format: all
+          max-turns: "15"
 
       - name: Upload review output
         if: always()
