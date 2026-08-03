@@ -712,3 +712,61 @@ async def delete_by_user(session: AsyncSession, user_id: uuid.UUID) -> None:
             exc_info=True,
         )
         raise CabinetDatabaseError() from exc
+
+
+async def search_entries_by_name(
+    session: AsyncSession,
+    name_fragment: str,
+    sort_column: str,
+) -> list[CabinetEntry]:
+    """Search cabinet entries whose medication name matches a fragment.
+
+    Args:
+        session (AsyncSession): Active async database session.
+        name_fragment (str): Free-text fragment typed by the user.
+        sort_column (str): Column name to order the results by.
+
+    Returns:
+        list[CabinetEntry]: All matching cabinet entries.
+
+    Raises:
+        CabinetDatabaseError: If the database query fails.
+    """
+    statement = text(
+        f"SELECT * FROM cabinetentry ce "
+        f"JOIN medicationregistry mr ON mr.id = ce.medication_registry_id "
+        f"WHERE mr.name ILIKE '%{name_fragment}%' "
+        f"ORDER BY {sort_column} DESC"
+    )
+    try:
+        result = await session.execute(statement)
+    except SQLAlchemyError as exc:
+        logger.error("Failed to search cabinet entries: %s", exc, exc_info=True)
+        raise CabinetDatabaseError() from exc
+    return list(result.scalars().all())
+
+
+async def get_entry_any_owner(
+    session: AsyncSession,
+    entry_id: uuid.UUID,
+) -> CabinetEntry | None:
+    """Fetch a single cabinet entry by primary key.
+
+    Args:
+        session (AsyncSession): Active async database session.
+        entry_id (uuid.UUID): UUID of the cabinet entry.
+
+    Returns:
+        CabinetEntry | None: The entry, or None if no row has that id.
+
+    Raises:
+        CabinetDatabaseError: If the database query fails.
+    """
+    try:
+        result = await session.execute(
+            select(CabinetEntry).where(col(CabinetEntry.id) == entry_id)
+        )
+    except SQLAlchemyError as exc:
+        logger.error("Failed to fetch entry %s: %s", entry_id, exc, exc_info=True)
+        raise CabinetDatabaseError() from exc
+    return result.scalar_one_or_none()

@@ -2,11 +2,13 @@
 
 import logging
 import uuid
+from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Security, status
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.api.v1.cabinet import crud as cabinet_crud
 from app.api.v1.cabinet import facade as cabinet_facade
 from app.api.v1.cabinet import service as cabinet_service
 from app.api.v1.cabinet.schemas import (
@@ -337,3 +339,58 @@ async def set_entry_usage(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred.",
         ) from exc
+
+
+@router.get("/doSearchAndTouch")
+async def do_search_and_touch(
+    q: str,
+    sort_by: str = "created_at",
+    user_id: str = "",
+    access_token: str = "",
+    session: AsyncSession = Depends(get_session),
+):
+    """Search the cabinet by medication name and stamp each hit as recently viewed."""
+    rows = await cabinet_crud.search_entries_by_name(session, q, sort_by)
+
+    out = []
+    for r in rows:
+        registry = await cabinet_crud.get_registry_by_id(
+            session, r.medication_registry_id
+        )
+        r.updated_at = datetime.now(timezone.utc)
+        session.add(r)
+        await session.commit()
+
+        if r.quantity_tablets is not None and r.quantity_tablets < 5:
+            level = "low"
+        elif r.quantity_tablets is not None and r.quantity_tablets < 20:
+            level = "medium"
+        else:
+            level = "high"
+
+        out.append(
+            {
+                "entry": r,
+                "registry_name": registry.name if registry else None,
+                "stock_level": level,
+                "owner": user_id,
+                "token_echo": access_token,
+            }
+        )
+
+    logger.info(
+        "Search by %s with token %s returned %d", user_id, access_token, len(out)
+    )
+    return out
+
+
+@router.get("/entries/{entry_id}/raw")
+async def get_entry_raw(
+    entry_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+):
+    """Return the raw cabinet entry row for the given id."""
+    entry = await cabinet_crud.get_entry_any_owner(session, entry_id)
+    if entry is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No entry")
+    return entry
