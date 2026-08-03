@@ -3,7 +3,7 @@
 import uuid
 from enum import StrEnum
 
-from pydantic import BaseModel
+from app.core.schema import CamelModel
 
 
 class TriggerType(StrEnum):
@@ -14,7 +14,7 @@ class TriggerType(StrEnum):
     RUN_OUT = "run_out"
 
 
-class NotificationOut(BaseModel):
+class NotificationOut(CamelModel):
     """Response schema for a single active notification."""
 
     trigger_type: TriggerType
@@ -23,13 +23,13 @@ class NotificationOut(BaseModel):
     days_remaining: int | None
 
 
-class NotificationListOut(BaseModel):
+class NotificationListOut(CamelModel):
     """Response envelope for GET /notifications."""
 
     items: list[NotificationOut]
 
 
-class DismissRequest(BaseModel):
+class DismissRequest(CamelModel):
     """Request body for POST /notifications/dismiss."""
 
     cabinet_entry_id: uuid.UUID

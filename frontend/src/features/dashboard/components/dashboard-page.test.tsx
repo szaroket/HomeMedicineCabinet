@@ -58,7 +58,7 @@ describe("DashboardPage", () => {
           valid: 1,
           expiring: 0,
           expired: 0,
-          out_of_stock: 0,
+          outOfStock: 0,
         }),
         { status: 200 },
       ),
@@ -75,7 +75,7 @@ describe("DashboardPage", () => {
       valid: 0,
       expiring: 0,
       expired: 0,
-      out_of_stock: 0,
+      outOfStock: 0,
     };
     vi.mocked(fetch).mockResolvedValueOnce(
       new Response(JSON.stringify(empty), { status: 200 }),
@@ -94,7 +94,7 @@ describe("DashboardPage", () => {
       valid: 6,
       expiring: 2,
       expired: 1,
-      out_of_stock: 1,
+      outOfStock: 1,
     };
     vi.mocked(fetch).mockResolvedValueOnce(
       new Response(JSON.stringify(summary), { status: 200 }),

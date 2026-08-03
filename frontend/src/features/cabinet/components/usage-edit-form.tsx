@@ -25,31 +25,31 @@ export function UsageEditForm({ entry, onClose }: UsageEditFormProps) {
   } = useForm<UsageValues>({
     resolver: zodResolver(usageSchema),
     defaultValues: {
-      is_used: entry.is_used,
-      is_tablet_based: entry.is_tablet_based,
-      dosage_times: entry.dosage_times ?? null,
-      dosage_period: entry.dosage_period ?? null,
-      dosage_amount: entry.dosage_amount ?? null,
-      dosage_start_date: entry.dosage_start_date ?? null,
-      dosage_end_date: entry.dosage_end_date ?? null,
+      isUsed: entry.isUsed,
+      isTabletBased: entry.isTabletBased,
+      dosageTimes: entry.dosageTimes ?? null,
+      dosagePeriod: entry.dosagePeriod ?? null,
+      dosageAmount: entry.dosageAmount ?? null,
+      dosageStartDate: entry.dosageStartDate ?? null,
+      dosageEndDate: entry.dosageEndDate ?? null,
     },
   });
 
   // useWatch (not the watch() function) so React Compiler can memoize this
   // component instead of skipping it (react-hooks/incompatible-library).
-  const isUsed = useWatch({ control, name: "is_used" });
+  const isUsed = useWatch({ control, name: "isUsed" });
 
   function onSubmit(values: UsageValues) {
-    const payload = values.is_used
+    const payload = values.isUsed
       ? {
-          is_used: true as const,
-          dosage_times: values.dosage_times ?? null,
-          dosage_period: values.dosage_period ?? null,
-          dosage_amount: values.dosage_amount ?? null,
-          dosage_start_date: values.dosage_start_date ?? null,
-          dosage_end_date: values.dosage_end_date ?? null,
+          isUsed: true as const,
+          dosageTimes: values.dosageTimes ?? null,
+          dosagePeriod: values.dosagePeriod ?? null,
+          dosageAmount: values.dosageAmount ?? null,
+          dosageStartDate: values.dosageStartDate ?? null,
+          dosageEndDate: values.dosageEndDate ?? null,
         }
-      : { is_used: false as const };
+      : { isUsed: false as const };
     setServerError(null);
     setUsage(
       { id: entry.id, payload },
@@ -72,13 +72,13 @@ export function UsageEditForm({ entry, onClose }: UsageEditFormProps) {
     >
       <div className="flex items-center gap-2">
         <input
-          id={`is_used_${entry.id}`}
+          id={`isUsed_${entry.id}`}
           type="checkbox"
           className="h-4 w-4 rounded border-slate-600 bg-slate-700 accent-blue-500"
-          {...register("is_used")}
+          {...register("isUsed")}
         />
         <label
-          htmlFor={`is_used_${entry.id}`}
+          htmlFor={`isUsed_${entry.id}`}
           className="cursor-pointer text-sm font-medium text-blue-400"
         >
           Oznacz jako przyjmowany
@@ -87,7 +87,7 @@ export function UsageEditForm({ entry, onClose }: UsageEditFormProps) {
 
       {isUsed && (
         <>
-          {entry.is_tablet_based && (
+          {entry.isTabletBased && (
             <>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <div className="flex flex-1 flex-col gap-1">
@@ -99,14 +99,14 @@ export function UsageEditForm({ entry, onClose }: UsageEditFormProps) {
                     min={1}
                     placeholder="np. 3"
                     className="rounded border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    {...register("dosage_times", {
+                    {...register("dosageTimes", {
                       setValueAs: (value: string) =>
                         value === "" || value == null ? null : Number(value),
                     })}
                   />
-                  {errors.dosage_times && (
+                  {errors.dosageTimes && (
                     <p className="text-xs text-red-400">
-                      {errors.dosage_times.message}
+                      {errors.dosageTimes.message}
                     </p>
                   )}
                 </div>
@@ -117,7 +117,7 @@ export function UsageEditForm({ entry, onClose }: UsageEditFormProps) {
                   </label>
                   <select
                     className="rounded border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    {...register("dosage_period", {
+                    {...register("dosagePeriod", {
                       setValueAs: (value: string) =>
                         value === "" ? null : value,
                     })}
@@ -126,9 +126,9 @@ export function UsageEditForm({ entry, onClose }: UsageEditFormProps) {
                     <option value="day">dzień</option>
                     <option value="week">tydzień</option>
                   </select>
-                  {errors.dosage_period && (
+                  {errors.dosagePeriod && (
                     <p className="text-xs text-red-400">
-                      {errors.dosage_period.message}
+                      {errors.dosagePeriod.message}
                     </p>
                   )}
                 </div>
@@ -143,14 +143,14 @@ export function UsageEditForm({ entry, onClose }: UsageEditFormProps) {
                   min={1}
                   placeholder="np. 2"
                   className="rounded border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  {...register("dosage_amount", {
+                  {...register("dosageAmount", {
                     setValueAs: (value: string) =>
                       value === "" || value == null ? null : Number(value),
                   })}
                 />
-                {errors.dosage_amount && (
+                {errors.dosageAmount && (
                   <p className="text-xs text-red-400">
-                    {errors.dosage_amount.message}
+                    {errors.dosageAmount.message}
                   </p>
                 )}
               </div>
@@ -165,11 +165,11 @@ export function UsageEditForm({ entry, onClose }: UsageEditFormProps) {
               <input
                 type="date"
                 className="rounded border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                {...register("dosage_start_date")}
+                {...register("dosageStartDate")}
               />
-              {errors.dosage_start_date && (
+              {errors.dosageStartDate && (
                 <p className="text-xs text-red-400">
-                  {errors.dosage_start_date.message}
+                  {errors.dosageStartDate.message}
                 </p>
               )}
             </div>
@@ -181,11 +181,11 @@ export function UsageEditForm({ entry, onClose }: UsageEditFormProps) {
               <input
                 type="date"
                 className="rounded border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                {...register("dosage_end_date")}
+                {...register("dosageEndDate")}
               />
-              {errors.dosage_end_date && (
+              {errors.dosageEndDate && (
                 <p className="text-xs text-red-400">
-                  {errors.dosage_end_date.message}
+                  {errors.dosageEndDate.message}
                 </p>
               )}
             </div>

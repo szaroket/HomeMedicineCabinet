@@ -67,19 +67,19 @@ async def test_mixed_inventory_returns_one_alert_per_trigger(
     assert response.status_code == 200
     items = response.json()["items"]
 
-    by_entry_id = {item["cabinet_entry_id"]: item for item in items}
+    by_entry_id = {item["cabinetEntryId"]: item for item in items}
 
     assert str(expiring_entry.id) in by_entry_id
-    assert by_entry_id[str(expiring_entry.id)]["trigger_type"] == "expiry"
-    assert by_entry_id[str(expiring_entry.id)]["days_remaining"] == 10
+    assert by_entry_id[str(expiring_entry.id)]["triggerType"] == "expiry"
+    assert by_entry_id[str(expiring_entry.id)]["daysRemaining"] == 10
 
     assert str(below_min_entry.id) in by_entry_id
-    assert by_entry_id[str(below_min_entry.id)]["trigger_type"] == "below_minimum"
-    assert by_entry_id[str(below_min_entry.id)]["days_remaining"] is None
+    assert by_entry_id[str(below_min_entry.id)]["triggerType"] == "below_minimum"
+    assert by_entry_id[str(below_min_entry.id)]["daysRemaining"] is None
 
     assert str(run_out_entry.id) in by_entry_id
-    assert by_entry_id[str(run_out_entry.id)]["trigger_type"] == "run_out"
-    assert by_entry_id[str(run_out_entry.id)]["days_remaining"] == 2
+    assert by_entry_id[str(run_out_entry.id)]["triggerType"] == "run_out"
+    assert by_entry_id[str(run_out_entry.id)]["daysRemaining"] == 2
 
     assert str(healthy_entry.id) not in by_entry_id
     assert len(items) == 3

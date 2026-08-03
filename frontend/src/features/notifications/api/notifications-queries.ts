@@ -38,8 +38,8 @@ export function useDismissAllNotifications() {
       Promise.allSettled(
         items.map((item) =>
           dismissNotification({
-            cabinet_entry_id: item.cabinet_entry_id,
-            trigger_type: item.trigger_type,
+            cabinetEntryId: item.cabinetEntryId,
+            triggerType: item.triggerType,
           }),
         ),
       ),

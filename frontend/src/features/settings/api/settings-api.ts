@@ -1,9 +1,9 @@
 import { apiJson, apiFetch } from "@/lib/api-client";
 
 export interface UserPreferences {
-  expiry_threshold_days: number;
-  close_to_finish_threshold_days: number;
-  min_package_count: number;
+  expiryThresholdDays: number;
+  closeToFinishThresholdDays: number;
+  minPackageCount: number;
 }
 
 export function getPreferences(): Promise<UserPreferences> {
@@ -11,9 +11,9 @@ export function getPreferences(): Promise<UserPreferences> {
 }
 
 export interface UpdatePreferencesPayload {
-  expiry_threshold_days: number;
-  close_to_finish_threshold_days: number;
-  min_package_count: number;
+  expiryThresholdDays: number;
+  closeToFinishThresholdDays: number;
+  minPackageCount: number;
 }
 
 export function updatePreferences(

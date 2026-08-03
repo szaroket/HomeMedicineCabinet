@@ -25,12 +25,12 @@ function dayWord(days: number | null): string {
 // filters — no new query param, no backend change.
 function triggerFilterParams(item: NotificationItem): URLSearchParams {
   const params = new URLSearchParams();
-  params.set("search", item.medication_name);
-  switch (item.trigger_type) {
+  params.set("search", item.medicationName);
+  switch (item.triggerType) {
     case "expiry":
       params.set(
         "status",
-        item.days_remaining != null && item.days_remaining < 0
+        item.daysRemaining != null && item.daysRemaining < 0
           ? "expired"
           : "expiring",
       );
@@ -46,16 +46,16 @@ function triggerFilterParams(item: NotificationItem): URLSearchParams {
 }
 
 function rowLabel(item: NotificationItem): string {
-  switch (item.trigger_type) {
+  switch (item.triggerType) {
     case "expiry":
-      if (item.days_remaining != null && item.days_remaining < 0) {
+      if (item.daysRemaining != null && item.daysRemaining < 0) {
         return "Termin ważności minął";
       }
-      return `Termin ważności kończy się za ${item.days_remaining} ${dayWord(item.days_remaining)}`;
+      return `Termin ważności kończy się za ${item.daysRemaining} ${dayWord(item.daysRemaining)}`;
     case "below_minimum":
       return "Liczba opakowań poniżej minimalnej wartości";
     case "run_out":
-      return `Zabraknie za ${item.days_remaining} ${dayWord(item.days_remaining)}`;
+      return `Zabraknie za ${item.daysRemaining} ${dayWord(item.daysRemaining)}`;
   }
 }
 
@@ -142,12 +142,12 @@ export function NotificationPanel({
           <ul className="flex max-h-[70vh] flex-col gap-2 overflow-y-auto">
             {items.map((item) => (
               <li
-                key={`${item.cabinet_entry_id}-${item.trigger_type}`}
+                key={`${item.cabinetEntryId}-${item.triggerType}`}
                 className="flex items-start justify-between gap-2 rounded border border-slate-700 bg-slate-900 p-2"
               >
                 <button
                   type="button"
-                  aria-label={`Pokaż w apteczce: ${item.medication_name}`}
+                  aria-label={`Pokaż w apteczce: ${item.medicationName}`}
                   onClick={() => {
                     navigate(`/cabinet?${triggerFilterParams(item)}`);
                     onClose();
@@ -155,18 +155,18 @@ export function NotificationPanel({
                   className="min-w-0 flex-1 cursor-pointer text-left"
                 >
                   <p className="truncate text-sm font-medium text-white">
-                    {item.medication_name}
+                    {item.medicationName}
                   </p>
                   <p className="text-xs text-slate-400">{rowLabel(item)}</p>
                 </button>
                 <button
                   type="button"
-                  aria-label={`Odrzuć powiadomienie: ${item.medication_name}`}
+                  aria-label={`Odrzuć powiadomienie: ${item.medicationName}`}
                   onClick={(event) => {
                     event.stopPropagation();
                     dismissMutation.mutate({
-                      cabinet_entry_id: item.cabinet_entry_id,
-                      trigger_type: item.trigger_type,
+                      cabinetEntryId: item.cabinetEntryId,
+                      triggerType: item.triggerType,
                     });
                   }}
                   className="shrink-0 rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-white"

@@ -2,10 +2,12 @@
 
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import EmailStr, field_validator
+
+from app.core.schema import CamelModel
 
 
-class RegisterRequest(BaseModel):
+class RegisterRequest(CamelModel):
     """Request body for POST /auth/register.
 
     Attributes:
@@ -35,7 +37,7 @@ class RegisterRequest(BaseModel):
         return v
 
 
-class LoginRequest(BaseModel):
+class LoginRequest(CamelModel):
     """Request body for POST /auth/login.
 
     Attributes:
@@ -47,7 +49,7 @@ class LoginRequest(BaseModel):
     password: str
 
 
-class UserOut(BaseModel):
+class UserOut(CamelModel):
     """Public user representation returned in auth responses.
 
     Attributes:
@@ -59,7 +61,7 @@ class UserOut(BaseModel):
     email: str
 
 
-class AuthResponse(BaseModel):
+class AuthResponse(CamelModel):
     """Response body for login, refresh, and auto-confirmed register.
 
     Attributes:

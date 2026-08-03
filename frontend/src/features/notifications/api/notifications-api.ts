@@ -3,10 +3,10 @@ import { apiFetch, apiJson } from "@/lib/api-client";
 export type TriggerType = "expiry" | "below_minimum" | "run_out";
 
 export interface NotificationItem {
-  trigger_type: TriggerType;
-  cabinet_entry_id: string;
-  medication_name: string;
-  days_remaining: number | null;
+  triggerType: TriggerType;
+  cabinetEntryId: string;
+  medicationName: string;
+  daysRemaining: number | null;
 }
 
 export interface NotificationListOut {
@@ -18,8 +18,8 @@ export function getNotifications(): Promise<NotificationListOut> {
 }
 
 export interface DismissNotificationPayload {
-  cabinet_entry_id: string;
-  trigger_type: TriggerType;
+  cabinetEntryId: string;
+  triggerType: TriggerType;
 }
 
 export async function dismissNotification(

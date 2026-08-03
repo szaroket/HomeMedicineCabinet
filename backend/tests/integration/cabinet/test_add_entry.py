@@ -35,9 +35,9 @@ async def test_add_entry_merges_on_duplicate_dedup_key(
     response = await client.post(
         "/api/v1/cabinet/entries",
         json={
-            "medication_registry_id": str(registry.id),
-            "package_count": 3,
-            "expiry_date": expiry.isoformat(),
+            "medicationRegistryId": str(registry.id),
+            "packageCount": 3,
+            "expiryDate": expiry.isoformat(),
         },
     )
 
@@ -45,7 +45,7 @@ async def test_add_entry_merges_on_duplicate_dedup_key(
     body = response.json()
     assert body["merged"] is True
     assert body["entry"]["id"] == str(initial.id)
-    assert body["entry"]["package_count"] == 5  # 2 + 3
+    assert body["entry"]["packageCount"] == 5  # 2 + 3
 
     # Only one entry in the cabinet — no duplicate row created
     list_response = await client.get("/api/v1/cabinet/entries")

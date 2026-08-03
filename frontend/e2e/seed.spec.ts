@@ -174,10 +174,10 @@ test.describe("Risk #2 — critical journey: add medication → see it in cabine
     // uniquely verifiable — filter them out and let the populated fields carry
     // the assertion (filtering here keeps the test body free of conditionals).
     const populatedDetailValues = [
-      variant.active_ingredient,
+      variant.activeIngredient,
       variant.strength,
-      variant.pharmaceutical_form,
-      variant.route_of_administration,
+      variant.pharmaceuticalForm,
+      variant.routeOfAdministration,
     ].filter((value): value is string => value != null);
     for (const value of populatedDetailValues) {
       await expect(

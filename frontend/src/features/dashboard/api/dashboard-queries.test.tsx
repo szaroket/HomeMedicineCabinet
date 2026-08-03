@@ -27,7 +27,7 @@ describe("useCabinetSummary", () => {
       valid: 6,
       expiring: 2,
       expired: 2,
-      out_of_stock: 1,
+      outOfStock: 1,
     };
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(summary));
 

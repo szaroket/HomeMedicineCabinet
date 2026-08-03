@@ -31,7 +31,7 @@ export const SUMMARY_CARDS: SummaryCardConfig[] = [
     accent: "expired",
   },
   {
-    key: "out_of_stock",
+    key: "outOfStock",
     label: "Leki bez zapasu",
     to: "/cabinet?below_minimum=true",
     accent: "out_of_stock",

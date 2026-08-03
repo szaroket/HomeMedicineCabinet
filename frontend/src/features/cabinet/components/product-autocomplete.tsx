@@ -13,7 +13,7 @@ function productLabel(product: ProductOut): string {
   return [
     product.name,
     product.strength,
-    product.pharmaceutical_form ? `· ${product.pharmaceutical_form}` : null,
+    product.pharmaceuticalForm ? `· ${product.pharmaceuticalForm}` : null,
   ]
     .filter(Boolean)
     .join(" ");
@@ -67,7 +67,7 @@ export function ProductAutocomplete({ onSelect, onClear, selected }: Props) {
         >
           {products.map((product) => (
             <li
-              key={`${product.name}|${product.strength}|${product.pharmaceutical_form}`}
+              key={`${product.name}|${product.strength}|${product.pharmaceuticalForm}`}
               onMouseDown={() => handleSelect(product)}
               className="cursor-pointer px-3 py-2 text-sm text-white hover:bg-slate-700"
             >

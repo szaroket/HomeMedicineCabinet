@@ -116,8 +116,8 @@ class TestRegisterEndpoint:
 
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
-        assert data["access_token"] == _FAKE_ACCESS_TOKEN
-        assert data["token_type"] == "bearer"
+        assert data["accessToken"] == _FAKE_ACCESS_TOKEN
+        assert data["tokenType"] == "bearer"
         assert data["user"]["email"] == _FAKE_EMAIL
         assert "refresh_token" in response.cookies
         mock_register.assert_called_once()
@@ -246,7 +246,7 @@ class TestLoginEndpoint:
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["access_token"] == _FAKE_ACCESS_TOKEN
+        assert data["accessToken"] == _FAKE_ACCESS_TOKEN
         assert "refresh_token" in response.cookies
         mock_login.assert_called_once()
 
@@ -316,7 +316,7 @@ class TestRefreshEndpoint:
         response = await client.get("/api/v1/auth/refresh")
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.json()["access_token"] == _FAKE_ACCESS_TOKEN
+        assert response.json()["accessToken"] == _FAKE_ACCESS_TOKEN
 
     @pytest.mark.asyncio
     async def test_missing_cookie_returns_401(self, client: AsyncClient):

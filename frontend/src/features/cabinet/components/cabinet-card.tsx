@@ -53,7 +53,7 @@ export function CabinetCard({ entry }: CabinetCardProps) {
       } ${
         belowMinimum
           ? "bg-amber-950/40"
-          : entry.is_sufficient === false
+          : entry.isSufficient === false
             ? "bg-red-950/40"
             : "bg-slate-800/30"
       }`}
@@ -64,7 +64,7 @@ export function CabinetCard({ entry }: CabinetCardProps) {
           <button
             type="button"
             aria-label={
-              entry.is_important ? "Usuń z ważnych" : "Oznacz jako ważny"
+              entry.isImportant ? "Usuń z ważnych" : "Oznacz jako ważny"
             }
             onClick={(ev) => {
               ev.stopPropagation();
@@ -72,7 +72,7 @@ export function CabinetCard({ entry }: CabinetCardProps) {
             }}
             className="inline-flex items-center rounded hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400"
           >
-            <StarIcon filled={entry.is_important} />
+            <StarIcon filled={entry.isImportant} />
           </button>
           <span className="truncate font-medium text-white">{entry.name}</span>
         </span>
@@ -123,13 +123,13 @@ export function CabinetCard({ entry }: CabinetCardProps) {
             <button
               type="button"
               aria-label="Zmniejsz liczbę opakowań"
-              disabled={mutationPending || entry.package_count <= 0}
+              disabled={mutationPending || entry.packageCount <= 0}
               onClick={decrementPackage}
               className="inline-flex h-6 w-6 items-center justify-center rounded border border-slate-600 text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
             >
               −
             </button>
-            <dd className="w-6 text-center">{entry.package_count}</dd>
+            <dd className="w-6 text-center">{entry.packageCount}</dd>
             <button
               type="button"
               aria-label="Zwiększ liczbę opakowań"
@@ -140,7 +140,7 @@ export function CabinetCard({ entry }: CabinetCardProps) {
               +
             </button>
           </div>
-          {entry.is_tablet_based && (
+          {entry.isTabletBased && (
             <div>
               {editingPartial ? (
                 <form
@@ -158,7 +158,7 @@ export function CabinetCard({ entry }: CabinetCardProps) {
                     aria-label="Liczba luźnych tabletek"
                     type="number"
                     min={1}
-                    defaultValue={entry.partial_tablet_count ?? ""}
+                    defaultValue={entry.partialTabletCount ?? ""}
                     placeholder="Pełne opak."
                     className="w-20 rounded border border-slate-600 bg-slate-700 px-1 py-0.5 text-xs text-white"
                   />
@@ -183,8 +183,8 @@ export function CabinetCard({ entry }: CabinetCardProps) {
                   onClick={openPartialEdit}
                   className="text-xs text-blue-400 hover:text-blue-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
                 >
-                  {entry.partial_tablet_count != null
-                    ? `Luźne: ${entry.partial_tablet_count} szt.`
+                  {entry.partialTabletCount != null
+                    ? `Luźne: ${entry.partialTabletCount} szt.`
                     : "Ustaw luźne tabletki"}
                 </button>
               )}
@@ -196,7 +196,7 @@ export function CabinetCard({ entry }: CabinetCardProps) {
         </div>
         <div className="flex gap-1">
           <dt className="text-slate-400">Sztuki:</dt>
-          <dd>{entry.total_tablets != null ? entry.total_tablets : "—"}</dd>
+          <dd>{entry.totalTablets != null ? entry.totalTablets : "—"}</dd>
         </div>
         <div className="flex gap-1">
           <dt className="text-slate-400">Ważność:</dt>
@@ -207,7 +207,7 @@ export function CabinetCard({ entry }: CabinetCardProps) {
       {expanded && (
         <dl className="mt-3 flex flex-wrap gap-x-8 gap-y-1 border-t border-slate-700 pt-3 text-sm">
           <div className="w-full pb-2 border-b border-slate-700 mb-1">
-            {entry.is_used && (
+            {entry.isUsed && (
               <div className="flex flex-col gap-1">
                 {usageView.schedule && (
                   <div className="flex gap-2">
@@ -260,7 +260,7 @@ export function CabinetCard({ entry }: CabinetCardProps) {
             >
               {showUsageEdit
                 ? "Ukryj formularz"
-                : entry.is_used
+                : entry.isUsed
                   ? "Zmień dawkowanie"
                   : "Ustaw dawkowanie"}
             </button>
@@ -277,24 +277,22 @@ export function CabinetCard({ entry }: CabinetCardProps) {
           </div>
           <div className="flex gap-2">
             <dt className="text-slate-400">Postać:</dt>
-            <dd className="text-white">{entry.pharmaceutical_form ?? "—"}</dd>
+            <dd className="text-white">{entry.pharmaceuticalForm ?? "—"}</dd>
           </div>
           <div className="flex gap-2">
             <dt className="text-slate-400">Substancja czynna:</dt>
-            <dd className="text-white">{entry.active_ingredient ?? "—"}</dd>
+            <dd className="text-white">{entry.activeIngredient ?? "—"}</dd>
           </div>
           <div className="flex gap-2">
             <dt className="text-slate-400">Droga podania:</dt>
-            <dd className="text-white">
-              {entry.route_of_administration ?? "—"}
-            </dd>
+            <dd className="text-white">{entry.routeOfAdministration ?? "—"}</dd>
           </div>
           <div className="flex gap-2">
             <dt className="text-slate-400">Ulotka:</dt>
             <dd>
-              {entry.leaflet_url ? (
+              {entry.leafletUrl ? (
                 <a
-                  href={entry.leaflet_url}
+                  href={entry.leafletUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-400 hover:underline"
@@ -310,9 +308,9 @@ export function CabinetCard({ entry }: CabinetCardProps) {
           <div className="flex gap-2">
             <dt className="text-slate-400">Charakterystyka:</dt>
             <dd>
-              {entry.specification_url ? (
+              {entry.specificationUrl ? (
                 <a
-                  href={entry.specification_url}
+                  href={entry.specificationUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-400 hover:underline"

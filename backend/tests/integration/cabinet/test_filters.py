@@ -55,7 +55,7 @@ async def test_status_expired_returns_exact_set(
     items = response.json()["items"]
     assert {item["id"] for item in items} == {str(entry_expired.id)}
     assert items[0]["status"] == "expired"
-    assert items[0]["expiry_date"] == entry_expired.expiry_date.isoformat()
+    assert items[0]["expiryDate"] == entry_expired.expiry_date.isoformat()
 
 
 @pytest.mark.asyncio
@@ -91,7 +91,7 @@ async def test_status_expiring_returns_exact_set(
     items = response.json()["items"]
     assert {item["id"] for item in items} == {str(entry_expiring.id)}
     assert items[0]["status"] == "expiring"
-    assert items[0]["expiry_date"] == entry_expiring.expiry_date.isoformat()
+    assert items[0]["expiryDate"] == entry_expiring.expiry_date.isoformat()
 
 
 @pytest.mark.asyncio
@@ -125,7 +125,7 @@ async def test_status_valid_returns_exact_set(
     items = response.json()["items"]
     assert {item["id"] for item in items} == {str(entry_valid.id)}
     assert items[0]["status"] == "valid"
-    assert items[0]["expiry_date"] == entry_valid.expiry_date.isoformat()
+    assert items[0]["expiryDate"] == entry_valid.expiry_date.isoformat()
 
 
 # ---------------------------------------------------------------------------
@@ -208,7 +208,7 @@ async def test_category_important_returns_exact_set(
     assert response.status_code == 200
     items = response.json()["items"]
     assert {item["id"] for item in items} == {str(entry_important.id)}
-    assert items[0]["is_important"] is True
+    assert items[0]["isImportant"] is True
 
 
 @pytest.mark.asyncio
@@ -244,7 +244,7 @@ async def test_category_used_returns_exact_set(
     assert response.status_code == 200
     items = response.json()["items"]
     assert {item["id"] for item in items} == {str(entry_used.id)}
-    assert items[0]["is_used"] is True
+    assert items[0]["isUsed"] is True
 
 
 # ---------------------------------------------------------------------------
@@ -293,15 +293,15 @@ async def test_below_minimum_returns_important_entries_under_threshold(
 
     act_as(current_user)
     response = await client.get(
-        "/api/v1/cabinet/entries", params={"below_minimum": "true"}
+        "/api/v1/cabinet/entries", params={"belowMinimum": "true"}
     )
 
     assert response.status_code == 200
     items = response.json()["items"]
     assert {item["id"] for item in items} == {str(entry_below.id)}
-    assert items[0]["is_important"] is True
-    assert items[0]["package_count"] == entry_below.package_count
-    assert items[0]["below_minimum"] is True
+    assert items[0]["isImportant"] is True
+    assert items[0]["packageCount"] == entry_below.package_count
+    assert items[0]["belowMinimum"] is True
 
 
 # ---------------------------------------------------------------------------
@@ -368,8 +368,8 @@ async def test_sufficiency_sufficient_returns_exact_set(
     assert response.status_code == 200
     items = response.json()["items"]
     assert {item["id"] for item in items} == {str(entry_sufficient.id)}
-    assert items[0]["is_used"] is True
-    assert items[0]["is_sufficient"] is True
+    assert items[0]["isUsed"] is True
+    assert items[0]["isSufficient"] is True
 
 
 @pytest.mark.asyncio
@@ -419,8 +419,8 @@ async def test_sufficiency_insufficient_returns_exact_set(
     assert response.status_code == 200
     items = response.json()["items"]
     assert {item["id"] for item in items} == {str(entry_insufficient.id)}
-    assert items[0]["is_used"] is True
-    assert items[0]["is_sufficient"] is False
+    assert items[0]["isUsed"] is True
+    assert items[0]["isSufficient"] is False
 
 
 # ---------------------------------------------------------------------------
@@ -474,4 +474,4 @@ async def test_filter_intersection_status_and_category_important(
     items = response.json()["items"]
     assert {item["id"] for item in items} == {str(entry_expiring_important.id)}
     assert items[0]["status"] == "expiring"
-    assert items[0]["is_important"] is True
+    assert items[0]["isImportant"] is True

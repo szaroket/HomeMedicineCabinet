@@ -45,13 +45,13 @@ export function useVariants(product: ProductOut | null) {
     queryKey: cabinetKeys.variants(
       product?.name ?? "",
       product?.strength ?? null,
-      product?.pharmaceutical_form ?? null,
+      product?.pharmaceuticalForm ?? null,
     ),
     queryFn: () =>
       listVariants(
         product!.name,
         product!.strength,
-        product!.pharmaceutical_form,
+        product!.pharmaceuticalForm,
       ),
     enabled: product != null,
   });
@@ -84,8 +84,8 @@ export function useAddEntry() {
 export function useToggleImportant() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, is_important }: { id: string; is_important: boolean }) =>
-      toggleImportant(id, is_important),
+    mutationFn: ({ id, isImportant }: { id: string; isImportant: boolean }) =>
+      toggleImportant(id, isImportant),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: cabinetKeys.entriesAll() });
       queryClient.invalidateQueries({ queryKey: DASHBOARD_SUMMARY_KEY });

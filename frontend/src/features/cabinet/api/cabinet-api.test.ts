@@ -32,8 +32,8 @@ describe("searchProducts", () => {
       {
         name: "Aspirin",
         strength: null,
-        pharmaceutical_form: null,
-        active_ingredient: null,
+        pharmaceuticalForm: null,
+        activeIngredient: null,
       },
     ];
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(products));
@@ -67,7 +67,7 @@ describe("listVariants", () => {
 describe("listEntries", () => {
   it("omits the query string when no params are set", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(
-      jsonResponse({ items: [], total: 0, page: 1, page_size: 20 }),
+      jsonResponse({ items: [], total: 0, page: 1, pageSize: 20 }),
     );
 
     await listEntries();
@@ -78,7 +78,7 @@ describe("listEntries", () => {
 
   it("includes each optional param only when set", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(
-      jsonResponse({ items: [], total: 0, page: 1, page_size: 20 }),
+      jsonResponse({ items: [], total: 0, page: 1, pageSize: 20 }),
     );
 
     await listEntries({ status: "valid", page: 2 });
@@ -87,23 +87,23 @@ describe("listEntries", () => {
     expect(path).toBe("/cabinet/entries?status=valid&page=2");
   });
 
-  it("serializes below_minimum as the literal string true when truthy", async () => {
+  it("serializes belowMinimum as the literal string true when truthy", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(
-      jsonResponse({ items: [], total: 0, page: 1, page_size: 20 }),
+      jsonResponse({ items: [], total: 0, page: 1, pageSize: 20 }),
     );
 
-    await listEntries({ below_minimum: true });
+    await listEntries({ belowMinimum: true });
 
     const { path } = callInfo(vi.mocked(fetch).mock.calls[0]);
-    expect(path).toBe("/cabinet/entries?below_minimum=true");
+    expect(path).toBe("/cabinet/entries?belowMinimum=true");
   });
 
-  it("omits below_minimum when false", async () => {
+  it("omits belowMinimum when false", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(
-      jsonResponse({ items: [], total: 0, page: 1, page_size: 20 }),
+      jsonResponse({ items: [], total: 0, page: 1, pageSize: 20 }),
     );
 
-    await listEntries({ below_minimum: false });
+    await listEntries({ belowMinimum: false });
 
     const { path } = callInfo(vi.mocked(fetch).mock.calls[0]);
     expect(path).toBe("/cabinet/entries");
@@ -111,7 +111,7 @@ describe("listEntries", () => {
 
   it("includes all optional params together in order", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(
-      jsonResponse({ items: [], total: 0, page: 1, page_size: 20 }),
+      jsonResponse({ items: [], total: 0, page: 1, pageSize: 20 }),
     );
 
     await listEntries({
@@ -119,15 +119,15 @@ describe("listEntries", () => {
       search: "aspirin",
       order: "desc",
       page: 2,
-      page_size: 50,
+      pageSize: 50,
       category: "important",
-      below_minimum: true,
+      belowMinimum: true,
       sufficiency: "insufficient",
     });
 
     const { path } = callInfo(vi.mocked(fetch).mock.calls[0]);
     expect(path).toBe(
-      "/cabinet/entries?status=expiring&search=aspirin&order=desc&page=2&page_size=50&category=important&below_minimum=true&sufficiency=insufficient",
+      "/cabinet/entries?status=expiring&search=aspirin&order=desc&page=2&pageSize=50&category=important&belowMinimum=true&sufficiency=insufficient",
     );
   });
 });
@@ -137,13 +137,13 @@ describe("addEntry", () => {
     const result = {
       merged: false,
       entry: {},
-      merge_summary: null,
+      mergeSummary: null,
     };
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(result));
     const payload = {
-      medication_registry_id: "reg-1",
-      package_count: 2,
-      expiry_date: "2027-01-01",
+      medicationRegistryId: "reg-1",
+      packageCount: 2,
+      expiryDate: "2027-01-01",
     };
 
     await addEntry(payload);
@@ -159,7 +159,7 @@ describe("addEntry", () => {
 });
 
 describe("toggleImportant", () => {
-  it("PATCHes the entry with the is_important flag", async () => {
+  it("PATCHes the entry with the isImportant flag", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({}));
 
     await toggleImportant("entry-1", true);
@@ -170,14 +170,14 @@ describe("toggleImportant", () => {
     expect(new Headers(init?.headers).get("Content-Type")).toBe(
       "application/json",
     );
-    expect(init?.body).toBe(JSON.stringify({ is_important: true }));
+    expect(init?.body).toBe(JSON.stringify({ isImportant: true }));
   });
 });
 
 describe("setUsage", () => {
   it("PATCHes /cabinet/entries/:id/usage", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({}));
-    const payload = { is_used: true, dosage_times: 2 };
+    const payload = { isUsed: true, dosageTimes: 2 };
 
     await setUsage("entry-1", payload);
 
@@ -194,7 +194,7 @@ describe("setUsage", () => {
 describe("updateQuantity", () => {
   it("PATCHes /cabinet/entries/:id/quantity", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({}));
-    const payload = { package_count: 3 };
+    const payload = { packageCount: 3 };
 
     await updateQuantity("entry-1", payload);
 

@@ -47,9 +47,9 @@ class TestGetPreferencesEndpoint:
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["expiry_threshold_days"] == 14
-        assert data["close_to_finish_threshold_days"] == 3
-        assert data["min_package_count"] == 5
+        assert data["expiryThresholdDays"] == 14
+        assert data["closeToFinishThresholdDays"] == 3
+        assert data["minPackageCount"] == 5
 
     async def test_db_error_returns_503(
         self, authed_client: AsyncClient, mocker: MockerFixture
@@ -85,14 +85,14 @@ class TestPatchPreferencesEndpoint:
         response = await authed_client.patch(
             PREFERENCES_URL,
             json={
-                "expiry_threshold_days": DEFAULT_EXPIRY_THRESHOLD_DAYS,
-                "close_to_finish_threshold_days": DEFAULT_CLOSE_TO_FINISH_THRESHOLD_DAYS,
-                "min_package_count": 3,
+                "expiryThresholdDays": DEFAULT_EXPIRY_THRESHOLD_DAYS,
+                "closeToFinishThresholdDays": DEFAULT_CLOSE_TO_FINISH_THRESHOLD_DAYS,
+                "minPackageCount": 3,
             },
         )
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.json()["min_package_count"] == 3
+        assert response.json()["minPackageCount"] == 3
 
     async def test_db_error_returns_503(
         self, authed_client: AsyncClient, mocker: MockerFixture
@@ -106,9 +106,9 @@ class TestPatchPreferencesEndpoint:
         response = await authed_client.patch(
             PREFERENCES_URL,
             json={
-                "expiry_threshold_days": DEFAULT_EXPIRY_THRESHOLD_DAYS,
-                "close_to_finish_threshold_days": DEFAULT_CLOSE_TO_FINISH_THRESHOLD_DAYS,
-                "min_package_count": 3,
+                "expiryThresholdDays": DEFAULT_EXPIRY_THRESHOLD_DAYS,
+                "closeToFinishThresholdDays": DEFAULT_CLOSE_TO_FINISH_THRESHOLD_DAYS,
+                "minPackageCount": 3,
             },
         )
 
@@ -121,9 +121,9 @@ class TestPatchPreferencesEndpoint:
         response = await authed_client.patch(
             PREFERENCES_URL,
             json={
-                "expiry_threshold_days": DEFAULT_EXPIRY_THRESHOLD_DAYS,
-                "close_to_finish_threshold_days": DEFAULT_CLOSE_TO_FINISH_THRESHOLD_DAYS,
-                "min_package_count": invalid_value,
+                "expiryThresholdDays": DEFAULT_EXPIRY_THRESHOLD_DAYS,
+                "closeToFinishThresholdDays": DEFAULT_CLOSE_TO_FINISH_THRESHOLD_DAYS,
+                "minPackageCount": invalid_value,
             },
         )
 
@@ -136,9 +136,9 @@ class TestPatchPreferencesEndpoint:
         response = await authed_client.patch(
             PREFERENCES_URL,
             json={
-                "expiry_threshold_days": invalid_value,
-                "close_to_finish_threshold_days": DEFAULT_CLOSE_TO_FINISH_THRESHOLD_DAYS,
-                "min_package_count": 3,
+                "expiryThresholdDays": invalid_value,
+                "closeToFinishThresholdDays": DEFAULT_CLOSE_TO_FINISH_THRESHOLD_DAYS,
+                "minPackageCount": 3,
             },
         )
 
@@ -150,16 +150,16 @@ class TestPatchPreferencesEndpoint:
         response = await authed_client.patch(
             PREFERENCES_URL,
             json={
-                "expiry_threshold_days": DEFAULT_EXPIRY_THRESHOLD_DAYS,
-                "close_to_finish_threshold_days": 0,
-                "min_package_count": 3,
+                "expiryThresholdDays": DEFAULT_EXPIRY_THRESHOLD_DAYS,
+                "closeToFinishThresholdDays": 0,
+                "minPackageCount": 3,
             },
         )
 
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     async def test_missing_token_returns_401_or_403(self, client: AsyncClient):
-        response = await client.patch(PREFERENCES_URL, json={"min_package_count": 3})
+        response = await client.patch(PREFERENCES_URL, json={"minPackageCount": 3})
         assert response.status_code in (
             status.HTTP_401_UNAUTHORIZED,
             status.HTTP_403_FORBIDDEN,

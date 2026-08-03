@@ -24,9 +24,9 @@ function SignedInAs({
 }
 
 const preferences = {
-  expiry_threshold_days: 30,
-  close_to_finish_threshold_days: 7,
-  min_package_count: 1,
+  expiryThresholdDays: 30,
+  closeToFinishThresholdDays: 7,
+  minPackageCount: 1,
 };
 
 function mockFetchRouting() {

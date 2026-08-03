@@ -60,7 +60,7 @@ async def test_cross_account_importance_patch_returns_404(
     act_as(current_user_b)
     response = await client.patch(
         f"/api/v1/cabinet/entries/{entry_a.id}",
-        json={"is_important": True},
+        json={"isImportant": True},
     )
 
     assert response.status_code == 404, "cross-account write must be rejected with 404"
@@ -72,7 +72,7 @@ async def test_cross_account_importance_patch_returns_404(
     items = list_response.json()["items"]
     assert len(items) == 1
     assert items[0]["id"] == str(entry_a.id)
-    assert items[0]["is_important"] is False, "victim row must not be mutated"
+    assert items[0]["isImportant"] is False, "victim row must not be mutated"
 
 
 @pytest.mark.asyncio
@@ -93,7 +93,7 @@ async def test_cross_account_usage_patch_returns_404(
     act_as(current_user_b)
     response = await client.patch(
         f"/api/v1/cabinet/entries/{entry_a.id}/usage",
-        json={"is_used": False},
+        json={"isUsed": False},
     )
 
     assert response.status_code == 404, (
@@ -107,7 +107,7 @@ async def test_cross_account_usage_patch_returns_404(
     items = list_response.json()["items"]
     assert len(items) == 1
     assert items[0]["id"] == str(entry_a.id)
-    assert items[0]["is_used"] is True, "victim row must not be mutated"
+    assert items[0]["isUsed"] is True, "victim row must not be mutated"
 
 
 @pytest.mark.asyncio
@@ -156,7 +156,7 @@ async def test_cross_account_quantity_patch_returns_404(
     act_as(current_user_b)
     response = await client.patch(
         f"/api/v1/cabinet/entries/{entry_a.id}/quantity",
-        json={"package_count": 0},
+        json={"packageCount": 0},
     )
 
     assert response.status_code == 404, (
@@ -169,7 +169,7 @@ async def test_cross_account_quantity_patch_returns_404(
     items = list_response.json()["items"]
     assert len(items) == 1
     assert items[0]["id"] == str(entry_a.id)
-    assert items[0]["package_count"] == 2, "victim row must not be mutated"
+    assert items[0]["packageCount"] == 2, "victim row must not be mutated"
 
 
 @pytest.mark.asyncio

@@ -43,36 +43,33 @@ export function AddMedicationForm() {
 
   // useWatch (not the watch() function) so React Compiler can memoize this
   // component instead of skipping it (react-hooks/incompatible-library).
-  const isUsed = useWatch({ control, name: "is_used" }) ?? false;
+  const isUsed = useWatch({ control, name: "isUsed" }) ?? false;
 
   function handleProductSelect(product: ProductOut) {
     setSelectedProduct(product);
     setSelectedVariant(null);
-    setValue("medication_registry_id", "");
+    setValue("medicationRegistryId", "");
   }
 
   function handleProductClear() {
     setSelectedProduct(null);
     setSelectedVariant(null);
-    setValue("medication_registry_id", "");
+    setValue("medicationRegistryId", "");
   }
 
   function handleVariantChange(variant: VariantOut) {
     setSelectedVariant(variant);
-    setValue("medication_registry_id", variant.id);
-    setValue("is_tablet_based", variant.is_tablet_based);
+    setValue("medicationRegistryId", variant.id);
+    setValue("isTabletBased", variant.isTabletBased);
   }
 
   function onSubmit(values: AddEntryValues) {
     if (!selectedVariant) return;
 
-    if (
-      selectedVariant.is_tablet_based &&
-      values.partial_tablet_count != null
-    ) {
+    if (selectedVariant.isTabletBased && values.partialTabletCount != null) {
       const tpp = selectedVariant.capacity ?? 0;
-      if (values.partial_tablet_count >= tpp) {
-        setError("partial_tablet_count", {
+      if (values.partialTabletCount >= tpp) {
+        setError("partialTabletCount", {
           type: "manual",
           message: `Częściowa liczba tabletek musi być mniejsza niż ${tpp}.`,
         });
@@ -80,33 +77,33 @@ export function AddMedicationForm() {
       }
     }
 
-    const usagePayload = values.is_used
+    const usagePayload = values.isUsed
       ? {
-          is_used: true,
-          dosage_times: selectedVariant.is_tablet_based
-            ? (values.dosage_times ?? null)
+          isUsed: true,
+          dosageTimes: selectedVariant.isTabletBased
+            ? (values.dosageTimes ?? null)
             : null,
-          dosage_period: selectedVariant.is_tablet_based
-            ? (values.dosage_period ?? null)
+          dosagePeriod: selectedVariant.isTabletBased
+            ? (values.dosagePeriod ?? null)
             : null,
-          dosage_amount: selectedVariant.is_tablet_based
-            ? (values.dosage_amount ?? null)
+          dosageAmount: selectedVariant.isTabletBased
+            ? (values.dosageAmount ?? null)
             : null,
-          dosage_start_date: values.dosage_start_date || null,
-          dosage_end_date: values.dosage_end_date || null,
+          dosageStartDate: values.dosageStartDate || null,
+          dosageEndDate: values.dosageEndDate || null,
         }
       : null;
 
     setServerError(null);
     mutate(
       {
-        medication_registry_id: values.medication_registry_id,
-        package_count: values.package_count,
-        expiry_date: values.expiry_date,
-        partial_tablet_count: selectedVariant.is_tablet_based
-          ? (values.partial_tablet_count ?? null)
+        medicationRegistryId: values.medicationRegistryId,
+        packageCount: values.packageCount,
+        expiryDate: values.expiryDate,
+        partialTabletCount: selectedVariant.isTabletBased
+          ? (values.partialTabletCount ?? null)
           : null,
-        is_important: values.is_important ?? false,
+        isImportant: values.isImportant ?? false,
         usage: usagePayload,
       },
       {
@@ -129,7 +126,7 @@ export function AddMedicationForm() {
     navigate("/cabinet");
   }
 
-  const isTablet = selectedVariant?.is_tablet_based ?? false;
+  const isTablet = selectedVariant?.isTabletBased ?? false;
 
   return (
     <>
@@ -154,30 +151,30 @@ export function AddMedicationForm() {
           selectedId={selectedVariant?.id ?? ""}
           onChange={handleVariantChange}
         />
-        {errors.medication_registry_id && (
+        {errors.medicationRegistryId && (
           <p className="text-xs text-red-400">
-            {errors.medication_registry_id.message}
+            {errors.medicationRegistryId.message}
           </p>
         )}
 
         <div className="flex flex-col gap-1">
           <label
-            htmlFor="package_count"
+            htmlFor="packageCount"
             className="text-sm font-medium text-blue-400"
           >
             Liczba opakowań
           </label>
           <input
-            id="package_count"
+            id="packageCount"
             type="number"
             min={1}
             defaultValue={1}
             className="rounded border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            {...register("package_count", { valueAsNumber: true })}
+            {...register("packageCount", { valueAsNumber: true })}
           />
-          {errors.package_count && (
+          {errors.packageCount && (
             <p className="text-xs text-red-400">
-              {errors.package_count.message}
+              {errors.packageCount.message}
             </p>
           )}
         </div>
@@ -192,7 +189,7 @@ export function AddMedicationForm() {
               min={1}
               placeholder={`Opcjonalnie (1–${(selectedVariant?.capacity ?? 2) - 1} szt.)`}
               className="rounded border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              {...register("partial_tablet_count", {
+              {...register("partialTabletCount", {
                 setValueAs: (value: string) =>
                   value === "" || value == null ? null : Number(value),
               })}
@@ -201,9 +198,9 @@ export function AddMedicationForm() {
               Ile tabletek pozostało w jednym otwartym opakowaniu (mniej niż{" "}
               {selectedVariant?.capacity ?? "?"} szt.).
             </p>
-            {errors.partial_tablet_count && (
+            {errors.partialTabletCount && (
               <p className="text-xs text-red-400">
-                {errors.partial_tablet_count.message}
+                {errors.partialTabletCount.message}
               </p>
             )}
           </div>
@@ -211,31 +208,31 @@ export function AddMedicationForm() {
 
         <div className="flex flex-col gap-1">
           <label
-            htmlFor="expiry_date"
+            htmlFor="expiryDate"
             className="text-sm font-medium text-blue-400"
           >
             Termin ważności
           </label>
           <input
-            id="expiry_date"
+            id="expiryDate"
             type="date"
             className="rounded border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            {...register("expiry_date")}
+            {...register("expiryDate")}
           />
-          {errors.expiry_date && (
-            <p className="text-xs text-red-400">{errors.expiry_date.message}</p>
+          {errors.expiryDate && (
+            <p className="text-xs text-red-400">{errors.expiryDate.message}</p>
           )}
         </div>
 
         <div className="flex items-center gap-2">
           <input
-            id="is_important"
+            id="isImportant"
             type="checkbox"
             className="h-4 w-4 rounded border-slate-600 bg-slate-700 accent-blue-500"
-            {...register("is_important")}
+            {...register("isImportant")}
           />
           <label
-            htmlFor="is_important"
+            htmlFor="isImportant"
             className="cursor-pointer text-sm font-medium text-blue-400"
           >
             Oznacz jako ważny

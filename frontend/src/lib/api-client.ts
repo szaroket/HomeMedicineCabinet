@@ -12,8 +12,8 @@ async function doRefresh(): Promise<string | null> {
     credentials: "include",
   });
   if (!res.ok) return null;
-  const data = (await res.json()) as { access_token: string };
-  return data.access_token;
+  const data = (await res.json()) as { accessToken: string };
+  return data.accessToken;
 }
 
 // Shared single-flight refresh: all callers (api-client 401 retry and
