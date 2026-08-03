@@ -401,8 +401,8 @@ No data or schema changes. Rollback is deleting `.github/workflows/ai-review.yml
 
 #### Manual
 
-- [x] 4.4 Inline comments are published on the first post-merge PR
-- [x] 4.5 The `review-output` artifact contains both JSON and markdown
-- [x] 4.6 Findings are scoped to `backend/`/`frontend/` and are substantive
-- [x] 4.7 The verdict carries all nine criterion scores, none visibly thin
-- [x] 4.8 Review quality justifies keeping `publish: "true"` on a public repo
+- [x] 4.4 Inline comments are published on the first post-merge PR — ffee5e8
+- [x] 4.5 The `review-output` artifact contains both JSON and markdown — ffee5e8
+- [x] 4.6 Findings are scoped to `backend/`/`frontend/` and are substantive — ffee5e8
+- [x] 4.7 The verdict carries all nine criterion scores, none visibly thin — ffee5e8
+- [x] 4.8 Review quality justifies keeping `publish: "true"` on a public repo — ffee5e8
