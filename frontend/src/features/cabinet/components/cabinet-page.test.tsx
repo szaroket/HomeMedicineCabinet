@@ -75,7 +75,7 @@ describe("CabinetPage — external search navigation", () => {
           return Promise.resolve(jsonResponse({ items: [] }));
         }
         return Promise.resolve(
-          jsonResponse({ items: [], total: 0, page: 1, page_size: 20 }),
+          jsonResponse({ items: [], total: 0, page: 1, pageSize: 20 }),
         );
       }),
     );

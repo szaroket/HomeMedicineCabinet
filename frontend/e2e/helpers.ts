@@ -21,7 +21,7 @@
 export interface ProductOut {
   name: string;
   strength: string | null;
-  pharmaceutical_form: string | null;
+  pharmaceuticalForm: string | null;
 }
 
 // Superset view of a `/medicines/variants` row: seed asserts the detail fields,
@@ -30,9 +30,9 @@ export interface ProductOut {
 export interface VariantOut {
   id: string;
   strength: string | null;
-  pharmaceutical_form: string | null;
-  active_ingredient: string | null;
-  route_of_administration: string | null;
+  pharmaceuticalForm: string | null;
+  activeIngredient: string | null;
+  routeOfAdministration: string | null;
 }
 
 // Rebuild the ProductAutocomplete option label exactly as it renders, so a spec
@@ -41,7 +41,7 @@ export function productLabel(product: ProductOut): string {
   return [
     product.name,
     product.strength,
-    product.pharmaceutical_form ? `· ${product.pharmaceutical_form}` : null,
+    product.pharmaceuticalForm ? `· ${product.pharmaceuticalForm}` : null,
   ]
     .filter(Boolean)
     .join(" ");

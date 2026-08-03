@@ -35,9 +35,9 @@ describe("cabinet mutations → dashboard summary invalidation", () => {
     const { result } = renderHook(() => useAddEntry(), { wrapper: Wrapper });
 
     result.current.mutate({
-      medication_registry_id: "reg-1",
-      package_count: 1,
-      expiry_date: "2030-01-01",
+      medicationRegistryId: "reg-1",
+      packageCount: 1,
+      expiryDate: "2030-01-01",
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));

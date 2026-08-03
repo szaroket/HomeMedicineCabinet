@@ -9,8 +9,8 @@ beforeEach(() => {
 describe("register", () => {
   it("POSTs to /auth/register with a JSON body and returns the response", async () => {
     const response = {
-      access_token: "token",
-      token_type: "bearer",
+      accessToken: "token",
+      tokenType: "bearer",
       user: { id: "u1", email: "a@b.com" },
     };
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(response));
@@ -31,8 +31,8 @@ describe("register", () => {
 describe("login", () => {
   it("POSTs to /auth/login with a JSON body and returns the response", async () => {
     const response = {
-      access_token: "token",
-      token_type: "bearer",
+      accessToken: "token",
+      tokenType: "bearer",
       user: { id: "u1", email: "a@b.com" },
     };
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(response));

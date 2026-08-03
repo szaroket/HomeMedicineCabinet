@@ -76,7 +76,7 @@ export interface UsageView {
 }
 
 function buildUsageView(entry: CabinetEntryOut): UsageView {
-  if (!entry.is_used) {
+  if (!entry.isUsed) {
     return {
       finishDate: null,
       daysOfSupply: null,
@@ -88,14 +88,12 @@ function buildUsageView(entry: CabinetEntryOut): UsageView {
     };
   }
 
-  const startDate = entry.dosage_start_date
-    ? formatDate(entry.dosage_start_date)
+  const startDate = entry.dosageStartDate
+    ? formatDate(entry.dosageStartDate)
     : null;
-  const endDate = entry.dosage_end_date
-    ? formatDate(entry.dosage_end_date)
-    : null;
+  const endDate = entry.dosageEndDate ? formatDate(entry.dosageEndDate) : null;
 
-  if (!entry.is_tablet_based) {
+  if (!entry.isTabletBased) {
     return {
       finishDate: null,
       daysOfSupply: null,
@@ -107,24 +105,24 @@ function buildUsageView(entry: CabinetEntryOut): UsageView {
     };
   }
 
-  const periodLabel = entry.dosage_period === "week" ? "tydzień" : "dzień";
+  const periodLabel = entry.dosagePeriod === "week" ? "tydzień" : "dzień";
   const schedule =
-    entry.dosage_times != null && entry.dosage_amount != null
-      ? `${entry.dosage_times} × ${entry.dosage_amount} tabl. / ${periodLabel}`
+    entry.dosageTimes != null && entry.dosageAmount != null
+      ? `${entry.dosageTimes} × ${entry.dosageAmount} tabl. / ${periodLabel}`
       : null;
 
   const finishDate =
-    entry.days_of_supply != null &&
-    entry.dosage_end_date == null &&
-    entry.dosage_start_date != null
-      ? computeFinishDate(entry.dosage_start_date, entry.days_of_supply)
+    entry.daysOfSupply != null &&
+    entry.dosageEndDate == null &&
+    entry.dosageStartDate != null
+      ? computeFinishDate(entry.dosageStartDate, entry.daysOfSupply)
       : null;
 
   return {
     finishDate,
-    daysOfSupply: entry.days_of_supply,
-    daysUntilEnd: entry.days_until_end,
-    isSufficient: entry.is_sufficient,
+    daysOfSupply: entry.daysOfSupply,
+    daysUntilEnd: entry.daysUntilEnd,
+    isSufficient: entry.isSufficient,
     schedule,
     startDate,
     endDate,
@@ -152,9 +150,9 @@ export function useCabinetEntry(entry: CabinetEntryOut) {
   };
 
   const sufficiencyInfo =
-    entry.is_sufficient === false
+    entry.isSufficient === false
       ? SUFFICIENCY_LABEL.insufficient
-      : entry.is_sufficient === true
+      : entry.isSufficient === true
         ? SUFFICIENCY_LABEL.sufficient
         : null;
 
@@ -163,7 +161,7 @@ export function useCabinetEntry(entry: CabinetEntryOut) {
   }
 
   function toggleImportantFlag() {
-    toggleImportant({ id: entry.id, is_important: !entry.is_important });
+    toggleImportant({ id: entry.id, isImportant: !entry.isImportant });
   }
 
   function openDeleteConfirm() {
@@ -189,23 +187,23 @@ export function useCabinetEntry(entry: CabinetEntryOut) {
     );
   }
 
-  const isZeroDeleteCategory = !entry.is_important && !entry.is_used;
+  const isZeroDeleteCategory = !entry.isImportant && !entry.isUsed;
 
   function incrementPackage() {
     if (mutationPending) return;
     updateQuantity({
       id: entry.id,
       payload: {
-        package_count: entry.package_count + 1,
-        partial_tablet_count: entry.partial_tablet_count,
+        packageCount: entry.packageCount + 1,
+        partialTabletCount: entry.partialTabletCount,
       },
     });
   }
 
   function decrementPackage() {
-    if (mutationPending || entry.package_count <= 0) return;
-    const nextCount = entry.package_count - 1;
-    if (nextCount === 0 && entry.package_count === 1 && isZeroDeleteCategory) {
+    if (mutationPending || entry.packageCount <= 0) return;
+    const nextCount = entry.packageCount - 1;
+    if (nextCount === 0 && entry.packageCount === 1 && isZeroDeleteCategory) {
       setDeleteError(null);
       setDeleteReason("zero");
       setConfirmingDelete(true);
@@ -214,8 +212,8 @@ export function useCabinetEntry(entry: CabinetEntryOut) {
     updateQuantity({
       id: entry.id,
       payload: {
-        package_count: nextCount,
-        partial_tablet_count: entry.partial_tablet_count,
+        packageCount: nextCount,
+        partialTabletCount: entry.partialTabletCount,
       },
     });
   }
@@ -237,8 +235,8 @@ export function useCabinetEntry(entry: CabinetEntryOut) {
         {
           id: entry.id,
           payload: {
-            package_count: entry.package_count,
-            partial_tablet_count: null,
+            packageCount: entry.packageCount,
+            partialTabletCount: null,
           },
         },
         { onSuccess: closePartialEdit },
@@ -259,8 +257,8 @@ export function useCabinetEntry(entry: CabinetEntryOut) {
       {
         id: entry.id,
         payload: {
-          package_count: entry.package_count,
-          partial_tablet_count: parsed,
+          packageCount: entry.packageCount,
+          partialTabletCount: parsed,
         },
       },
       { onSuccess: closePartialEdit },
@@ -273,10 +271,10 @@ export function useCabinetEntry(entry: CabinetEntryOut) {
       : `Czy na pewno chcesz usunąć „${entry.name}” z apteczki?`;
   const deleteNote =
     deleteReason === "zero"
-      ? entry.partial_tablet_count != null && entry.partial_tablet_count > 0
+      ? entry.partialTabletCount != null && entry.partialTabletCount > 0
         ? "Luźne tabletki z otwartego opakowania również zostaną usunięte."
         : undefined
-      : entry.below_minimum
+      : entry.belowMinimum
         ? `Oznaczenie „${OUT_OF_STOCK_LABEL}” również zniknie.`
         : undefined;
 
@@ -288,8 +286,8 @@ export function useCabinetEntry(entry: CabinetEntryOut) {
     setShowUsageEdit,
     statusInfo,
     sufficiencyInfo,
-    belowMinimum: entry.below_minimum,
-    formattedExpiryDate: formatDate(entry.expiry_date),
+    belowMinimum: entry.belowMinimum,
+    formattedExpiryDate: formatDate(entry.expiryDate),
     usageView: buildUsageView(entry),
     confirmingDelete,
     openDeleteConfirm,

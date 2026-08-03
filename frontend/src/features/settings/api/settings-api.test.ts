@@ -12,9 +12,9 @@ beforeEach(() => {
 describe("getPreferences", () => {
   it("GETs /users/preferences and returns the parsed body", async () => {
     const preferences = {
-      expiry_threshold_days: 30,
-      close_to_finish_threshold_days: 7,
-      min_package_count: 1,
+      expiryThresholdDays: 30,
+      closeToFinishThresholdDays: 7,
+      minPackageCount: 1,
     };
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(preferences));
 
@@ -28,15 +28,15 @@ describe("getPreferences", () => {
 describe("updatePreferences", () => {
   it("PATCHes /users/preferences with a JSON body", async () => {
     const preferences = {
-      expiry_threshold_days: 30,
-      close_to_finish_threshold_days: 7,
-      min_package_count: 2,
+      expiryThresholdDays: 30,
+      closeToFinishThresholdDays: 7,
+      minPackageCount: 2,
     };
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse(preferences));
     const payload = {
-      expiry_threshold_days: 30,
-      close_to_finish_threshold_days: 7,
-      min_package_count: 2,
+      expiryThresholdDays: 30,
+      closeToFinishThresholdDays: 7,
+      minPackageCount: 2,
     };
 
     await expect(updatePreferences(payload)).resolves.toEqual(preferences);

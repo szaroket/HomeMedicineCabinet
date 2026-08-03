@@ -39,7 +39,7 @@ Prefer app-level cleanup now that a cabinet `DELETE` endpoint exists
 rows through the API — a per-test fixture / `afterEach` for the common case, plus
 a `test.afterAll` safety net for rows a crashed test left behind. The direct-DB
 `globalTeardown` remains the final backstop for anything both miss. Per-run
-uniqueness (a timestamp-derived `expiry_date`) still keeps re-runs and parallel
+uniqueness (a timestamp-derived `expiryDate`) still keeps re-runs and parallel
 workers from colliding on `uq_cabinet_entries_user_med_expiry`. See
 `manage-cabinet-entry.spec.ts` for the fixture + `afterAll` pattern. (`seed.spec.ts`
 predates the endpoint and leans on the `globalTeardown` sweep alone.) State the

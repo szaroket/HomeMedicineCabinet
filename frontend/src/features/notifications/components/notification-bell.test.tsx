@@ -37,10 +37,10 @@ function renderBell() {
 
 function makeItem(overrides: Partial<NotificationItem> = {}): NotificationItem {
   return {
-    trigger_type: "expiry",
-    cabinet_entry_id: "entry-1",
-    medication_name: "Apap",
-    days_remaining: 5,
+    triggerType: "expiry",
+    cabinetEntryId: "entry-1",
+    medicationName: "Apap",
+    daysRemaining: 5,
     ...overrides,
   };
 }
@@ -60,7 +60,7 @@ describe("NotificationBell", () => {
 
   it("shows 9+ when the active count exceeds nine", async () => {
     const items = Array.from({ length: 10 }, (_, index) =>
-      makeItem({ cabinet_entry_id: `entry-${index}` }),
+      makeItem({ cabinetEntryId: `entry-${index}` }),
     );
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ items }));
     renderBell();
@@ -71,22 +71,22 @@ describe("NotificationBell", () => {
   it("opens the panel with rows and Polish copy per trigger type, and dismiss invokes the mutation", async () => {
     const items = [
       makeItem({
-        trigger_type: "expiry",
-        cabinet_entry_id: "entry-1",
-        medication_name: "Apap",
-        days_remaining: 5,
+        triggerType: "expiry",
+        cabinetEntryId: "entry-1",
+        medicationName: "Apap",
+        daysRemaining: 5,
       }),
       makeItem({
-        trigger_type: "below_minimum",
-        cabinet_entry_id: "entry-2",
-        medication_name: "Ibuprom",
-        days_remaining: null,
+        triggerType: "below_minimum",
+        cabinetEntryId: "entry-2",
+        medicationName: "Ibuprom",
+        daysRemaining: null,
       }),
       makeItem({
-        trigger_type: "run_out",
-        cabinet_entry_id: "entry-3",
-        medication_name: "Amoksiklav",
-        days_remaining: 2,
+        triggerType: "run_out",
+        cabinetEntryId: "entry-3",
+        medicationName: "Amoksiklav",
+        daysRemaining: 2,
       }),
     ];
     vi.mocked(fetch).mockImplementation((input, init) => {
@@ -131,8 +131,8 @@ describe("NotificationBell", () => {
   it("caps the list height and lets it scroll when there are many notifications", async () => {
     const items = Array.from({ length: 15 }, (_, index) =>
       makeItem({
-        cabinet_entry_id: `entry-${index}`,
-        medication_name: `Lek ${index}`,
+        cabinetEntryId: `entry-${index}`,
+        medicationName: `Lek ${index}`,
       }),
     );
     vi.mocked(fetch).mockResolvedValue(jsonResponse({ items }));
@@ -151,7 +151,7 @@ describe("NotificationBell", () => {
 
   it("navigates to the cabinet filtered by medication name when a row is clicked, and closes the panel", async () => {
     const items = [
-      makeItem({ cabinet_entry_id: "entry-1", medication_name: "Apap" }),
+      makeItem({ cabinetEntryId: "entry-1", medicationName: "Apap" }),
     ];
     vi.mocked(fetch).mockResolvedValue(jsonResponse({ items }));
 
@@ -179,36 +179,36 @@ describe("NotificationBell", () => {
     {
       name: "expiry still ahead → expiring status",
       item: {
-        trigger_type: "expiry" as const,
-        medication_name: "Apap",
-        days_remaining: 5,
+        triggerType: "expiry" as const,
+        medicationName: "Apap",
+        daysRemaining: 5,
       },
       expected: "search=Apap&status=expiring",
     },
     {
       name: "expiry already past → expired status",
       item: {
-        trigger_type: "expiry" as const,
-        medication_name: "Apap",
-        days_remaining: -3,
+        triggerType: "expiry" as const,
+        medicationName: "Apap",
+        daysRemaining: -3,
       },
       expected: "search=Apap&status=expired",
     },
     {
       name: "below_minimum → below_minimum flag",
       item: {
-        trigger_type: "below_minimum" as const,
-        medication_name: "Ibuprom",
-        days_remaining: null,
+        triggerType: "below_minimum" as const,
+        medicationName: "Ibuprom",
+        daysRemaining: null,
       },
       expected: "search=Ibuprom&below_minimum=true",
     },
     {
       name: "run_out → insufficient sufficiency",
       item: {
-        trigger_type: "run_out" as const,
-        medication_name: "Amoksiklav",
-        days_remaining: 2,
+        triggerType: "run_out" as const,
+        medicationName: "Amoksiklav",
+        daysRemaining: 2,
       },
       expected: "search=Amoksiklav&sufficiency=insufficient",
     },
@@ -227,7 +227,7 @@ describe("NotificationBell", () => {
       );
       await user.click(
         await screen.findByRole("button", {
-          name: `Pokaż w apteczce: ${item.medication_name}`,
+          name: `Pokaż w apteczce: ${item.medicationName}`,
         }),
       );
 
@@ -239,7 +239,7 @@ describe("NotificationBell", () => {
 
   it("does not navigate when the dismiss button on a row is clicked", async () => {
     const items = [
-      makeItem({ cabinet_entry_id: "entry-1", medication_name: "Apap" }),
+      makeItem({ cabinetEntryId: "entry-1", medicationName: "Apap" }),
     ];
     vi.mocked(fetch).mockImplementation((input) => {
       const url = String(input);
@@ -273,8 +273,8 @@ describe("NotificationBell", () => {
 
   it("dismiss all invokes the mutation once per active notification", async () => {
     const items = [
-      makeItem({ cabinet_entry_id: "entry-1", medication_name: "Apap" }),
-      makeItem({ cabinet_entry_id: "entry-2", medication_name: "Ibuprom" }),
+      makeItem({ cabinetEntryId: "entry-1", medicationName: "Apap" }),
+      makeItem({ cabinetEntryId: "entry-2", medicationName: "Ibuprom" }),
     ];
     vi.mocked(fetch).mockImplementation((input) => {
       const url = String(input);
