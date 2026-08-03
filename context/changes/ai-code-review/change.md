@@ -57,3 +57,33 @@ so PR #11 stops tripping the same max-turns wall reviewing its own diff.
 Once PR #11 merges and the consuming workflow's pinned SHA is bumped, a future max-turns
 exhaustion will fail the check cleanly (no uncaught traceback, no PR comment) instead of
 silently reporting green like PR #58 did.
+
+**Root cause of the empty reviews: repo exploration, not the turn budget.** After PR #11
+merged, PR #58 still produced zero findings at `max-turns: 25`. Raising the budget was
+treating a symptom. Added turn-by-turn tool-call logging upstream
+(AICodeReviewAction PR #12) — `run_review` previously logged only assistant *text* and
+blocked paths, so a turn spent purely on tool calls left no trace, and the 13-minute
+silent gaps in the logs were a total black box.
+
+The first instrumented run answered it immediately: **20 tool calls across 15 turns,
+100% `Grep`/`Read`/`Glob`, zero `submit_finding`/`submit_review_verdict`.** A diff
+touching anything the rules file flags as sensitive sent the model on an unbounded
+verification chase with no natural stopping point. The system prompt's "do not go on an
+open-ended exploration" line is advice, not enforcement, and the model did not follow
+it. An intermediate fix capping exploration at 8 calls helped only marginally — the
+model retried denied calls rather than pivoting.
+
+Final fix (commit 7690bde, merged as 9d571ca): **`Read`/`Grep`/`Glob` are no longer
+offered at all.** The review works from the diff text alone, which is what the system
+prompt always claimed it did. The `PreToolUse` guard and its exploration cap stay
+registered as defense-in-depth should a path-taking tool ever be re-added. Verified: the
+action's own `path-resolution-test` converged in 2 turns and produced a complete
+per-criterion verdict — the first successful full review of a substantive diff this
+project has ever produced. `develop`'s pinned SHA bumped to `9d571ca` and `max-turns`
+lowered 25 → 15 (headroom is now for `submit_finding`, one turn per finding, not for
+exploration).
+
+Note for future debugging: the action's `dogfood` self-test failed the same run with
+`API Error: 402 ... requires more credits` — an exhausted OpenRouter key, unrelated to
+any of the above. The new per-turn logging is what made that distinguishable at a glance
+from the exploration failures.
