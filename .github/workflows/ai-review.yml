@@ -29,7 +29,7 @@ jobs:
           github-token: ${{ github.token }}
           publish: "true"
           format: all
-          max-turns: "15"
+          max-turns: "25"
 
       - name: Upload review output
         if: always()
